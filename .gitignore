@@ -37,3 +37,6 @@ export_credentials.cfg
 /page4_5.txt
 /thumb_*.png
 /thumb_*.png.import
+
+# README screenshots are documentation, not game textures
+/docs/images/*.import
