@@ -1,0 +1,12 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/Enemy/scout_buggy_Game_Asset/Desert_Recon_Buggy_Body_polished_albedo.png" id="1_5d8ld"]
+[ext_resource type="Texture2D" path="res://assets/Enemy/scout_buggy_Game_Asset/Desert_Recon_Buggy_Body_polished_normal.png" id="2_lv4qh"]
+
+[resource]
+resource_name = "M_Desert_Recon_Buggy_Polished"
+albedo_texture = ExtResource("1_5d8ld")
+metallic = 0.5
+roughness = 0.5
+normal_enabled = true
+normal_texture = ExtResource("2_lv4qh")

@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/enemies/ground/tank_chassis_controller.gd" id="1_chassis"]
+[ext_resource type="Resource" path="res://src/enemies/ground/config/ironclad_sentinel_config.tres" id="2_cfg"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/enemy_tanks/ironclad_sentinel/body_mesh.res" id="3_body"]
+[ext_resource type="Script" path="res://src/enemies/ground/articulated_tank_turret.gd" id="4_turret"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/enemy_tanks/ironclad_sentinel/turret_mesh.res" id="5_turret_m"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/enemy_tanks/ironclad_sentinel/gun_housing_mesh.res" id="6_housing_m"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/enemy_tanks/ironclad_sentinel/gun_barrels_mesh.res" id="7_barrels_m"]
+
+[node name="IroncladSentinelRig" type="Node3D"]
+
+[node name="Visuals" type="Node3D" parent="."]
+script = ExtResource("1_chassis")
+config = ExtResource("2_cfg")
+
+[node name="ChassisMotion" type="Node3D" parent="Visuals"]
+
+[node name="HullModel" type="Node3D" parent="Visuals/ChassisMotion"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8278, -0.3155)
+
+[node name="Tank_Body" type="MeshInstance3D" parent="Visuals/ChassisMotion/HullModel"]
+transform = Transform3D(0, 0, 6.8, 0, 6.8, 0, -6.8, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_body")
+
+[node name="Turret" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7966, 0.3366)
+script = ExtResource("4_turret")
+config = ExtResource("2_cfg")
+
+[node name="MountModel" type="Node3D" parent="Turret"]
+
+[node name="Tank_Turret" type="MeshInstance3D" parent="Turret/MountModel"]
+transform = Transform3D(0, 0, 6.8, 0, 6.8, 0, -6.8, 0, 0, 0, 0, 0)
+mesh = ExtResource("5_turret_m")
+
+[node name="GunPitch" type="Node3D" parent="Turret"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8915, -0.8316)
+
+[node name="Recoil" type="Node3D" parent="Turret/GunPitch"]
+
+[node name="GunHousingModel" type="Node3D" parent="Turret/GunPitch/Recoil"]
+
+[node name="Tank_GunHousing" type="MeshInstance3D" parent="Turret/GunPitch/Recoil/GunHousingModel"]
+transform = Transform3D(0, 0, 6.8, 0, 6.8, 0, -6.8, 0, 0, 0, 0, 0)
+mesh = ExtResource("6_housing_m")
+
+[node name="BarrelSpin" type="Node3D" parent="Turret/GunPitch/Recoil"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0384, 0.0621, 0)
+
+[node name="Tank_GunBarrels" type="MeshInstance3D" parent="Turret/GunPitch/Recoil/BarrelSpin"]
+transform = Transform3D(0, 0, 6.8, 0, 6.8, 0, -6.8, 0, 0, -0.0384, -0.0621, 0)
+mesh = ExtResource("7_barrels_m")
+
+[node name="Muzzle" type="Marker3D" parent="Turret/GunPitch/Recoil"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0384, 0.0621, -3.0695)

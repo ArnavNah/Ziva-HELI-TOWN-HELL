@@ -1,0 +1,380 @@
+[gd_scene format=3 uid="uid://chlutndvocs4f"]
+
+[ext_resource type="Script" uid="uid://cx2utjls5jmfk" path="res://scenes/main_game.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/world/weather_system.tscn" id="2_weather"]
+[ext_resource type="Script" uid="uid://dkssd03uxo5ob" path="res://src/world/city_generator.gd" id="3_city"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="4_player"]
+[ext_resource type="Script" uid="uid://b5gsokcxi0q3n" path="res://src/enemies/enemy_spawner.gd" id="5_spawner"]
+[ext_resource type="Script" uid="uid://coyexxosgo11w" path="res://src/missions/mission_manager.gd" id="6_mission"]
+[ext_resource type="Script" uid="uid://1af7jbynrmxy" path="res://src/missions/cargo_manager.gd" id="7_cargo"]
+[ext_resource type="Script" uid="uid://yv0sh8uq5506" path="res://src/ui/hud.gd" id="8_hud"]
+[ext_resource type="Script" uid="uid://ck7ld1evce61k" path="res://src/ui/upgrade_dialog.gd" id="9_upgrades"]
+[ext_resource type="Script" uid="uid://ct0mrn3368gmd" path="res://src/ui/menus/debrief_screen.gd" id="10_debrief"]
+[ext_resource type="Script" uid="uid://bxusb0j8k631o" path="res://src/loot/loot_manager.gd" id="11_loot"]
+[ext_resource type="Script" uid="uid://t7kys5tnos6i" path="res://src/ui/minimap.gd" id="12_radar"]
+[ext_resource type="Script" uid="uid://ldtbwrp6akqe" path="res://src/ui/menus/pause_menu.gd" id="13_pause"]
+[ext_resource type="Script" uid="uid://57ecxx6wgmcx" path="res://src/ui/boss_decision_dialog.gd" id="14_boss_decision"]
+[ext_resource type="Script" uid="uid://fcca7toj5fqb" path="res://src/gameplay/endless_overdrive.gd" id="15_overdrive"]
+[ext_resource type="PackedScene" uid="uid://bo3ptc1y5kfno" path="res://scenes/environment/boundary/playable_area.tscn" id="16_playable_area"]
+[ext_resource type="Script" uid="uid://dgfo73112rolq" path="res://src/ui/menus/settings_menu.gd" id="17_settings"]
+[ext_resource type="PackedScene" path="res://scenes/ui/level_up_ui.tscn" id="18_levelup"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_Ground"]
+albedo_color = Color(0.32, 0.4, 0.24, 1)
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="BoxMesh_Ground"]
+material = SubResource("Mat_Ground")
+size = Vector3(1000, 2, 1000)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_Ground"]
+size = Vector3(1000, 2, 1000)
+
+[node name="MainGame" type="Node3D" unique_id=1590352864]
+script = ExtResource("1_main")
+
+[node name="WeatherSystem" parent="." unique_id=778686319 instance=ExtResource("2_weather")]
+
+[node name="PlayableArea" parent="." unique_id=411096111 instance=ExtResource("16_playable_area")]
+
+[node name="Ground" type="StaticBody3D" parent="." unique_id=926747984]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+collision_layer = 2
+collision_mask = 5
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground" unique_id=2103331887]
+mesh = SubResource("BoxMesh_Ground")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground" unique_id=763662708]
+shape = SubResource("BoxShape3D_Ground")
+
+[node name="CityGenerator" type="Node3D" parent="." unique_id=1555681620]
+script = ExtResource("3_city")
+grid_width = 16
+grid_depth = 16
+
+[node name="PlayerHelicopter" parent="." unique_id=2044741752 instance=ExtResource("4_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 13, -1)
+
+[node name="EnemySpawner" type="Node" parent="." unique_id=1148448967]
+script = ExtResource("5_spawner")
+
+[node name="MissionManager" type="Node" parent="." unique_id=2038194797]
+script = ExtResource("6_mission")
+
+[node name="CargoManager" type="Node" parent="." unique_id=539194193]
+script = ExtResource("7_cargo")
+
+[node name="LootManager" type="Node" parent="." unique_id=1753163976]
+script = ExtResource("11_loot")
+
+[node name="EndlessOverdrive" type="Node" parent="." unique_id=1385662636]
+script = ExtResource("15_overdrive")
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=1844245124]
+process_mode = 3
+
+[node name="CombatHUD" type="CanvasLayer" parent="UI" unique_id=1740118482 node_paths=PackedStringArray("player_helicopter")]
+script = ExtResource("8_hud")
+player_helicopter = NodePath("../../PlayerHelicopter")
+
+[node name="TacticalRadar" type="Control" parent="UI/CombatHUD" unique_id=59674282]
+layout_mode = 3
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -194.0
+offset_top = 76.0
+offset_right = -20.0
+offset_bottom = 250.0
+grow_horizontal = 0
+script = ExtResource("12_radar")
+
+[node name="SurvivalLayer" type="Control" parent="UI/CombatHUD" unique_id=694528205]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 400.0
+offset_bottom = 200.0
+
+[node name="HullBar" type="ProgressBar" parent="UI/CombatHUD/SurvivalLayer" unique_id=1383052171]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 260.0
+offset_bottom = 45.0
+value = 100.0
+
+[node name="FuelBar" type="ProgressBar" parent="UI/CombatHUD/SurvivalLayer" unique_id=87369607]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 50.0
+offset_right = 260.0
+offset_bottom = 70.0
+value = 100.0
+
+[node name="AmmoLabel" type="Label" parent="UI/CombatHUD/SurvivalLayer" unique_id=1336661954]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 80.0
+offset_right = 300.0
+offset_bottom = 110.0
+text = "Machine Gun: 300 / 300"
+
+[node name="FlareLabel" type="Label" parent="UI/CombatHUD/SurvivalLayer" unique_id=1955223597]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 110.0
+offset_right = 200.0
+offset_bottom = 135.0
+text = "FLARES: 3 / 3"
+
+[node name="SuperBar" type="ProgressBar" parent="UI/CombatHUD/SurvivalLayer" unique_id=856125836]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 140.0
+offset_right = 260.0
+offset_bottom = 160.0
+
+[node name="TaskLayer" type="Control" parent="UI/CombatHUD" unique_id=2055923196]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 20.0
+offset_top = 220.0
+offset_right = 400.0
+offset_bottom = 400.0
+
+[node name="MissionLabel" type="Label" parent="UI/CombatHUD/TaskLayer" unique_id=1275350753]
+layout_mode = 0
+offset_left = -1.0
+offset_top = -27.0
+offset_right = 349.0
+offset_bottom = 3.0
+text = "TACTICAL MISSION: STANDBY"
+
+[node name="CargoLabel" type="Label" parent="UI/CombatHUD/TaskLayer" unique_id=956288536]
+layout_mode = 0
+offset_left = 5.0
+offset_top = 12.0
+offset_right = 355.0
+offset_bottom = 42.0
+text = "CARGO CONTRACT: STANDBY"
+
+[node name="ProgressLayer" type="Control" parent="UI/CombatHUD" unique_id=2082565301]
+layout_mode = 3
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -400.0
+offset_bottom = 200.0
+grow_horizontal = 0
+
+[node name="WaveLabel" type="Label" parent="UI/CombatHUD/ProgressLayer" unique_id=1074599589]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 20.0
+offset_right = 380.0
+offset_bottom = 50.0
+text = "WAVE 1 — 00:45"
+
+[node name="ScoreLabel" type="Label" parent="UI/CombatHUD/ProgressLayer" unique_id=2007245693]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 50.0
+offset_right = 380.0
+offset_bottom = 80.0
+text = "SCORE: 0"
+
+[node name="ComboLabel" type="Label" parent="UI/CombatHUD/ProgressLayer" unique_id=383875190]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 80.0
+offset_right = 380.0
+offset_bottom = 105.0
+text = "COMBO: x1.0"
+
+[node name="CreditsLabel" type="Label" parent="UI/CombatHUD/ProgressLayer" unique_id=1283940358]
+layout_mode = 0
+offset_left = 50.0
+offset_top = 110.0
+offset_right = 380.0
+offset_bottom = 135.0
+text = "BANKED: 0 CR | AT RISK: 0 CR"
+
+[node name="UpgradeDialog" type="Control" parent="UI" unique_id=1039438049]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("9_upgrades")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/UpgradeDialog" unique_id=983020804]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -100.0
+offset_right = 300.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="UI/UpgradeDialog/VBoxContainer" unique_id=348635069]
+layout_mode = 2
+text = "--- CHOOSE RUN UPGRADE ---"
+horizontal_alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="UI/UpgradeDialog/VBoxContainer" unique_id=1611888875]
+layout_mode = 2
+
+[node name="Button1" type="Button" parent="UI/UpgradeDialog/VBoxContainer/HBoxContainer" unique_id=1396804489]
+custom_minimum_size = Vector2(180, 80)
+layout_mode = 2
+text = "Upgrade 1"
+
+[node name="Button2" type="Button" parent="UI/UpgradeDialog/VBoxContainer/HBoxContainer" unique_id=1394163477]
+custom_minimum_size = Vector2(180, 80)
+layout_mode = 2
+text = "Upgrade 2"
+
+[node name="Button3" type="Button" parent="UI/UpgradeDialog/VBoxContainer/HBoxContainer" unique_id=1401285137]
+custom_minimum_size = Vector2(180, 80)
+layout_mode = 2
+text = "Upgrade 3"
+
+[node name="LevelUpUi" parent="UI" unique_id=604619615 instance=ExtResource("18_levelup")]
+
+[node name="DebriefScreen" type="Control" parent="UI" unique_id=1484309484]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("10_debrief")
+
+[node name="VBox" type="VBoxContainer" parent="UI/DebriefScreen" unique_id=108282792]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -150.0
+offset_right = 250.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="OutcomeLabel" type="Label" parent="UI/DebriefScreen/VBox" unique_id=1846833410]
+layout_mode = 2
+text = "MISSION ACCOMPLISHED"
+horizontal_alignment = 1
+
+[node name="BreakdownLabel" type="Label" parent="UI/DebriefScreen/VBox" unique_id=712931428]
+layout_mode = 2
+text = "Score breakdown..."
+
+[node name="HBox" type="HBoxContainer" parent="UI/DebriefScreen/VBox" unique_id=1540744374]
+layout_mode = 2
+
+[node name="RetryButton" type="Button" parent="UI/DebriefScreen/VBox/HBox" unique_id=1213340762]
+layout_mode = 2
+text = "RETRY MISSION"
+
+[node name="HangarButton" type="Button" parent="UI/DebriefScreen/VBox/HBox" unique_id=367182406]
+layout_mode = 2
+text = "RETURN TO HANGAR"
+
+[node name="CopyButton" type="Button" parent="UI/DebriefScreen/VBox/HBox" unique_id=969725648]
+layout_mode = 2
+text = "COPY SCORECARD"
+
+[node name="PauseMenu" type="Control" parent="UI" unique_id=809812079]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("13_pause")
+
+[node name="Panel" type="Panel" parent="UI/PauseMenu" unique_id=606166445]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -145.0
+offset_right = 160.0
+offset_bottom = 145.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="UI/PauseMenu/Panel" unique_id=1166664711]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="UI/PauseMenu/Panel/VBox" unique_id=1427994465]
+layout_mode = 2
+text = "TACTICAL PAUSE"
+horizontal_alignment = 1
+
+[node name="ResumeBtn" type="Button" parent="UI/PauseMenu/Panel/VBox" unique_id=1961798079]
+layout_mode = 2
+text = "RESUME MISSION"
+
+[node name="RestartBtn" type="Button" parent="UI/PauseMenu/Panel/VBox" unique_id=1145664750]
+layout_mode = 2
+text = "RESTART OPERATION"
+
+[node name="SettingsBtn" type="Button" parent="UI/PauseMenu/Panel/VBox" unique_id=202854920]
+layout_mode = 2
+text = "SETTINGS"
+
+[node name="MainMenuBtn" type="Button" parent="UI/PauseMenu/Panel/VBox" unique_id=120237529]
+layout_mode = 2
+text = "MAIN MENU"
+
+[node name="QuitBtn" type="Button" parent="UI/PauseMenu/Panel/VBox" unique_id=1887930601]
+layout_mode = 2
+text = "ABANDON TO DESKTOP"
+
+[node name="BossDecisionDialog" type="Control" parent="UI" unique_id=140151680]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("14_boss_decision")
+
+[node name="SettingsMenu" type="Control" parent="UI" unique_id=140151681]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("17_settings")

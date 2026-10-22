@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="TankModelConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/enemies/ground/tank_model_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+model_name = "azure_siege_tank"
+assigned_role = "rail_crawler"
+visual_scale = 9.2
+ground_contact_lift = 1.3772
+hull_center_offset_z = 1.5635
+turret_mount_offset = Vector3(0, 1.2402, 1.9205)
+gun_hinge_offset = Vector3(0, 0.874, -1.0028)
+muzzle_offset = Vector3(0, 0.1702, -6.8862)
+min_pitch_deg = -8.0
+max_pitch_deg = 45.0
+turn_speed_deg = 90.0
+pitch_speed_deg = 70.0
+default_aim_tolerance_deg = 15.0
+recoil_distance = 0.14
+recoil_recovery_time = 0.22
+has_rotary_barrels = false
+barrel_bore_offset = Vector3(0, 0, 0)
+windup_spin_speed = 0.0
+fire_spin_speed = 0.0
+max_pitch_settle_deg = 2.2
+max_roll_settle_deg = 1.6
+chassis_pitch_speed = 5.5
+chassis_roll_speed = 6.5
+chassis_return_speed = 7.5

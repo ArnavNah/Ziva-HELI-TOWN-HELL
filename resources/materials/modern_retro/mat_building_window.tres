@@ -1,0 +1,10 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/environment/retro_textures/building_window_128.png" id="1_oxnam"]
+
+[resource]
+resource_name = "mat_building_window"
+albedo_texture = ExtResource("1_oxnam")
+metallic_specular = 0.25
+roughness = 0.85
+texture_filter = 2

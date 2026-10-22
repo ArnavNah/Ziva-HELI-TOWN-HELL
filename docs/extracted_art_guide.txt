@@ -1,0 +1,583 @@
+ZIVA · Simple town graphics guide
+ZIVA / SIMPLE GUIDE
+1. The look we want
+2. Shape, skin & lighting
+3. What to do first
+4. The whole town
+5. Copy an AI prompt
+6. Check the result
+Optional: technical details
+Start small.
+Match the same style.
+Check it from the helicopter.
+Your town graphics · simple guide
+Simple shapes.
+Pixel-painted surfaces.
+Make the town feel like
+Megabonk
+, with the buildings, military colors and helicopter view you want from
+Nuclear Strike
+.
+Start with one house, one road and one tree.
+Make those look right in Godot. Then use the same style for the whole town.
+You do not need to understand shaders to choose the style. The main steps are below; the technical settings are tucked away at the end.
+01 / WHAT WE WANT
+Take these features from your pictures
+From the robot image:
+visible square pixels, worn metal and warm brick colors.
+From Megabonk:
+chunky shapes, clear colors and objects that are easy to recognize.
+For your town: simple houses, broad roofs, chunky trees and slightly worn surfaces. Keep roads and grass quieter so enemies and bullets stand out.
+The important part:
+a “PSX shader” alone will not create this look. The shapes and painted surfaces do most of the work. Strong wobble and screen noise can stay off at first.
+02 / THREE THINGS MAKE THE LOOK
+Think of a house as a shape, a skin and lighting.
+1. Model = the shape
+The actual 3D house: walls, roof and chimney.
+Use Blender.
+Build it with a small number of simple shapes.
+2. Texture = the skin
+A flat image wrapped onto the house. It adds bricks, roof tiles and paint.
+Use AI for a starting image, then a pixel editor such as Aseprite to clean it.
+3. Material = how it looks in light
+Godot combines the shape and texture, then adds light and shadow.
+Use Godot.
+Keep surfaces mostly matte, with visible pixel edges.
+One useful term: UV mapping.
+This tells the game where the texture belongs on the model—like wrapping paper around a box. Some of your current building-detail models need this added before images can wrap onto them correctly.
+A shader is a small program that changes how Godot draws a surface. We can use one later to fine-tune the lighting and retro effects.
+03 / WHAT TO DO FIRST
+Build one small test area in five steps
+Choose one example look.
+Ask AI for a picture of your town. Choose a result whose shapes and colors you like.
+Make one house, one road and one tree.
+Build their 3D shapes in Blender. Give the house a clear roof shape because the helicopter sees it from above.
+Make a few small texture images.
+Start with brick, roof, grass and road. Try 128 × 128 pixels for each repeating surface. That is a starting size, not a rule for every object.
+Put them in Godot.
+Wrap the textures onto the models. Use “Nearest with Mipmaps” texture filtering: crisp pixels nearby, less flickering far away. Add simple sunlight.
+Fly around and check.
+Do the objects still look good from your normal camera? Can you see enemies clearly? If yes, use this small area as the example for all later assets.
+AI supplies reference pictures and texture candidates. The 3D models, wrapping, collisions and game behavior still need to be built.
+04 / APPLY IT TO THE WHOLE TOWN
+Different objects. The same family of colors and pixels.
+Buildings
+Simple walls, thick roof edges, large window groups. Warm brick, beige plaster and gray roofs. Make rooftops easy to recognize from above.
+Roads & grass
+Muted gray roads and olive-green grass. Use gentle patches of color. Avoid filling the ground with tiny noisy details.
+Trees
+A simple trunk with a few large green canopy shapes. Paint groups of leaves rather than modeling every leaf.
+Breakable objects
+Crates, barrels, cars and buildings should match the same style. A broken house keeps its original brick and roof colors in the rubble.
+Keep the visible pixel size similar across objects.
+A house should not have blurry giant pixels while the next house has tiny realistic details.
+Normal house
+→
+Broken roof and wall
+→
+Matching rubble
+05 / SIMPLE AI PROMPTS
+Ask for a picture or a texture—one job at a time.
+Attach your two reference images when possible. Later, attach your approved town example to help new images match it.
+A. See how the town could look
+Create a game-art concept of a small town for a helicopter action game. Use chunky low-poly shapes and painted pixel textures inspired by the supplied Megabonk reference. Include brick houses, broad gray roofs, olive-green trees, roads and a few military props. View the town from above at an angle, like a helicopter game. Keep open roads and clear spaces for combat. Use earthy colors and simple daylight. Avoid photorealism, glossy surfaces, heavy blur and tiny noisy details. No interface or text.
+Copy town prompt
+Result: a picture to guide the style. It is not a playable 3D town.
+B. Get a house reference for modeling
+Design one simple two-story brick house for the same chunky pixel-textured town. Give it a broad gray roof, thick roof edges, a chimney and large window groups. Show front, side and top views of the same house on a plain background. Keep the shape and colors consistent in every view. Use simple low-poly forms and painted pixel detail. No realistic materials, dramatic lighting, labels or text.
+Copy house prompt
+Result: a reference for making the house in Blender. Check that the views agree.
+C. Make a brick surface image
+Create a flat repeating brick texture for a chunky low-poly game town. Warm brown-red bricks, simple dark mortar and a few broad worn patches. Use clear pixel-like color blocks with little noise. Show only the flat surface, filling the entire square image. No house, perspective, shadows, border or text. Make opposite edges join so the image can repeat. Design it to remain readable when cleaned up at 128 × 128 pixels.
+Copy texture prompt
+Result: a texture candidate. Resize and clean it in a pixel editor, then check that the edges join. For grass or roads, change the material description.
+AI will not guarantee an exact match.
+Keep the best result as your reference, ask for small corrections, and clean the final images before using them in the game.
+06 / HOW WE KNOW IT WORKS
+Check these four things from the helicopter.
+Buildings, trees, roads and rubble look like they belong to the same game.
+You can recognize enemies, hazards and pickups without zooming in.
+Textures stay clear while moving, without distracting flickering.
+A destroyed building looks like the same building broken apart.
+Our first goal:
+one good-looking house, road and tree in Godot. Once that works, expand the town using those same art rules.
+Technical details — Godot settings, shader code, more prompts and sources
+You can skip this section until implementation. These are the full production notes, with proposed starting values rather than fixed requirements.
+01 / DECISION
+The look comes from the assets first.
+Working style name: “Chunky painted-pixel military town.”
+Simple 3D silhouettes + deliberate low-resolution color textures + restrained lighting + coherent scale. Add PSX artifacts only after the town looks right without them.
+Primary influence
+Megabonk’s exaggerated shapes, large color areas and visibly textured surfaces. Make buildings, trees, vehicles and props easy to recognize while moving.
+Surface influence
+The robot reference’s square texels, warm masonry, worn painted metal and sharp geometric edges. Keep its surface character; reduce its dense noise for distant terrain.
+Game identity
+Your Nuclear Strike direction: town rooftops, roads, military installations, readable aircraft and destructible architecture, viewed from the existing elevated camera.
+Use modern, stable perspective by default. Strong vertex wobble, warped textures, thick black outlines and full-screen dithering are separate effects; none is required to obtain the main look.
+No image prompt can guarantee an exact, repeatable game-ready result. Prompting establishes direction; palette cleanup, UV work, modeling and in-game review produce consistency. Keep one approved asset sheet attached to later generations whenever your chosen generator supports references.
+02 / VISUAL EVIDENCE
+What each reference actually tells us
+The reference image is shown in the simple guide above.
+Reference A · supplied robot image.
+Angular construction, large visible texture blocks, subdued earthy colors, bright green emission. Its identity and exact renderer are unverified.
+The reference image is shown in the simple guide above.
+Reference B · supplied Megabonk image.
+Strong character silhouettes, broad painted shading, bright costume accents and a quieter environment behind them.
+Visible feature
+How to reproduce the effect
+What we cannot infer
+Coarse square surface detail
+Small authored albedo textures, suitable UV density and nearest sampling.
+The original texture dimensions or import settings.
+Angular silhouettes and broad planes
+Low-poly meshes, deliberate hard edges and large geometric features.
+Actual triangle counts or whether every surface uses flat normals.
+Painted light/dark patches
+Broad material color clusters and restrained recess shading; simple scene lighting.
+Which marks are baked, painted or produced by a shader.
+Dark contours around characters
+If helpful, test selective silhouettes for enemies and interactables.
+This appears to be a presentation/collage; contours may be added in editing. They are not proof of a universal in-game outline shader.
+Low-detail background and strong subject colors
+Quiet ground textures, clear value hierarchy, selective saturated accents.
+A complete town material library from this character-focused image.
+The town recommendations below are an
+adaptation
+of these visible traits to your helicopter game. Megabonk’s official description establishes a survival loop with hordes, loot, upgrades and generated maps; it does not document its shaders or asset budgets.
+Official Megabonk page
+.
+03 / THE STYLE CONTRACT
+One visual language across the whole town
+Shapes & proportions
+Chunky roof volumes, thick eaves, broad window groups and substantial tree crowns.
+Use geometry for silhouette and collision-relevant forms. Paint small seams, panel lines and chips.
+Flat normals on masonry and angular props; selective smooth normals on rounded aircraft and trunks where useful.
+Avoid making every object a uniformly beveled toy. Keep believable military and town proportions with simplified detail.
+Texture & color
+Start at 16 texels per meter for environment surfaces; allow 32 for selected hero assets.
+Paint 3–5 main value clusters per material. This is an art target, not a hard global color limit.
+Use restrained local wear, darker recesses and soft edge color changes. Avoid photographic grain.
+Reserve bright saturated accents for the aircraft, enemies, hazards, loot and objective markings.
+OLIVE GRASS
+#52663D
+CROWN SHADOW
+#34462E
+WARM BRICK
+#945D45
+PLASTER / STONE
+#B6AA8B
+ROAD / SLATE
+#555C59
+HAZARD ACCENT
+#D9AC4A
+Proposed base-color anchors, not colors sampled from the screenshots. Shading and grading change their final screen appearance. Build highlight and shadow ramps around these anchors; use neutral darks instead of crushing everything to black.
+At your current camera, rooftops are primary artwork.
+The camera script uses a 35 m trailing distance, 33.5 m height and 50° base field of view. Spend detail on roof shapes, canopy shapes, road boundaries and large markings before tiny wall scratches. The flight view, rather than an asset close-up, decides whether a texture works.
+04 / WHO DOES WHAT
+Godot assembles the game; asset tools make the source art.
+Job
+Recommended tool / approach
+Deliverable
+Style exploration
+AI image generator using the prompts below and the same approved references.
+Town concepts, orthographic asset reference sheets, material candidates.
+Models & modular parts
+Blender for meshes, UVs, pivots, normals, collision proxies and prebuilt destruction pieces. Existing Godot procedural meshes remain useful for blockout and simple parts.
+Editable source model + exported
+.glb
+.
+Texture cleanup
+Aseprite or another pixel editor for precise pixels, palette ramps, seam repair and atlas assembly.
+Native-resolution lossless PNGs + editable source file.
+Game materials & effects
+Godot StandardMaterial3D for baseline tests; shared ShaderMaterials where custom banded lighting is useful.
+.tres
+materials and
+.gdshader
+files.
+Town assembly & gameplay
+Godot scenes, the existing city generator, visibility sectors, collision and destruction scripts.
+Reusable
+.tscn
+assets and a playable town block.
+AI image generation produces images, not topology, UVs, collisions or reliable unseen sides. If an image-to-3D service is used later, treat its output as a draft: simplify geometry, repair normals, rebuild UVs, remove baked lighting and set scale before import. A manually modeled box-based house is often easier to control than a dense generated mesh.
+Style sheet
+→
+Simple mesh
+→
+UV layout
+→
+Pixel texture
+→
+GLB + PNG
+→
+Godot camera review
+Export GLB with applied object scale, intentional normals, stable material slots and useful object names. Use one Godot unit as one meter. Validate scale and forward orientation with a test prop before exporting a batch. Keep collisions and gameplay logic in an inherited/wrapper Godot scene so reimporting art is safe.
+Godot model export guidance
+·
+Aseprite documentation
+.
+05 / ASSET INVENTORY
+Build a reusable town kit, then vary the arrangement.
+These are starting ranges for visible meshes, not Megabonk’s measured budgets or guaranteed performance limits. Count triangles after export. On this project, draw calls, shadows, transparent foliage and active debris can matter more than a few extra triangles.
+Family
+First production set
+Suggested triangles / asset
+Surface plan
+Buildings
+2 houses, corner shop, apartment, warehouse, garage; 3 roof shapes.
+House 300–1,200; larger building 800–2,500.
+128² wall/roof tiles; shared 256² or 512² trim/feature atlas. Give roofs dedicated UV space.
+Ground & roads
+Grass, dirt, asphalt, pavement; straight, junction and curb modules.
+2 triangles per flat patch; more at slopes, curbs and transitions.
+128² repeat tiles; separate lane markings and dirt-edge masks. Avoid a unique huge texture for the entire map.
+Trees & rocks
+3 broadleaf shapes, 2 pines, 3 rocks, hedge and stump.
+Trees 100–500; rocks 24–150.
+64²–128² bark/foliage tiles or a shared atlas. Prefer opaque faceted crowns initially.
+Destructible props
+Crate, barrel, fuel tank, fence, lamp, parked car, barricade.
+Small prop 24–250; car 300–900; installation 500–1,500.
+64²–128² unique maps for tests; shared atlas once the kit is approved.
+Destruction
+Intact, damaged and collapsed building states; matching fragments.
+6–12 authored chunks per building as a starting limit, with simpler distant rubble.
+Reuse exterior surfaces; add dark interior brick/concrete and a shared rubble texture.
+Helicopter & enemies
+Use existing gameplay meshes; apply the same material language.
+Hero aircraft approximately 1,500–4,000 if needed for silhouette.
+256² atlas initially; increase only after the gameplay camera proves a need.
+Modularity
+Use a 2 m authoring grid, with 4 m and 8 m modules where possible. Preserve existing gameplay footprint measurements during migration; modular art must fit the collision and road spacing already in use. Place pivots at ground center, or at an explicit grid corner for wall modules.
+Variation without style drift
+Reuse the same materials across different silhouettes. Mix roof shape, facade grouping, limited tint variants, height and porch/awning modules. Use seeded variation. Do not stretch a wall texture differently on every building.
+06 / TEXTURE DESIGN
+Small textures need authored structure, not random noise.
+Albedo
+is the surface’s base color.
+UVs
+tell the mesh where to sample that image. A
+texel
+is one pixel of the texture. A
+trim sheet
+packs repeatable strips such as window frames and roof edges. An
+atlas
+packs several reusable image regions into one texture.
+What belongs in the pixels
+Large brick groups, uneven plaster patches, broad roof seams, chunky bark shapes, painted panel divisions and restrained edge wear. Use connected color clusters. Tiny random single-pixel marks usually turn into noise from the helicopter.
+Paint subtle recess darkening; keep the main lighting neutral. A dramatic directional shadow painted into the texture remains fixed when the object turns and fights Godot’s sunlight.
+What belongs in the mesh
+Roof peaks, eaves, chimneys, overhangs, tree crowns, tank silhouettes, large frame edges and broken walls. If it changes the skyline or needs real collision, model it.
+Do not model each brick, leaf or roof shingle. Use low-detail geometry with intentional UV allocation.
+Nearest sampling · distinct square texels.
+Linear sampling · blended texel boundaries.
+Schematic browser illustration, not a generated game asset or an exact Godot lighting simulation. Low-resolution source art and filtering are two different decisions.
+Choose density before image dimensions
+At 16 texels/m, a 128-pixel tile covers 8 m. A 16 m wall uses that tile twice. A 256-pixel unique image spanning 16 m has the same density. A bigger file alone does not improve the style.
+Tile resolution
+64
+128
+256
+512
+Tile world width (m)
+Wall world width (m)
+Keep this consistent between wall and roof surfaces. Geometry UVs must express world-scale repeats. For tiny props, prioritize recognizability over forcing an identical density.
+Material
+Design guidance
+Common failure
+Road
+Broad charcoal patches; quiet aggregate; chunky pale markings on separate geometry or an authored road texture.
+Highly contrasted gravel everywhere competing with bullets and loot.
+Grass
+3–5 olive clusters, gentle large-scale hue variation, sparse tufts near edges.
+Photographic blades, uniform neon green or repeated dark spots that form a grid.
+Brick / plaster
+Readable grouped blocks and irregular patches; continuous mortar for tiles.
+Deep baked side-lighting or a perspective photograph pretending to be a flat texture.
+Roofs
+Large rectangular panels, clear ridge and broad wear patches; differentiated roof colors.
+Thin high-frequency lines disappearing or flickering from the flight camera.
+Foliage
+Big leaf-mass clusters and faceted canopy volumes, slightly darker undersides.
+Thousands of transparent leaf cards or individual leaf outlines.
+Metal / props
+Matte painted color, broad seams and a few bright edge chips. Use logos/labels authored separately.
+Chrome reflections and noisy chipped paint over the entire object.
+Prepare AI textures for actual use
+Generate one flat material per image. Request orthographic, edge-to-edge, neutral light and no cast shadows. Ask for seamless repeats, but verify them yourself.
+If the generator produces a large image, reduce it to the final working size. Compare area/box reduction for painted sources against nearest reduction for already aligned pixel art; then repaint the clusters. Always use nearest when enlarging the finished pixel texture for a preview.
+Reduce and clean the palette in the pixel editor. Remove pseudo-text, gradients and stray single pixels. Exact dimensions and exact colors come from this editing step.
+Offset by half the image width/height, repair the cross-shaped seam, then inspect a 3×3 repetition. Check both borders and repeated recognizable landmarks.
+Assemble atlases in the editor against actual UV layouts. Start with 4–8 pixels of extruded gutters at base resolution and inspect distant mip levels; this is not a guarantee against all mip bleeding. Separate high-contrast regions or use separate repeating textures where needed.
+Save PNG and inspect on the actual mesh under daylight, storm and night. Do not approve a texture just from its flat image.
+A generated atlas is not automatically UV-ready.
+Generated sheets can invent inconsistent panel sizes and perspectives. For unique props, unwrap the real model first and supply that UV layout as a locked guide if the tool supports it; finish the map in an editor. Keep UV islands aligned to whole texels where practical and consistent across destruction variants.
+07 / ENGINE SETUP
+A stable Godot baseline
+The local engine reports
+4.7.1.stable
+. The project selects
+gl_compatibility
+. A separate
+d3d12
+setting in the file does not turn Compatibility into a RenderingDevice renderer. Retain Compatibility for this art prototype and profile before changing renderers.
+Renderer overview
+.
+Setting / asset
+Starting choice
+Reason / check
+Texture import
+PNG, Lossless compression initially; generate mipmaps for 3D world textures.
+Inspect the imported result after 3D detection/reimport. Lossless preserves the authored source detail; mipmaps improve minification. Benchmark compression alternatives later.
+3D material sampling
+Nearest with Mipmaps
+. For roads at grazing angles, compare its anisotropic variant.
+Nearest preserves close texel edges; mipmaps reduce distant shimmer. Pure nearest without mipmaps is a comparison option, not the town default.
+Material response
+Roughness around 0.9–1.0, metallic 0.0, specular disabled initially.
+A deliberate stylized response for most surfaces, including painted metal. Add selective highlights only when they improve readability.
+Maps
+Albedo first. Optional emission mask for lights. Normal/parallax maps off initially.
+Most of the desired detail should be painted. Photorealistic PBR maps change the visual language.
+Light
+One primary sun, restrained ambient fill, visible contact shadows.
+Test shadowed streets as well as bright roofs. Keep the existing 2048 shadow atlas as a measured baseline.
+Foliage
+Opaque faceted canopy meshes first. If cards are necessary, test alpha scissor.
+Reduce overdraw and sorting problems; verify cutout shadows.
+Screen resolution
+Start at the existing 1280×720 view. Test 960×540 or 640×360 for a dedicated retro mode.
+Texture pixelation does not require a pixelated whole screen. Choose based on targeting and readability while moving.
+Antialiasing
+Compare disabled and 2× MSAA for geometry edges.
+MSAA can smooth the silhouette without turning texture sampling into bilinear filtering. Avoid blur-based post effects for the baseline.
+Fog / grading
+Gentle distance fog; retain one controlled color-grading pass.
+Current materials already darken/desaturate color before the existing screen grade. Rebalance together when adding painted textures to avoid making them muddy.
+Filtering is a 3D material/sampler choice; changing a CanvasItem texture filter alone does not configure mesh materials. For custom shaders, use sampler hints.
+Godot texture filters
+·
+Image import and mipmaps
+.
+Optional low-resolution presentation
+Render the world to a fixed-size SubViewport and enlarge its displayed texture with nearest sampling; place the HUD outside that low-resolution viewport so text and targeting markers stay readable. At 1280×720, a 640×360 world enlarges exactly 2×. At arbitrary window sizes, use integer scaling and letterboxing if uniform pixel sizes are essential. Recalculate dynamic resolution and HUD projection together, and wire the existing world grading into the correct viewport.
+Godot resolution guidance
+.
+Godot’s stable documentation changes over time. The current renderer table lists Compatibility support for glow and adjustments; older blanket claims that these never work are unsafe. The project’s earlier notes recorded ineffective adjustments in its tested setup. Keep its working grading pass, and verify any new effect in the installed renderer before depending on it. Do not add a second grading pass accidentally.
+08 / THE SHADER RECIPE
+One shared textured material; optional retro effects.
+Default town look
+Authored albedo texture + nearest/mipmap sampling.
+Lightly faceted mesh normals.
+Simple diffuse lighting or the project’s restrained banded light.
+High roughness, mild color grade and limited fog.
+Small material tint variants within the shared palette.
+Optional “PSX” profile
+Very mild screen-space vertex snapping; leave it off for the initial prototype.
+Subtle color quantization/dithering, checked in dark streets.
+Optional reduced world resolution.
+Affine texture warping only as a deliberate alternate effect.
+No default full-screen noise, strong wobble or thick outlines on every brick.
+A post-process pixelation shader cannot add UVs, turn a smooth mesh into a good low-poly silhouette, or create painted material detail. Vertex snapping changes projected geometry; affine mapping changes texture interpolation. Neither is the same thing as low-resolution albedo.
+Starter material shader · lit, textured, opaque
+This example uses the same style of banded direct light as the project, now with an authored texture. It is a candidate for a new shared material, not a replacement pasted over every existing shader. Supply valid UVs and a texture. Vertex tint is optional to avoid multiplying an already colored texture by strong existing facade colors.
+shader_type spatial;
+render_mode diffuse_lambert, specular_disabled;
+uniform sampler2D albedo_texture
+: source_color, filter_nearest_mipmap, repeat_enable;
+uniform vec4 tint : source_color = vec4(1.0);
+uniform bool use_vertex_tint = false;
+uniform vec2 uv_scale = vec2(1.0);
+void fragment() {
+vec3 base = texture(albedo_texture, UV * uv_scale).rgb;
+vec3 vertex_tint = use_vertex_tint ? COLOR.rgb : vec3(1.0);
+ALBEDO = base * tint.rgb * vertex_tint;
+ROUGHNESS = 0.95;
+METALLIC = 0.0;
+}
+void light() {
+float n_dot_l = max(dot(NORMAL, LIGHT), 0.0);
+float band = mix(0.35, 0.72,
+smoothstep(0.12, 0.16, n_dot_l));
+band = mix(band, 1.0,
+smoothstep(0.62, 0.66, n_dot_l));
+DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * band
+* ATTENUATION / 3.14159265;
+}
+Copy shader
+The entire direct-light contribution is attenuated, preserving shadows. Ambient illumination is separate. This is a stylized lighting response, not an assertion about Megabonk’s shader. Disable forced vertex shading when testing a custom
+light()
+function. For an atlas, keep sampling inside assigned islands; this repeating sampler is intended for a whole repeating material tile.
+Spatial shader reference
+·
+Sampler hints
+.
+Why wobble and outlines come later
+Vertex snapping can cause visible movement at stationary geometry as the camera moves. It can also open cracks if adjoining meshes snap differently and can destabilize thin structures. Affine UV effects distort large polygons and need careful testing on roads and roofs. Neither should affect collision geometry.
+If outlines help enemies separate from rooftops, prototype a selective inverted-hull mesh pass. It costs another draw and needs hard-edge/normal handling. A full-screen depth outline can also mark unwanted terrain edges. The normal/roughness screen buffer is unavailable in Compatibility, so do not copy a Forward+-only outline shader and assume it will work.
+Renderer shader features
+.
+09 / TOWN STRUCTURE & DAMAGE
+The environment must support combat and survive being broken.
+Illustrative town layout
+A loop of roads connects residential, market, industrial and park areas, with a central combat clearing. This is a proposed layout diagram, not the current game map.
+RESIDENTIAL
+INDUSTRIAL
+COMBAT
+CLEARING
+MARKET
+SERVICE YARD
+PARK / RECOVERY SPACE
+Layout concept only. Large landmarks and alternating dense/open zones make a town legible at speed.
+Adapt the survival structure
+Use connected road loops, broad intersections, courtyards and parks. Give enemy approach sectors multiple routes and keep space to circle, collect loot and recover. Place fuel or objectives at recognizable landmarks so exploration offers choices.
+Keep rooftops below important sight lines where practical. Put tall landmarks at planned locations rather than randomly filling every block. Preserve gaps around trees and avoid closing roads with decorative clutter.
+The current notes specify 12 m primary and 8 m secondary roads. Start with those established gameplay dimensions; playtest visual density without narrowing the flight and targeting space.
+Author each damage state as part of the same asset
+Intact silhouette
+→
+Broken roof + cracks
+→
+Collapsed shell + rubble
+Keep matching pivots, footprint, scale and texture density across states. Reuse outer-wall UVs; assign exposed interiors their own material regions.
+Use large cracks and missing roof sections to communicate damage. A random dark tint alone is insufficient.
+Swap to prebuilt broken meshes and simplified collision. Ensure rubble height matches the intended opened flight corridor; do not simply turn all collision off.
+Spawn a small, capped burst of physical fragments, then sleep, pool or remove them. Keep settled rubble visual-only when gameplay permits.
+Coordinate navigation, target selection, damage receivers and explosions with the actual stage. A destroyed mesh must not leave an invisible full-height collision box.
+Trees use intact canopy → broken trunk/stump; props use intact → damaged/broken. Hazard barrels need both a distinct silhouette/marking and color.
+Use MultiMesh batches for repeated static foliage and props, separated into spatial sectors. MultiMesh does not provide per-instance culling within a single batch, so avoid a town-wide batch with one huge bound. The current vegetation already uses sectors: preserve that useful structure. Destructible instances need a mapping from gameplay identity to batch index, or separate scenes for interactive objects.
+Godot MultiMesh guidance
+.
+10 / COPYABLE PROMPTS
+Describe the output, material and camera—not just “PSX.”
+Use the same style contract for every request. Choose a specific output below. The generator assembles a complete prompt with the right constraints; concept art and material textures intentionally use different lighting instructions.
+Best first sequence:
+town style concept → one house reference → brick, roof and grass textures → manually build the house → review it in Godot. Approve that result as the reference for the rest of the town.
+Asset / output
+Condition
+Intact / maintained with light wear
+Damaged / same design family
+Copy complete prompt
+For printing, the static prompt library below contains all asset instructions. Combine the master contract with the matching asset instructions and the corresponding output rules.
+The master art contract · reuse across the entire kit
+Create original art for ZIVA, a stylized 3D helicopter survival game set in a destructible town. Visual direction: chunky low-poly forms, hand-painted low-resolution pixel textures, broad readable color clusters, restrained earthy military-town palette, olive foliage, warm brick, sandy plaster, slate roofs and matte painted metal. Draw on the readable chunky painted-texture character of the supplied Megabonk reference and the coarse surface pixels of the supplied robot reference. Use original town architecture and assets. Prioritize roof shapes, canopy masses and broad markings that read from an elevated helicopter gameplay view. Keep small surface detail quiet. Use deliberate connected pixel clusters, minimal photographic grain, simple material separation, subtle local wear and coherent proportions. Reserve bright accent colors for hazards, loot and objectives. Match the same approved style reference and palette across every asset.
+Copy art contract
+Negative constraints · append when useful
+Avoid photorealism, photographic microdetail, realistic PBR gloss, chrome, ray-traced presentation, smooth plastic toy surfaces, high-poly sculpted detail, tiny repeated noise, anime proportions, voxel cubes, Minecraft-like blocks, heavy black outlines on every environmental edge, full-screen CRT artifacts, extreme perspective distortion, blurred pixel edges, cinematic depth of field, excessive bloom, UI overlays, watermarks, existing game logos and illegible generated text. For texture-only outputs also avoid perspective, a rendered object, borders, labels, cast shadows, lighting gradients and isolated vignetted material samples.
+Copy constraints
+Iterate with a correction, not a new style every time
+Keep the same silhouette, proportions, palette and pixel-cluster style as the approved reference. Change only [specific issue]. Reduce high-frequency surface noise; group the texture into larger coherent color shapes. Preserve roof visibility and the established material boundaries. Do not add new decorative objects, change the camera, introduce glossy materials or redesign the asset. Return the same requested output format.
+Copy correction prompt
+Attach the original two images for the first style study if the generator supports image conditioning. After approval, attach your own accepted town/asset reference to later requests. A seed may help some generators, but it does not guarantee identical geometry or cross-view consistency. Request a single material per texture image and enforce exact dimensions during cleanup.
+11 / PROJECT-SPECIFIC IMPLEMENTATION
+Extend what already works.
+Read-only inspection found an established procedural town, shared materials, foliage batching, a follow camera and staged building destruction. The most important integration issue is
+UVs
+: the shared box-detail builder currently writes positions, normals, colors and indices, but no UV array.
+Existing project file
+Observed behavior
+Proposed change
+src/world/detail_mesh.gd
+Merges boxes into one ArrayMesh with vertex colors; no
+Mesh.ARRAY_TEX_UV
+.
+Add per-face UVs scaled by real dimensions, or migrate authored facade modules to GLB. Use separate surfaces when materials require them. A texture sampler alone cannot fix missing UVs.
+src/world/stylized_materials.gd
+Caches materials by color, variation and wind.
+Add a textured material factory/cache keyed by texture identity, filtering, UV settings and tint. Keep intentionally shared immutable resources; use per-instance or unique resources for individual damage values.
+src/shaders/field_surface.gdshader
+Base/vertex color, world-space random grain, banded lighting; no albedo sampler.
+Prototype authored albedo sampling. Lower procedural grain when adding painted texture. Rebalance existing desaturation/darkening against the screen grade.
+src/shaders/meadow.gdshader
+World-space broad terrain patches and grain.
+Keep large-scale variation; add a quiet grass tile using world XZ mapping on flat ground. Use slope-aware projection for steep faces to avoid stretching.
+src/world/city_generator.gd
+Procedural road, prop and town assembly.
+Introduce an approved kit library, seeded art variants and consistent surface scale while preserving gameplay footprints.
+src/world/field_dressing.gd
+Faceted foliage/rocks with spatial MultiMesh batches.
+Swap approved textured meshes into existing sectors; preserve culling and building clearance. Review wind masks and canopy motion.
+src/world/destructible_building.gd
+Intact/damaged/collapsed stages; stage changes alter visuals and collisions.
+Bind authored meshes and matching textures to those stages. Keep health events, rubble behavior and collision updates intact.
+src/shaders/battlefield_grade.gdshader
+Canvas screen grade with saturation, warmth and shadow lift.
+Retune once for the approved texture kit. Keep HUD separation and re-test day/storm/night.
+Implement one vertical slice before converting the town
+Reference block:
+place one house, one shop, a road intersection, grass verge, two trees, a crate, a barrel, a parked vehicle and rubble in an isolated art review scene. Use the existing flight camera.
+Material proof:
+add UVs to one procedural surface or import one GLB; use the brick/roof/grass starter set. Compare standard diffuse lighting against the custom banded shader.
+Destruction proof:
+damage and collapse the house, break a prop, verify collision and material continuity.
+Motion proof:
+fly and turn at normal speed through day, storm and night. Check shimmer, shadow contrast, target visibility and distant texture bleeding.
+Kit approval:
+save comparison images at the same camera, lighting and resolution. Lock the palette, density and export conventions.
+Scale out:
+replace one district, measure performance with enemies and simultaneous destruction, then migrate the rest of the map.
+Suggested asset organization and handoff
+assets/art/town/
+source/             editable models and pixel-art sources
+textures/tiles/     brick_128, plaster_128, roof_128, asphalt_128
+textures/atlases/   town_trim_512, props_256, damage_256
+meshes/buildings/  house_a_intact.glb, house_a_damaged.glb, ...
+meshes/foliage/    broadleaf_a.glb, pine_a.glb, stump_a.glb
+materials/        shared Godot material resources
+scenes/environment/town/
+house_a.tscn       gameplay wrapper around imported art
+art_review.tscn    proposed isolated visual acceptance scene
+This is a proposed organization, not files created by this guide. Each asset handoff should include dimensions, pivot, triangle count, material slots, texture dimensions/density, collision intent and destruction variants. Keep source files outside export packaging where appropriate.
+12 / ACCEPTANCE
+Approve the town from the pilot’s view.
+Visual gate
+House, shop, warehouse and fuel hazard are identifiable without zooming in.
+Walls, roofs, trees, ground and rubble share a coherent texel scale and palette.
+Material structure is visible; ground detail stays quieter than targets.
+Damage states look like the same building, with correctly textured exposed interiors.
+Roads, aircraft, projectiles and pickups remain distinct in grayscale as well as color.
+Pixels remain deliberate; no blurred atlas edges or seams.
+Runtime gate
+Inspect while flying and turning, including grazing-angle roads and distant roofs.
+No severe texture shimmer, z-fighting, drifting world-space textures on moving rubble, or clipping foliage.
+Check daylight, night and storm; preserve target and HUD visibility.
+Verify collision and navigation after destruction.
+Measure frame time, draw calls, visible triangles and active physics debris under the existing enemy cap.
+Compare against the current benchmark on the same device and resolution. If targeting 60 fps, 16.7 ms is the total frame budget—not an assumed asset budget.
+The first approved house is the standard.
+Save its model, textures, material, palette, camera screenshots and damage states together. All later town assets should match this reference set. That is how this direction stays consistent across future AI-assisted work.
+13 / EVIDENCE & REFERENCES
+What is observed, verified and proposed
+Observed locally
+The two user-supplied images;
+project.godot
+; the camera, material, terrain, mesh, city, foliage, grading and destruction files listed above;
+STRIKE_MEADOW_NOTES.md
+; local Godot version output.
+Earlier project notes describe prior tests. They are context, not fresh game verification performed for this document.
+Proposed here
+Style name, palette anchors, texture sizes, triangle ranges, asset kit, town layout diagram, prompt recipes and migration sequence. These are practical starting points to validate in your game, not measured settings from Megabonk or the robot image.
+Megabonk official Steam page
+— game structure and official reference material.
+Godot BaseMaterial3D
+— filtering, material response and transparency.
+Godot image importing
+— compression, mipmaps and import behavior.
+Godot spatial shader reference
+— fragment/light stages and built-ins.
+Godot shading language
+— uniforms and texture sampler hints.
+Godot renderer feature comparison
+— Compatibility constraints and supported effects.
+Godot multiple resolutions
+— stretch behavior and pixel-art presentation.
+Godot MultiMesh optimization
+— instancing and culling tradeoffs.
+Godot model export considerations
+— model pipeline reference.
+Aseprite documentation
+— pixel editing and source-art workflow.
+Sources consulted 15 October 2026. Linked stable documentation is rolling; confirm feature behavior in the installed engine before production rollout. No claim is made about the reference games’ internal shaders, original texture resolutions or exact asset counts.
+ZIVA · Town graphics made simple · Standalone offline guide. The supplied images are embedded for reference. Copy controls and the prompt workshop work locally; external links require a connection.
+Print / save as PDF

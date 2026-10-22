@@ -1,0 +1,31 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://src/installations/ammo_depot.gd" id="1_depot"]
+[ext_resource type="Script" path="res://src/combat/damage_receiver.gd" id="2_rec"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_Depot"]
+size = Vector3(10.0, 5.0, 10.0)
+
+[sub_resource type="StandardMaterial3D" id="Mat_Depot"]
+albedo_color = Color(0.2, 0.45, 0.3, 1)
+roughness = 0.6
+
+[sub_resource type="BoxMesh" id="BoxMesh_Depot"]
+material = SubResource("Mat_Depot")
+size = Vector3(10.0, 5.0, 10.0)
+
+[node name="AmmoDepot" type="StaticBody3D"]
+collision_layer = 2
+collision_mask = 5
+script = ExtResource("1_depot")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+shape = SubResource("BoxShape3D_Depot")
+
+[node name="BunkerMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, 0)
+mesh = SubResource("BoxMesh_Depot")
+
+[node name="DamageReceiver" type="Node" parent="."]
+script = ExtResource("2_rec")

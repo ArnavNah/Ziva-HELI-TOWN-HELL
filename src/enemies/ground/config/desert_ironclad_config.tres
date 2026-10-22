@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="TankModelConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/enemies/ground/tank_model_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+model_name = "desert_ironclad"
+assigned_role = "siege_tank"
+visual_scale = 7.5
+ground_contact_lift = 1.5255
+hull_center_offset_z = 0.5513
+turret_mount_offset = Vector3(0, 1.1723, -0.0998)
+gun_hinge_offset = Vector3(0, 0.849, -0.4042)
+muzzle_offset = Vector3(0, -0.1718, -3.609)
+min_pitch_deg = -7.0
+max_pitch_deg = 50.0
+turn_speed_deg = 85.0
+pitch_speed_deg = 65.0
+default_aim_tolerance_deg = 15.0
+recoil_distance = 0.18
+recoil_recovery_time = 0.28
+has_rotary_barrels = false
+barrel_bore_offset = Vector3(0, 0, 0)
+windup_spin_speed = 0.0
+fire_spin_speed = 0.0
+max_pitch_settle_deg = 2.4
+max_roll_settle_deg = 1.8
+chassis_pitch_speed = 5.0
+chassis_roll_speed = 6.0
+chassis_return_speed = 7.0

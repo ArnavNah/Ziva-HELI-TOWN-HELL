@@ -1,0 +1,10 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/environment/retro_textures/grass_olive_128.png" id="1_i2f5n"]
+
+[resource]
+resource_name = "mat_grass_olive"
+albedo_texture = ExtResource("1_i2f5n")
+metallic_specular = 0.08
+roughness = 0.98
+texture_filter = 2

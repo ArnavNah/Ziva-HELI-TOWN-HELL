@@ -1,0 +1,10 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/environment/retro_textures/brick_warm_128.png" id="1_s6k2j"]
+
+[resource]
+resource_name = "mat_brick_warm"
+albedo_texture = ExtResource("1_s6k2j")
+metallic_specular = 0.15
+roughness = 0.95
+texture_filter = 2

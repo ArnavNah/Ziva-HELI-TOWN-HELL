@@ -1,0 +1,146 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://src/player/player_helicopter.gd" id="1_heli"]
+[ext_resource type="Script" path="res://src/player/player_turret.gd" id="2_turret"]
+[ext_resource type="Script" path="res://src/player/player_camera.gd" id="3_camera"]
+[ext_resource type="Script" path="res://src/player/player_weapons.gd" id="4_weapons"]
+[ext_resource type="Script" path="res://src/player/player_salvo.gd" id="5_salvo"]
+[ext_resource type="Script" path="res://src/player/player_countermeasures.gd" id="6_flares"]
+[ext_resource type="Script" path="res://src/player/run_progression.gd" id="7_progression"]
+[ext_resource type="Script" path="res://src/player/devastation_super.gd" id="8_super"]
+[ext_resource type="PackedScene" path="res://assets/player/player.glb" id="9_model"]
+[ext_resource type="Script" path="res://src/player/player_subsystem_manager.gd" id="10_subsystems"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_body"]
+size = Vector3(3.6, 2.5, 11.5)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_magnet"]
+radius = 12.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_Gun"]
+albedo_color = Color(0.26, 0.28, 0.32, 1)
+metallic = 0.65
+roughness = 0.45
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_Gun"]
+material = SubResource("Mat_Gun")
+top_radius = 0.045
+bottom_radius = 0.055
+height = 1.1
+
+[node name="PlayerHelicopter" type="CharacterBody3D"]
+collision_layer = 1
+collision_mask = 6
+script = ExtResource("1_heli")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.45)
+shape = SubResource("BoxShape3D_body")
+
+[node name="GroundRayCast" type="RayCast3D" parent="."]
+target_position = Vector3(0, -60, 0)
+collision_mask = 2
+
+[node name="Visuals" type="Node3D" parent="."]
+
+[node name="ApacheModel" parent="Visuals" instance=ExtResource("9_model")]
+transform = Transform3D(0, 0, -7.2, 0, 7.2, 0, 7.2, 0, 0, 0, 0, 1.376)
+
+[node name="SearchLight" type="SpotLight3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, -0.84, -3.12)
+light_color = Color(1, 0.98, 0.9, 1)
+light_energy = 2.4
+spot_range = 35.0
+spot_angle = 28.0
+spot_attenuation = 1.5
+
+[node name="CockpitLight" type="OmniLight3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, -1.9)
+light_color = Color(0.25, 0.75, 0.9, 1)
+light_energy = 0.35
+omni_range = 1.1
+omni_attenuation = 2.5
+
+[node name="TailStrobe" type="OmniLight3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.68, 7.44)
+light_color = Color(1, 1, 1, 1)
+light_energy = 1.8
+omni_range = 1.2
+omni_attenuation = 2.5
+
+[node name="NavLightLeft" type="OmniLight3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.26, -0.24, 0)
+light_color = Color(1, 0.15, 0.15, 1)
+light_energy = 0.5
+omni_range = 0.35
+omni_attenuation = 3.5
+
+[node name="NavLightRight" type="OmniLight3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.26, -0.24, 0)
+light_color = Color(0.2, 1, 0.35, 1)
+light_energy = 0.5
+omni_range = 0.35
+omni_attenuation = 3.5
+
+[node name="AirframeFillLight" type="OmniLight3D" parent="Visuals"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0.5)
+light_color = Color(0.95, 0.98, 1.0, 1)
+light_energy = 0.85
+omni_range = 9.0
+omni_attenuation = 1.0
+
+[node name="Turret" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.74, -2.82)
+script = ExtResource("2_turret")
+
+[node name="YawPivot" type="Node3D" parent="Turret"]
+
+[node name="PitchPivot" type="Node3D" parent="Turret/YawPivot"]
+
+[node name="GunMesh" type="MeshInstance3D" parent="Turret/YawPivot/PitchPivot"]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, -0.65)
+mesh = SubResource("CylinderMesh_Gun")
+
+[node name="MuzzleLeft" type="Marker3D" parent="Turret/YawPivot/PitchPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 0, -1.35)
+
+[node name="MuzzleRight" type="Marker3D" parent="Turret/YawPivot/PitchPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.15, 0, -1.35)
+
+[node name="PlayerCamera" type="Camera3D" parent="." node_paths=PackedStringArray("target_node")]
+transform = Transform3D(1, 0, 0, 0, 0.650774, 0.759271, 0, -0.759271, 0.650774, 0, 28, 24)
+fov = 50.0
+current = true
+script = ExtResource("3_camera")
+target_node = NodePath("..")
+
+[node name="Weapons" type="Node" parent="." node_paths=PackedStringArray("player_helicopter")]
+script = ExtResource("4_weapons")
+player_helicopter = NodePath("..")
+
+[node name="Salvo" type="Node" parent="." node_paths=PackedStringArray("player_helicopter")]
+script = ExtResource("5_salvo")
+player_helicopter = NodePath("..")
+
+[node name="Countermeasures" type="Node" parent="." node_paths=PackedStringArray("player_helicopter")]
+script = ExtResource("6_flares")
+player_helicopter = NodePath("..")
+
+[node name="RunProgression" type="Node" parent="." node_paths=PackedStringArray("player_helicopter")]
+script = ExtResource("7_progression")
+player_helicopter = NodePath("..")
+
+[node name="DevastationSuper" type="Node" parent="." node_paths=PackedStringArray("player_helicopter")]
+script = ExtResource("8_super")
+player_helicopter = NodePath("..")
+
+[node name="MagnetSensor" type="Area3D" parent="." groups=["player_magnet"]]
+collision_layer = 0
+collision_mask = 16
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MagnetSensor"]
+shape = SubResource("SphereShape3D_magnet")
+
+[node name="SubsystemManager" type="Node" parent="." node_paths=PackedStringArray("player_helicopter")]
+script = ExtResource("10_subsystems")
+player_helicopter = NodePath("..")

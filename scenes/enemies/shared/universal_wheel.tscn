@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/tank_game_ready/universal_wheel_mesh.res" id="1_27f71"]
+
+[node name="UniversalWheel" type="MeshInstance3D" unique_id=1601780390]
+mesh = ExtResource("1_27f71")

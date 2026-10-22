@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/enemies/ground/tank_chassis_controller.gd" id="1_chassis"]
+[ext_resource type="Resource" path="res://src/enemies/ground/config/azure_siege_tank_config.tres" id="2_cfg"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/enemy_tanks/azure_siege_tank/body_mesh.res" id="3_body"]
+[ext_resource type="Script" path="res://src/enemies/ground/articulated_tank_turret.gd" id="4_turret"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/enemy_tanks/azure_siege_tank/turret_mesh.res" id="5_turret_m"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/enemy_tanks/azure_siege_tank/gun_mesh.res" id="6_gun_m"]
+
+[node name="AzureSiegeTankRig" type="Node3D"]
+
+[node name="Visuals" type="Node3D" parent="."]
+script = ExtResource("1_chassis")
+config = ExtResource("2_cfg")
+
+[node name="ChassisMotion" type="Node3D" parent="Visuals"]
+
+[node name="HullModel" type="Node3D" parent="Visuals/ChassisMotion"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3772, -1.5635)
+
+[node name="Tank_Body" type="MeshInstance3D" parent="Visuals/ChassisMotion/HullModel"]
+transform = Transform3D(0, 0, 9.2, 0, 9.2, 0, -9.2, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_body")
+
+[node name="Turret" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2402, 1.9205)
+script = ExtResource("4_turret")
+config = ExtResource("2_cfg")
+
+[node name="MountModel" type="Node3D" parent="Turret"]
+
+[node name="Tank_Turret" type="MeshInstance3D" parent="Turret/MountModel"]
+transform = Transform3D(0, 0, 9.2, 0, 9.2, 0, -9.2, 0, 0, 0, 0, 0)
+mesh = ExtResource("5_turret_m")
+
+[node name="GunPitch" type="Node3D" parent="Turret"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.874, -1.0028)
+
+[node name="Recoil" type="Node3D" parent="Turret/GunPitch"]
+
+[node name="GunModel" type="Node3D" parent="Turret/GunPitch/Recoil"]
+
+[node name="Tank_Gun" type="MeshInstance3D" parent="Turret/GunPitch/Recoil/GunModel"]
+transform = Transform3D(0, 0, 9.2, 0, 9.2, 0, -9.2, 0, 0, 0, 0, 0)
+mesh = ExtResource("6_gun_m")
+
+[node name="Muzzle" type="Marker3D" parent="Turret/GunPitch/Recoil"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1702, -6.8862)

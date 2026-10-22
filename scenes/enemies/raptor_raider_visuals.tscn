@@ -1,0 +1,75 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/enemies/ground/multi_axle_wheel_controller.gd" id="1_yo8v8"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/new ground/Raptor_Raider/raptor_chassis_mesh.res" id="2_6ftuy"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/tank_game_ready/universal_wheel_mesh.res" id="3_lwefl"]
+[ext_resource type="Script" path="res://src/enemies/ground/raptor_cannon_turret.gd" id="4_2q6qn"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/new ground/Raptor_Raider/raptor_turret_base_mesh.res" id="5_spjg5"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/new ground/Raptor_Raider/raptor_turret_gun_mesh.res" id="6_4hos2"]
+
+[node name="RaptorRaiderRig" type="Node3D" unique_id=641300525]
+
+[node name="Visuals" type="Node3D" parent="." unique_id=924375532]
+script = ExtResource("1_yo8v8")
+
+[node name="HullModel" type="Node3D" parent="Visuals" unique_id=723530304]
+
+[node name="Raptor_Chassis" type="MeshInstance3D" parent="Visuals/HullModel" unique_id=1231861350]
+transform = Transform3D(0, 0, -6, 0, 6, 0, 6, 0, 0, 0, 1.02, 0)
+mesh = ExtResource("2_6ftuy")
+
+[node name="Wheels" type="Node3D" parent="Visuals" unique_id=953717405]
+
+[node name="FrontLeftSteer" type="Node3D" parent="Visuals/Wheels" unique_id=1990252177]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.71, 0.74, -1.57)
+
+[node name="FrontLeftSpin" type="Node3D" parent="Visuals/Wheels/FrontLeftSteer" unique_id=486358448]
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/FrontLeftSteer/FrontLeftSpin" unique_id=909902966]
+transform = Transform3D(0, 0, 1.35, 0, 1.35, 0, -1.35, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_lwefl")
+
+[node name="FrontRightSteer" type="Node3D" parent="Visuals/Wheels" unique_id=1621031396]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.71, 0.74, -1.57)
+
+[node name="FrontRightSpin" type="Node3D" parent="Visuals/Wheels/FrontRightSteer" unique_id=300058860]
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/FrontRightSteer/FrontRightSpin" unique_id=1131195532]
+transform = Transform3D(0, 0, -1.35, 0, 1.35, 0, 1.35, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_lwefl")
+
+[node name="RearLeftSpin" type="Node3D" parent="Visuals/Wheels" unique_id=2024232334]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.64, 0.76, 1.68)
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/RearLeftSpin" unique_id=1703324194]
+transform = Transform3D(0, 0, 1.35, 0, 1.35, 0, -1.35, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_lwefl")
+
+[node name="RearRightSpin" type="Node3D" parent="Visuals/Wheels" unique_id=1479582257]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.64, 0.76, 1.68)
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/RearRightSpin" unique_id=56873981]
+transform = Transform3D(0, 0, -1.35, 0, 1.35, 0, 1.35, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_lwefl")
+
+[node name="Turret" type="Node3D" parent="." unique_id=2010562514]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.33, 1.29)
+script = ExtResource("4_2q6qn")
+
+[node name="MountModel" type="Node3D" parent="Turret" unique_id=880857271]
+
+[node name="Raptor_Turret_Base" type="MeshInstance3D" parent="Turret/MountModel" unique_id=440185989]
+transform = Transform3D(0, 0, -6, 0, 6, 0, 6, 0, 0, 0, 0, 0)
+mesh = ExtResource("5_spjg5")
+
+[node name="GunPitch" type="Node3D" parent="Turret" unique_id=1693775586]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.91, 0.126)
+
+[node name="Recoil" type="Node3D" parent="Turret/GunPitch" unique_id=2112411720]
+
+[node name="GunModel" type="MeshInstance3D" parent="Turret/GunPitch/Recoil" unique_id=1194930465]
+transform = Transform3D(0, 0, -6, 0, 6, 0, 6, 0, 0, 0, -0.91, -0.126)
+mesh = ExtResource("6_4hos2")
+
+[node name="Muzzle" type="Marker3D" parent="Turret/GunPitch/Recoil" unique_id=1619916117]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -1.38)

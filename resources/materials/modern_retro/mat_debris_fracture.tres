@@ -1,0 +1,10 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/environment/retro_textures/debris_fracture_128.png" id="1_b3f73"]
+
+[resource]
+resource_name = "mat_debris_fracture"
+albedo_texture = ExtResource("1_b3f73")
+metallic_specular = 0.08
+roughness = 0.98
+texture_filter = 2

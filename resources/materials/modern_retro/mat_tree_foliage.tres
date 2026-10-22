@@ -1,0 +1,15 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/environment/retro_textures/tree_foliage_128.png" id="1_gmt1w"]
+
+[resource]
+resource_name = "mat_tree_foliage"
+transparency = 2
+alpha_scissor_threshold = 0.5
+alpha_antialiasing_mode = 0
+cull_mode = 2
+albedo_texture = ExtResource("1_gmt1w")
+metallic_specular = 0.08
+roughness = 0.95
+texture_filter = 2
+texture_repeat = false

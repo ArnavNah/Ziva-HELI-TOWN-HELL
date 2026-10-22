@@ -1,0 +1,17 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/Enemy/new ground/Raptor_Raider/textures/Image_0.jpg" id="1_rs206"]
+[ext_resource type="Texture2D" path="res://assets/Enemy/new ground/Raptor_Raider/textures/Image_1.jpg" id="2_sk7l4"]
+[ext_resource type="Texture2D" path="res://assets/Enemy/new ground/Raptor_Raider/textures/Image_2.jpg" id="3_dp5oh"]
+
+[resource]
+resource_name = "Raptor_PBR"
+cull_mode = 2
+albedo_texture = ExtResource("1_rs206")
+metallic = 1.0
+metallic_texture = ExtResource("2_sk7l4")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("2_sk7l4")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("3_dp5oh")

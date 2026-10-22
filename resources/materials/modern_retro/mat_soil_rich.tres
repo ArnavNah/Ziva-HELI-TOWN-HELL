@@ -1,0 +1,10 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/environment/retro_textures/soil_rich_128.png" id="1_udfr1"]
+
+[resource]
+resource_name = "mat_soil_rich"
+albedo_texture = ExtResource("1_udfr1")
+metallic_specular = 0.08
+roughness = 0.98
+texture_filter = 2

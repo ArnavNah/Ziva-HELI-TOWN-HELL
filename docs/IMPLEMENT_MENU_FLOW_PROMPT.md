@@ -1,0 +1,171 @@
+
+
+
+
+Work in `C:/Users/Prime 3/Documents/ziva-heli-town-helll`. Repair and complete the existing Godot menu system, including navigation, loading animation, settings, hangar purchases, pause, upgrades, boss decisions, and results. Implement the changes and verify the finished flows. Do not stop at a redesign proposal or connect buttons to empty handlers.
+
+Keep the game's existing pixel-art military presentation: chunky readable buttons, restrained teal/olive/amber colors, helicopter imagery, and the Nuclear Strike/Megabonk-inspired identity. Use simple player-facing language. The priority is reliable behavior and readable screens.
+
+### 1. Inspect the current implementation before editing
+
+Read applicable project instructions and recheck these files because they may have changed since this audit:
+
+- `project.godot`, `scenes/ui/main_menu.tscn`, `scenes/ui/vehicle_selection_menu.tscn`, `scenes/ui/loading_screen.tscn`.
+- All scripts in `src/ui/menus/`, especially main_menu, vehicle_selection_menu, loading_screen, hangar_menu, settings_menu, pause_menu, and debrief_screen.
+- `scenes/main_game.gd`, `scenes/main_game.tscn`, `src/ui/upgrade_dialog.gd`, `src/ui/boss_decision_dialog.gd`.
+- `autoload/game_manager.gd`, `profile_manager.gd`, `input_manager.gd`, `audio_manager.gd`, `combat_director.gd`, `shader_manager.gd`.
+- `src/player/`, `src/loot/`, `src/effects/fx_manager.gd`, `src/gameplay/endless_overdrive.gd`, `src/world/city_generator.gd`, and the shared gameplay constants.
+- Existing menu, loading, vehicle-selection, score, death-flow, and progression tests.
+
+The project currently boots to the main menu and uses Godot 4.7 / GL Compatibility. Work within the installed engine and renderer. Inventory every interactive control, including dynamically created buttons, sliders, dropdowns, tabs, upgrade cards, dialogs, and debug controls. For each, record its handler, intended result, return destination, enabled/disabled conditions, persistence, and verification result. Signal connection alone does not prove a feature works.
+
+### 2. Address the problems found in this review
+
+Reproduce or revalidate each finding before changing it:
+
+1. `PauseMenu.toggle_pause()` directly flips `SceneTree.paused`, without updating `GameManager.current_state`. Its pause handler has no restriction to a live run. This can unpause an upgrade/results/boss modal or leave state and simulation disagreeing. Resume has the same ownership problem.
+2. `SettingsMenu._on_close_pressed()` just hides the screen despite the label `SAVE & CLOSE`. AudioManager settings and GameManager display settings have no disk persistence in the reviewed code. FPS selection changes `Engine.max_fps` without synchronizing `GameManager.target_fps`.
+3. Searches of the runtime scripts found `screen_shake_level` and `reduce_flashes` being set by settings but no gameplay consumers of those fields. Camera trauma shake is applied independently. These controls need actual effects as well as persistence.
+4. Loading has threaded resource loading, animation, and an automatic transition, but also displays `PRESS SPACE / LMB TO LAUNCH`. Completion immediately swaps the scene, so there is no useful stable manual-ready stage. Choose one consistent behavior.
+5. `start_loading()` ignores the request error code; `_process()` lacks explicit failed/invalid load recovery. Scene-change return codes are not checked. Repeated Deploy calls can create multiple loading overlays because there is no transition guard.
+6. The main menu preloads the gameplay PackedScene. Loading and selection previews also bring in player resources. Audit this dependency chain: loading costs can occur before the loading screen becomes visible.
+7. Threaded resource completion does not cover synchronous city generation in `CityGenerator._ready()` or scene initialization. The current fade uses a fixed short delay after the swap; readiness is not explicitly acknowledged by the gameplay scene. Measure possible stalls instead of claiming threaded loading solves them.
+8. Debrief `Return to Hangar` and `Main Menu` both open the same menu without an explicit Hangar destination. Selection's `Upgrade Hangar` hides selection and opens Hangar without remembering its caller or refreshing through a shared entry function.
+9. Debrief Retry calls `start_new_run()` before reloading, and MainGame calls it again during initialization. Pause Restart uses a different direct reload route. Unify these transitions and initialize each run once.
+10. ProfileManager purchases save ranks and equipped mods, but searches of the reviewed runtime scripts found no reads of `hangar_ranks` or `perk_ranks` outside the profile/menu. PlayerWeapons initializes `active_mod` to NONE, with no reviewed connection to ProfileManager's equipped mods. Some mod effect branches exist, but purchasing/equipping is not enough unless the next sortie uses them.
+11. Aircraft statistics are duplicated. Selection shows cruise speeds 36.0/41.4/31.7 m/s, while loading displays 72/83/64. Loading also claims Super uses E, while InputManager binds V/G and E is strafe. Some airframe-specific weapon/super descriptions need checking against actual capabilities.
+12. UpgradeDialog does not reset/hide unavailable card buttons for short offer lists, and hides before validating/applying a selection. Guard against invalid and repeated choices. Profile run recording and settlement also need once-per-run protection; repeated callbacks must not pay twice.
+13. Several layouts use fixed offsets and small fonts. Verify controls/manual/debrief overflow at different sizes. Aircraft selection custom navigation uses `_unhandled_key_input`, which does not handle gamepad events; test focused buttons and controller navigation together.
+14. Existing render_menu_verification uses a hardcoded output directory and changes the profile wallet in memory. Loading tests mainly check nodes, animation properties, and scene arrival. They do not prove every control, failed-load recovery, saved settings, or absence of input leaks.
+
+Do not describe runtime-only suspicions as reproduced defects until tested.
+
+### 3. Implement one predictable navigation flow
+
+Required player journeys:
+
+| Starting screen | Action | Expected destination/result |
+|---|---|---|
+| Main menu | Play / Select Airframe | Aircraft selection, previous selection retained |
+| Main menu | Hangar & Armory | Hangar, current wallet and equipment refreshed |
+| Main menu | Settings / Flight Manual | Correct modal; Back returns to main menu |
+| Main menu | Exit | Quit confirmation; Cancel returns focus to Exit |
+| Aircraft selection | Previous / Next / aircraft card | Select exactly one valid aircraft and update preview/stats |
+| Aircraft selection | Upgrade Hangar | Hangar; Back returns to the same aircraft selection |
+| Aircraft selection | Back | Main menu |
+| Aircraft selection | Deploy | One loading transition using the selected aircraft |
+| Loading | Success | Ready gameplay, then reveal and enable control |
+| Loading | Failure | Clear explanation with Retry and Back |
+| Gameplay | Pause | Pause menu; simulation stops |
+| Pause | Resume | Same live run resumes |
+| Pause | Settings | Settings above pause; Back returns to pause, still paused |
+| Pause | Restart | Confirmation, then loading and a fresh run with the same aircraft |
+| Pause | Main Menu / Quit | Confirmation with a clear explanation of unsaved run progress |
+| Upgrade choice | Choose a card | Apply once; next pending choice or resume |
+| Boss decision | Extract | Settle once and show results |
+| Boss decision | Continue | Activate Endless Overdrive once and return to active play |
+| Results | Retry | Loading, same aircraft, new run initialized once |
+| Results | Return to Hangar | Main-menu scene with Hangar actually open |
+| Results | Main Menu | Main menu without another overlay |
+| Results | Copy Scorecard | Copy actual report; brief success/failure feedback |
+
+Use explicit screen destinations and return context, rather than scattered visibility assignments. A small shared flow controller is appropriate; avoid an unnecessarily large framework. Keep persistent profile data, settings, temporary run data, and UI navigation separate. Do not add unsupported multiplayer/store/continue-save buttons. The Academy button is currently hidden: keep it hidden unless its training flow is deliberately completed and verified.
+
+### 4. Fix state ownership and input
+
+Use one authoritative gameplay state transition path. Opening Settings must not reset the run. Pausing and resuming must agree with GameManager, CombatDirector, player input, audio, and the scene tree. Preserve the appropriate gameplay state when returning from a permitted pause.
+
+Give only the topmost screen or modal interactive focus. Underlying screens must not receive clicks, keyboard shortcuts, controller actions, or global input polling. Escape/Back closes one layer at a time. It must never bypass an upgrade, boss decision, loading state, or results screen and resume combat. Preserve mandatory choices rather than silently discarding them.
+
+Support mouse, Tab/Shift+Tab, directional navigation, Enter/Space as appropriate, and controller confirm/cancel/pause. Show clear keyboard/controller focus. Restore focus to the initiating control when closing a modal. Ensure hidden or queued-for-deletion controls cannot retain focus. After rebuilding a purchase card, focus a valid replacement and preserve scroll position.
+
+Use a single-action guard for Deploy, Retry, Restart, Extract, Continue, purchases, and upgrade selection. Ignore held-key repeat for destructive/navigation actions. Gate gameplay's `Input.is_action_pressed()` polling too; consuming a UI event alone does not clear held input. The launch/confirm click must not also fire, climb, or dash on the first gameplay frame. Correct mouse mode on every transition.
+
+### 5. Complete the loading animation and lifecycle
+
+Use automatic launch when the destination is actually ready. Remove misleading press-to-launch instructions. Keep a lightweight animated radar/rotor or progress accent, a simple status label, and an optional tip. Keep body text readable. Decorative briefing text must not claim to be real engine telemetry.
+
+Show the overlay before expensive loading. Audit heavy preloads and use scene paths where appropriate. Give the overlay a chance to render before beginning expensive main-thread work. Only retrieve a threaded resource after a loaded status; handle invalid paths, failed requests, failed resources, and failed scene changes. A missing preview should fall back to a simple illustration without blocking loading.
+
+Model the phases explicitly: request accepted, resources loading, world preparing, scene ready, reveal, gameplay active. Track actual available progress; use an animated indeterminate indicator for work without reliable progress. Never show 100% or Ready before the player, camera, HUD, collisions, and world are usable. Displayed progress should not move backward. Do not add a long fake delay to disguise freezes; a brief anti-flicker minimum may be configurable.
+
+Keep the overlay alive across the scene change and remove it exactly once. Gameplay should signal readiness. Start the run timer, enemies, damage, and player controls only after the reveal/activation handoff so loading does not consume the opening grace period. Let necessary initialization run without allowing combat. Avoid waiting for a signal on a node that cannot process because the tree is paused.
+
+Measure main-thread world preparation. If it freezes animation, incrementally build safe batches across frames. Do not mutate the active scene tree from a worker thread. Do not claim a continuously animated screen based on a headless test.
+
+For failures, keep responsive Retry and Back buttons. Retry must create a clean attempt; Back must invalidate stale completion callbacks. If a threaded resource request cannot be cancelled, disregard its late result safely. Prevent multiple scene swaps and orphaned overlays. Use the same transition service for Deploy, Retry, and Restart.
+
+### 6. Make settings real and persistent
+
+Support every existing control: window mode, FPS limit, VSync, master/SFX/music levels, screen shake, reduced flashes, FPS telemetry, and controls-reference tabs. Use validated defaults and one settings owner with saved data under user://. Load before relevant gameplay/UI initialization. Keep existing profiles compatible and preserve credits, ranks, records, and equipment.
+
+Use immediate preview with automatic saving, and label the exit button `Done` or `Back`; do not retain `Save & Close` unless it actually performs a save. Escape must have the same persistence behavior as closing normally. Update controls without emitting unwanted change sounds or repeatedly writing while populating them. Coalesce slider writes. Add a clearly scoped Restore Settings Defaults action that does not reset progression.
+
+Synchronize FPS with GameManager and the engine. Implement window mode labels accurately: a borderless desktop option should size/place on the intended display, and returning to windowed should restore a usable window. Use a timed Keep/Revert confirmation for disruptive display-mode changes, with failure recovery.
+
+Wire shake intensity to actual camera shake. Wire reduced flashes to explosion/muzzle/post-process effects as applicable, while retaining readable combat cues. Verify zero audio volume truly mutes the appropriate category, including looping sounds. Read current settings consistently from both main-menu and paused settings screens.
+
+Generate controls help from the active input configuration or a shared display mapping. Remove stale hardcoded tips such as E for Super. Keep the existing controls page a reference unless full remapping is implemented, including conflict handling, defaults, persistence, and hints.
+
+### 7. Make Hangar buttons affect the game
+
+Complete all four tabs: Systems, Perks, Weapon Mods, and Dossier. Refresh wallets and selected equipment when opening from either main menu or selection, after purchases, and after completing a run.
+
+For every one of the eight systems, eight perks, and each selectable weapon mod, trace the complete path: displayed description -> purchase/equip validation -> persistent value -> next-run initialization -> measurable gameplay effect. Use existing project balance data where available. If descriptions and existing mechanics disagree, define and document a single consistent behavior; never claim a benefit the implementation does not provide.
+
+Apply permanent bonuses once to fresh baseline stats, after aircraft selection and before gameplay starts. Separate them from temporary run upgrades so retries do not multiply bonuses repeatedly. Initialize weapon mods from the profile after weapon state creation. Test actual mod effects, including variants whose enum exists but whose effect may be incomplete.
+
+Prevent negative balances, invalid IDs, ranks above five, and duplicate transactions. Show affordable, insufficient-funds, maximum-rank, and equipped states. Do not charge credits when an operation fails. Report save failures instead of pretending persistence succeeded. Use safe writes and validate loaded profile types/ranges. Do not overwrite a corrupted real save silently.
+
+Share authoritative aircraft and upgrade data between selection, loading, hangar previews, and runtime. Display actual stats and equipment. Do not invent unique airframe supers simply to match decorative text. Preserve the existing game balance except for changes required to make advertised features function.
+
+### 8. Finish run-ending and in-run menus
+
+Settlement and recording must be idempotent: the same run can pay and enter history only once, even if death/extraction callbacks repeat. Use a stable run identity or equivalent guard across the settlement/profile boundary. Viewing results repeatedly must not award credits again.
+
+Show accurate result values and distinguish wave reached from waves cleared. Keep Copy Scorecard safe if the screen closes during its feedback timer. Button labels must match destinations. Keep existing death animation and extraction behavior working.
+
+Upgrade cards must validate that the selected offer is current, apply exactly once, hide/disable missing slots, and handle queued level-ups. Show a short benefit description rather than only an internal name. Boss decisions must not award the boss reward repeatedly or start Endless Overdrive twice. Test simultaneous level-up/boss/death events and define which modal wins without losing pending choices incorrectly.
+
+Move experimental shader controls out of the normal pause flow into a clearly identified developer section, or make them accurate supported settings. A changing ON/OFF label without a visual effect is not a completed button.
+
+### 9. Polish layout and feedback
+
+Use shared styling and clear normal/hover/focus/pressed/disabled/busy states. Keep animations brief and interruptible. Do not play selection/purchase sounds just because UI values are being initialized. Pause hidden 3D previews when not needed. Avoid stacked tweens when rapidly changing aircraft.
+
+Use responsive containers, appropriate wrapping, and scrolling for long content. Test at 1280x720, 1920x1080, a smaller 16:9 window, and an ultrawide aspect ratio. If a minimum window size is necessary, enforce and document it. Check text clipping, button hitboxes, dropdown placement, safe margins, and controller focus in scroll panels. Keep important labels readable instead of shrinking all text to fit. Do not bake clickable labels into background images.
+
+### 10. Verify behavior, not just appearances
+
+Run tests against an isolated test profile/settings location. Do not grant test credits, buy items, clear records, or overwrite the user's real profile. Inspect existing test side effects before using them. Output artifacts under this project rather than an old hardcoded personal directory.
+
+Required automated and rendered checks:
+
+1. Cold boot -> main menu -> selection -> Deploy -> one loading overlay -> correct aircraft -> active run.
+2. All three aircraft; repeated selection and Back; selection -> Hangar -> Back retains the selection.
+3. Rapid repeated Deploy/Retry/Restart input produces only one transition and one run initialization.
+4. Pause -> Settings -> Back remains paused; Resume returns to active play. Escape/Start during upgrade, boss choice, and results cannot unpause combat.
+5. Retry/Restart reset transient state, enemies, projectiles, progression, and timers while preserving permanent equipment/settings exactly once.
+6. Invalid scene path, failed resource, and failed initialization show a usable failure screen; Retry and Back recover without a late unwanted swap.
+7. Actual loading animation during resource load and procedural world preparation, with transition timing/frame-stall evidence. Test both warm and cold loads where practical.
+8. Every existing settings control affects the actual game; values survive closing and reopening the application. Verify display revert and restore-defaults behavior.
+9. Affordable/insufficient/max-rank purchase cases, each permanent-effect consumer, every mod choice, save/load, and multiple retries without bonus stacking.
+10. Death/extraction results, repeated completion events, scorecard copy, Return to Hangar, Main Menu, and confirmations with correct Cancel focus.
+11. One/two/three upgrade offers, repeated selections, queued level-ups, boss continuation/extraction, and conflicting event ordering.
+12. Mouse, keyboard, and controller events through the real UI routing, including hover hitboxes, focus, held keys, and no gameplay input leakage. Directly calling handlers is useful for unit tests but insufficient for navigation acceptance.
+13. Repeat the complete menu/run/results loop at least five times; no stale modal, duplicate signals, orphan loader, extra player, or unexpected profile payout.
+14. Visual checks at the listed sizes, including all tabs, loading/error, pause/settings, upgrade/boss, and results screens. Inspect runtime logs; a zero exit code alone is not a clean pass.
+
+Update outdated tests to match intentional new behavior, but do not weaken them just to get green results. Report headless logic tests separately from rendered checks and physical controller checks. Do not claim unperformed verification.
+
+### 11. Required delivery
+
+Deliver the implementation, not just this plan. Provide a short before/after explanation, the completed per-control checklist, changed files, reproducible test commands, actual results, screenshots of the important screens, and any remaining limitations. Fix transition/state and persistence defects first, gameplay connections next, then presentation and final acceptance. Keep unrelated art, enemy AI, and map redesign outside this task.
+
+## Official implementation references
+
+Godot's background-loading documentation explains threaded status checking and why retrieving too early can block: https://docs.godotengine.org/en/stable/tutorials/io/background_loading.html
+
+Godot's input documentation explains GUI consumption, event routing, and the keyboard-only callback distinction: https://docs.godotengine.org/en/stable/tutorials/inputs/inputevent.html
+
+Godot's pause documentation explains process modes for pause-aware UI: https://docs.godotengine.org/en/stable/tutorials/scripting/pausing_games.html

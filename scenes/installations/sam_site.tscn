@@ -1,0 +1,49 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://src/installations/sam_site.gd" id="1_sam"]
+[ext_resource type="Script" path="res://src/combat/damage_receiver.gd" id="2_rec"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_Base"]
+size = Vector3(8.0, 3.0, 8.0)
+
+[sub_resource type="StandardMaterial3D" id="Mat_SAM"]
+albedo_color = Color(0.28, 0.32, 0.25, 1)
+metallic = 0.5
+roughness = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_Base"]
+material = SubResource("Mat_SAM")
+size = Vector3(8.0, 3.0, 8.0)
+
+[sub_resource type="BoxMesh" id="BoxMesh_Launcher"]
+material = SubResource("Mat_SAM")
+size = Vector3(3.0, 2.0, 5.0)
+
+[node name="SAMSite" type="StaticBody3D"]
+collision_layer = 2
+collision_mask = 5
+script = ExtResource("1_sam")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("BoxShape3D_Base")
+
+[node name="BaseMesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("BoxMesh_Base")
+
+[node name="Turret" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+
+[node name="LauncherMesh" type="MeshInstance3D" parent="Turret"]
+transform = Transform3D(1, 0, 0, 0, 0.939693, 0.34202, 0, -0.34202, 0.939693, 0, 1.0, 0)
+mesh = SubResource("BoxMesh_Launcher")
+
+[node name="DamageReceiver" type="Node" parent="."]
+script = ExtResource("2_rec")
+
+[node name="LockLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.0, 0)
+billboard = 1
+font_size = 32
+text = "SEARCH"

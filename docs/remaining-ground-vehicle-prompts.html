@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ZIVA · 10 remaining ground vehicle prompts</title>
+<style>
+:root{color-scheme:light;--paper:#f4f2e9;--card:#fffef9;--ink:#243027;--muted:#626c60;--olive:#4c613a;--line:#d7dbcd;--amber:#d99f3d}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}a{color:var(--olive);text-underline-offset:4px}button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:9px 14px;font-size:13px;font-weight:650}button:hover{background:#eaf0df}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--amber);outline-offset:4px}.primary{background:var(--olive);color:white;border-color:var(--olive)}.primary:hover{background:#35492c}.wrap{max-width:1320px;margin:auto;padding:32px}.masthead{display:flex;justify-content:space-between;gap:18px;border-bottom:1px solid var(--line);padding-bottom:20px}.brand{font-weight:850;letter-spacing:.1em}.edition,.eyebrow,.type,.number{font:12px/1.5 ui-monospace,monospace}.edition{color:var(--muted);text-align:right}.eyebrow{color:var(--olive);letter-spacing:.15em;text-transform:uppercase}header{padding:42px 0 28px}h1{font-size:clamp(36px,5vw,64px);line-height:1.08;letter-spacing:-.05em;max-width:850px;margin:12px 0 20px}.lead{max-width:800px;font-size:18px;color:var(--muted)}.brief{background:#eaf0df;border-left:4px solid var(--olive);padding:20px 24px;border-radius:5px}.brief p{margin:0}.brief p+p{margin-top:10px}.layout{display:grid;grid-template-columns:225px minmax(0,1fr);gap:32px;margin-top:28px}nav{align-self:start;position:sticky;top:24px}nav p{margin:0 0 12px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.1em}nav a{display:block;padding:7px 0;font-size:14px;text-decoration:none}nav a:hover{text-decoration:underline}main{min-width:0}.toolbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:0 0 20px}.toolbar label{font-size:13px;display:flex;gap:8px;align-items:center}.toolbar input{accent-color:var(--olive)}section,article{scroll-margin-top:24px}details,article{border:1px solid var(--line);border-radius:8px;background:var(--card);margin-bottom:20px}details{padding:18px 22px}summary{cursor:pointer;font-weight:750}summary small{font-weight:400;color:var(--muted);margin-left:8px}.shared-copy{margin-top:14px}article{padding:28px}.card-head{display:flex;gap:16px;align-items:start}.number{color:var(--olive);font-size:21px;border-bottom:3px solid var(--amber);padding-bottom:5px}.card-title{flex:1;min-width:0}h2{margin:0 0 6px;font-size:25px;line-height:1.25;letter-spacing:-.025em}.type{color:var(--muted)}.note{font-size:13px;color:var(--muted);border-left:3px solid var(--amber);padding-left:12px;margin:16px 0}.prompt{font:14px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:20px 0 0}.card-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:22px}.card-actions span{font-size:12px;color:var(--muted)}footer{border-top:1px solid var(--line);padding:24px 0;margin-top:24px;color:var(--muted);font-size:13px}#status{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);background:var(--ink);color:white;border-radius:6px;padding:12px 20px;box-shadow:0 6px 25px #0002;z-index:5}#status:empty{display:none}
+@media(max-width:850px){.wrap{padding:22px 18px}.layout{grid-template-columns:1fr;gap:18px}nav{position:static;display:flex;flex-wrap:wrap;gap:4px 16px}nav p{width:100%;margin-bottom:0}nav a{font-size:13px}article{padding:22px}.masthead{font-size:13px}.edition{font-size:10px}.card-head{gap:12px}h2{font-size:22px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{body{background:white}.wrap{max-width:none;padding:0}nav,.toolbar,button,#status{display:none!important}.layout{display:block}header{padding:20px 0}h1{font-size:34pt}.lead{font-size:12pt}article{break-before:page;padding:18px;border-color:#bbb}.prompt{font-size:10pt;line-height:1.5}details{border-color:#bbb}.brief{background:#f0f2eb}.masthead{font-size:10pt}footer{font-size:10pt}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="masthead"><div class="brand">ZIVA / HELI TOWN HELLL</div><div class="edition">DETAILED ASSET PROMPT PACK<br>GROUND VEHICLES · 01–10</div></div>
+<header><div class="eyebrow">The ten remaining ground vehicles</div><h1>Small polygons.<br>Big personalities.</h1><p class="lead">Detailed generation prompts for a chunky, exaggerated arcade enemy collection inspired by Megabonk. Broad armor panels, oversized weapons, matte colors, and silhouettes that read from the helicopter camera.</p></header>
+<aside class="brief"><p><strong>How to use:</strong> “Copy complete prompt” combines the shared style, the selected vehicle, and the negative prompt. Enable the 3D requirements when sending the prompt to a modeling agent or 3D generator.</p><p><strong>Shared wheels:</strong> Generate wheel-free bodies for the Technical, Rocket Buggy, and Mortar Crawler. Attach instances of <code>scenes/enemies/shared/universal_wheel.tscn</code> during assembly. Tracked units use enclosed running gear.</p></aside>
+<div class="layout">
+<nav aria-label="Prompt navigation"><p>Prompt index</p><a href="#shared">Shared style &amp; requirements</a><a href="#technical_truck">01 · Raider Technical</a><a href="#rocket_buggy">02 · Rocket Buggy</a><a href="#mortar_crawler">03 · Mortar Crawler</a><a href="#sam_launcher">04 · SAM Launcher</a><a href="#siege_tank">05 · Siege Tank</a><a href="#flak_tank">06 · Flak Tank</a><a href="#missile_carrier">07 · Missile Carrier</a><a href="#gatling_heavy">08 · Gatling Heavy</a><a href="#flame_tank">09 · Flame Tank</a><a href="#rail_crawler">10 · Rail Crawler</a></nav>
+<main>
+<div class="toolbar"><button class="primary" id="copy-all" type="button">Copy all 10 complete prompts</button><button id="print" type="button">Print / Save PDF</button><label><input id="include-export" type="checkbox">Include 3D delivery requirements</label></div>
+<section id="shared" aria-label="Shared prompt sections">
+<details open><summary>Shared style prompt <small>included with every complete prompt</small></summary><pre class="prompt" id="style-prompt">Create an original low-poly enemy vehicle for a colorful arcade helicopter
+combat game, with a playful, exaggerated aesthetic inspired by Megabonk.
+
+ART DIRECTION:
+Chunky proportions, bold silhouette, broad flat surfaces, visible polygon
+facets, simple construction, slightly toy-like military machinery.
+Make the vehicle threatening but a little absurd through oversized weapons
+and squat proportions.
+
+Prioritize readability from an elevated gameplay camera. The roof layout,
+weapon shape, and overall silhouette must identify the enemy at a distance.
+Use a few large recognizable shapes instead of many small details.
+
+GEOMETRY:
+Genuinely low-poly geometry with flat shading. Use approximately 6–10 sides
+for small cylinders. Use bevels sparingly, only where they improve the
+silhouette. Armor panels should be thick, angular, and deliberately simple.
+Use solid geometry for important features.
+
+MATERIALS:
+Matte painted armor, charcoal mechanical parts, dark opaque windows,
+and one strong accent color. Broad color blocks with minimal surface noise.
+Simple painted vents and panel divisions. Consistent material style across
+the entire vehicle collection.
+
+PRESENTATION:
+One vehicle only, centered, fully visible, isolated against a plain light-gray
+background. Front three-quarter view, viewed slightly from above, showing
+the front, one side, roof, and weapon clearly. Soft neutral lighting.
+No environment, base, text, labels, interface, or dramatic effects.</pre><button class="shared-copy" data-copy="style-prompt" type="button">Copy shared style</button></details>
+<details><summary>Negative prompt <small>included with every complete prompt</small></summary><pre class="prompt" id="negative-prompt">Photorealistic, high-poly, dense bevels, smooth subdivision surfaces,
+micro-details, realistic military simulation, intricate machinery,
+individual bolts, individual track links, complex suspension,
+scratched noisy textures, heavy weathering, rust everywhere,
+chrome, glossy plastic, transparent glass, thin fragile parts,
+tiny unreadable markings, text, logos, watermarks, crew,
+background scenery, diorama base, smoke, fire, muzzle flashes,
+motion blur, depth of field, cropped vehicle, multiple vehicles,
+exploded view, disconnected floating parts, fused weapon and hull,
+asymmetric accidental geometry, warped barrels, blocked muzzle openings.</pre><button class="shared-copy" data-copy="negative-prompt" type="button">Copy negative prompt</button></details>
+<details><summary>3D delivery requirements <small>optional when copying</small></summary><pre class="prompt" id="export-prompt">Deliver a modular game asset with separate logical moving parts:
+Hull, TurretBody, GunCradle, and Weapon.
+For the Gatling Heavy, also separate the rotating BarrelCluster.
+For launchers, separate the elevating Launcher from its mounting base.
+
+Keep static decorative details joined to their relevant parent mesh.
+Do not create one object per bolt, panel, or vent.
+
+Place turret yaw pivots at the mounting-ring center, elevation pivots at
+the physical gun hinge, and the rotary-gun pivot along the barrel axis.
+Provide named muzzle/socket empties where supported.
+
+Export GLB/glTF 2.0. Final Godot orientation: +Y up and -Z forward.
+Use meters. Ground contact at Y = 0, with the root centered between
+the running gear.
+
+Suggested geometry targets:
+Light vehicle body and weapon: approximately 1,500–3,000 triangles.
+Heavy tracked vehicle: approximately 2,500–4,500 triangles.
+These are modeling targets, excluding the existing shared wheels.
+
+Prefer one shared color atlas/material for armor and mechanical parts.
+Use a separate emissive material only where necessary.
+No baked lighting or painted cast shadows.
+
+For wheeled vehicles, export no wheel geometry.
+Use existing universal-wheel instances during assembly.
+Store new source assets under assets/Enemy/, preserving the capital E.</pre><button class="shared-copy" data-copy="export-prompt" type="button">Copy 3D requirements</button></details>
+</section>
+<article id="technical_truck"><div class="card-head"><span class="number">01</span><div class="card-title"><h2>Raider Technical</h2><div class="type">technical_truck · 4 shared wheels · Gun truck</div></div></div><pre class="prompt vehicle">Create a low-poly desert raider pickup truck with a heavy machine gun
+mounted in its open rear bed.
+
+SILHOUETTE:
+A short, chunky pickup with a distinct front hood, upright two-seat cab,
+and open rectangular cargo bed. Slightly oversized cab and broad stance.
+The front should feel blunt and stubborn, with a thick bumper, two simple
+square headlights, and a dark rectangular grille.
+
+BODY:
+Dusty sand-yellow paint, charcoal bumpers and chassis, muted brick-red
+recognition panels. Use a dark opaque windshield split into two broad panes.
+Add one thick rollbar behind the cab and low armored bed sides.
+Include a few large welded armor plates with deliberately simple shapes.
+
+WEAPON:
+A single oversized heavy machine gun on a pedestal in the rear bed.
+Give it a thick rectangular receiver, one long faceted barrel, a broad
+muzzle opening, and one chunky ammunition box attached to the side.
+The weapon should clearly read as a machine gun rather than a tank cannon.
+Keep the receiver, elevation cradle, and mounting pedestal visually distinct.
+
+WHEEL COMPATIBILITY:
+Four-wheel layout with two axles. Do not generate wheels, tires, spare tires,
+or detailed suspension. Leave four generous open wheel positions suitable
+for attaching an existing shared off-road wheel.
+
+CHARACTER:
+Fast improvised raider vehicle; rough, practical, slightly ridiculous.
+Its defining shape is a pickup cab followed by an exposed bed-mounted gun.
+
+Suggested chassis length: approximately 4.4 meters.
+No driver, gunner, flags, cargo clutter, or loose ammunition.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy vehicle only</button><span>Pickup cab + exposed bed-mounted gun</span></div></article>
+<article id="rocket_buggy"><div class="card-head"><span class="number">02</span><div class="card-title"><h2>Rocket Buggy</h2><div class="type">rocket_buggy · 4 shared wheels · Mobile rockets</div></div></div><pre class="prompt vehicle">Create a low-poly lightweight rocket attack buggy.
+
+SILHOUETTE:
+A low wedge-shaped nose, compact open cockpit, thick angular roll cage,
+and short rear engine deck. Wide stance and short overhangs.
+Use only a few thick structural bars so the cage remains readable.
+It should look lighter, lower, and more exposed than an armored pickup.
+
+BODY:
+Muted olive armor with charcoal framework, brick-red rocket pods,
+and small mustard-yellow warning panels.
+Use a broad sloped hood, two simple front lamps, and a compact opaque
+dashboard area. Keep the cockpit simple and empty.
+
+WEAPON:
+Two oversized rectangular rocket pods mounted side by side above the
+rear deck on one compact rotating cradle.
+Each pod has three large recessed launch openings across its front face.
+Use thick pod walls and dark openings. Keep the rocket pods visually
+separate from the roll cage, with clearance for aiming.
+The two pods should dominate the roof silhouette.
+
+WHEEL COMPATIBILITY:
+Four-wheel layout with two axles. Generate no tires, wheels, spare wheels,
+or elaborate suspension. Leave open wheel positions with generous clearance
+for an existing universal off-road wheel.
+
+CHARACTER:
+An unstable-looking little raider carrying far too much rocket firepower.
+Keep the body compact and the weapon exaggerated.
+
+Suggested chassis length: approximately 4.6 meters.
+No exposed engine plumbing, thin cables, driver, smoke, or launched rockets.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy vehicle only</button><span>Low cage + twin rocket pods</span></div></article>
+<article id="mortar_crawler"><div class="card-head"><span class="number">03</span><div class="card-title"><h2>Mortar Crawler</h2><div class="type">mortar_crawler · 6 shared wheels · Mobile artillery</div></div></div><pre class="prompt vehicle">Create a low-poly six-wheeled armored mortar support vehicle.
+
+SILHOUETTE:
+A squat rectangular armored body with a short sloping front and a broad
+rear weapon deck. Three wheel positions on each side.
+The body should feel compact, heavy, and stable rather than fast.
+
+BODY:
+Muted olive-green armor, charcoal lower chassis, and mustard-yellow
+recognition panels. Broad flat armor plates with clipped corners.
+Small dark front vision slits, a simple front bumper, and a low roof hatch.
+Keep the roof clear around the mortar mounting ring.
+
+WEAPON:
+Two short, thick, open-ended mortar tubes mounted side by side in one
+elevating cradle. Pose them upward at approximately 55 degrees.
+Make the tubes noticeably wider and shorter than conventional cannon barrels.
+Use dark recessed bores, thick rims, and a chunky shared hinge assembly.
+The paired upward-pointing tubes are the main recognition feature.
+
+WHEEL COMPATIBILITY:
+Six-wheel layout with three evenly spaced axles.
+Do not generate wheels or tires. Leave six open wheel positions and enough
+space between neighboring wheels for an existing universal wheel asset.
+Do not convert this vehicle into a tracked tank.
+
+CHARACTER:
+A little armored bombardment platform carrying two oversized stovepipe-like
+mortars. Heavy, simple, and immediately recognizable from above.
+
+Suggested chassis length: approximately 5 meters.
+No deployed stabilizers, crew, ammunition piles, firing effects, or trailer.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy vehicle only</button><span>Six-wheel body + twin raised mortars</span></div></article>
+<article id="sam_launcher"><div class="card-head"><span class="number">04</span><div class="card-title"><h2>SAM Launcher</h2><div class="type">sam_launcher · Enclosed tracks · Air defense</div></div></div><pre class="prompt vehicle">Create a low-poly tracked surface-to-air missile launcher.
+
+SILHOUETTE:
+A long, low armored chassis supporting four large cylindrical missile
+canisters arranged in a clear two-by-two cluster.
+Add one compact radar dish behind and above the launcher.
+The tube cluster and radar must remain recognizable from an elevated camera.
+
+BODY:
+Desaturated blue-gray armor, charcoal running gear, pale ivory canisters,
+and restrained brick-red canister end markings.
+Use a sloping front plate, broad upper deck, and thick side armor skirts.
+
+RUNNING GEAR:
+Tracked chassis with enclosed running gear. Most road wheels and upper
+track sections are hidden behind solid armor skirts. Show a simple dark
+lower tread band and a few broad tread divisions.
+Do not model individual track links or exposed suspension.
+
+WEAPON:
+Four thick faceted cylindrical canisters, two across and two high,
+held by one substantial elevating cradle. Pose them moderately upward.
+Use recessed dark launch openings with thick pale rims.
+Mount the cradle on a distinct rotating base.
+Use a simple low-poly radar dish with a thick support, not a fragile mast.
+
+CHARACTER:
+Dedicated air-defense machinery with a tall, unmistakable tube-cluster
+silhouette. More orderly and technical than the raider vehicles.
+
+Suggested chassis length: approximately 6.4 meters.
+No wheels, secondary cannon, exposed missiles in flight, or effects.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy vehicle only</button><span>Four cylindrical canisters + radar</span></div></article>
+<article id="siege_tank"><div class="card-head"><span class="number">05</span><div class="card-title"><h2>Siege Tank</h2><div class="type">siege_tank · Enclosed tracks · Heavy cannon</div></div></div><pre class="prompt vehicle">Create a low-poly heavy siege tank built around one enormous artillery cannon.
+
+SILHOUETTE:
+Very broad, low hull; thick armored shoulders; large angular turret;
+one exceptionally long and thick cannon.
+The cannon should be the strongest visual feature, with a substantial
+rectangular muzzle brake and a heavy armored mantlet.
+
+BODY:
+Dusty ochre-brown armor, charcoal tracks and weapon mechanics,
+and small warm ivory recognition panels.
+Use large sloped frontal plates and thick side skirts.
+Give the turret a broad rear counterweight to balance the giant cannon.
+Include one simple hatch and two broad rear engine vents.
+
+RUNNING GEAR:
+Enclosed tracked chassis. Hide road wheels behind deep armor skirts.
+Only a narrow dark tread band should remain visible along the bottom.
+Use simple continuous track forms rather than individual links.
+
+WEAPON:
+One heavy conventional cannon with an obvious round bore.
+Thick faceted barrel, chunky recoil sleeve, and oversized muzzle brake.
+Keep turret shell, elevation cradle, and recoiling barrel distinct.
+The barrel should feel heavy and slightly absurd without becoming so long
+that it overwhelms the entire vehicle.
+
+CHARACTER:
+Slow, stubborn siege machinery. This is the heaviest conventional tank
+in the collection, with a strong low-and-wide silhouette.
+
+Suggested hull length: approximately 7 meters, excluding cannon overhang.
+No transport cabin, passenger windows, exposed tires, missile racks,
+secondary turret, or deployed supports.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy vehicle only</button><span>Broad armor + oversized conventional cannon</span></div></article>
+<article id="flak_tank"><div class="card-head"><span class="number">06</span><div class="card-title"><h2>Flak Tank</h2><div class="type">flak_tank · Enclosed tracks · Quad autocannons</div></div></div><p class="note">Uses your requested four-barrel design. The current procedural model has two barrels; this is an art direction choice for the replacement.</p><pre class="prompt vehicle">Create a low-poly tracked anti-aircraft tank with four autocannon barrels.
+
+SILHOUETTE:
+A low armored hull carrying a compact central turret and two paired gun
+assemblies, one on each side. Exactly four barrels total:
+two on the left and two on the right.
+The guns point upward approximately 30 degrees in the presentation pose.
+
+BODY:
+Muted military green armor, charcoal gun assemblies,
+and mustard-yellow identification panels.
+Use a compact angular turret with a small central targeting sensor.
+Keep the turret narrower than the hull so the paired guns stand out.
+
+WEAPON:
+Four thick, moderately long autocannon barrels with clear dark muzzle
+openings. Use simple reinforced barrel sleeves and substantial receivers.
+Each pair sits on a sturdy elevation cradle.
+The weapon should resemble four separate autocannons, not one rotary gun.
+Maintain visible spacing between every barrel.
+
+RUNNING GEAR:
+Tracked chassis with enclosed road wheels and broad side skirts.
+Show only a simplified lower tread band.
+Avoid exposed suspension and individual track links.
+
+CHARACTER:
+A squat anti-aircraft platform with a forked, upward-reaching silhouette.
+The four raised barrels must distinguish it immediately from the Siege Tank
+and Gatling Heavy, including in a small top-down thumbnail.
+
+Suggested hull length: approximately 7 meters.
+No missiles, giant central cannon, oversized radar dish, or firing effects.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy vehicle only</button><span>Four raised barrels in two pairs</span></div></article>
+<article id="missile_carrier"><div class="card-head"><span class="number">07</span><div class="card-title"><h2>Missile Carrier</h2><div class="type">missile_carrier · Enclosed tracks · Box launcher</div></div></div><pre class="prompt vehicle">Create a low-poly armored tracked missile carrier with a large rectangular
+launcher box.
+
+SILHOUETTE:
+A long low chassis with one broad slab-like launcher mounted above the rear
+half. The launcher has two large rectangular missile channels side by side.
+Its shape must read as a broad armored box rather than a cluster of tubes.
+
+BODY:
+Muted teal-green armor, charcoal chassis and launcher recesses,
+pale ivory missile noses, and small burnt-orange warning panels.
+Use a simple sloped front hull and heavy side skirts.
+Keep the forward deck low so the rear launcher dominates the silhouette.
+
+WEAPON:
+One chunky rectangular launcher housing on a rotating base and substantial
+elevation hinge. Pose the housing upward approximately 30 degrees.
+Show two clearly separated launch channels with recessed pale missile noses.
+Use thick armored edges and a compact rear counterweight.
+Keep the rotating base, fixed cradle, and elevating launcher distinct.
+
+RUNNING GEAR:
+Enclosed tracked chassis with hidden road wheels.
+Simple dark lower tread bands and broad armor skirts.
+No detailed suspension or individually modeled track links.
+
+CHARACTER:
+A heavy mobile missile battery. Its main recognition feature is a wide,
+tilted rectangular launcher. Keep it clearly different from the SAM
+Launcher's four cylindrical canisters and radar dish.
+
+Suggested hull length: approximately 7 meters.
+No cylindrical tube cluster, large radar dish, secondary gun, or effects.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy vehicle only</button><span>Broad launcher box + two channels</span></div></article>
+<article id="gatling_heavy"><div class="card-head"><span class="number">08</span><div class="card-title"><h2>Gatling Heavy</h2><div class="type">gatling_heavy · Enclosed tracks · Rotary gun</div></div></div><pre class="prompt vehicle">Create a low-poly heavy tracked vehicle carrying one oversized rotary gun.
+
+SILHOUETTE:
+A broad squat armored chassis, compact angular turret,
+and one thick cylindrical six-barrel gatling assembly.
+The weapon should look like a huge rotating mechanical drum rather than
+a conventional cannon.
+
+BODY:
+Muted slate-purple armor, charcoal weapon mechanics,
+and restrained mustard-yellow recognition panels.
+Give the turret a substantial rear ammunition housing.
+Add one large simple ammunition feed enclosure connecting to the receiver;
+avoid a chain made from individual bullets.
+
+WEAPON:
+Exactly six faceted barrels arranged around a central rotation axis.
+Use a thick rear receiver, one supporting collar near the front,
+and six visible dark muzzle openings.
+Keep the barrel cluster short and chunky enough to remain legible at
+gameplay distance. Give the assembly a clear longitudinal spin axis.
+Separate the rotating barrel cluster from the stationary receiver and cradle.
+
+RUNNING GEAR:
+Enclosed tracked chassis with deep armor skirts.
+Hide road wheels and simplify tracks into dark continuous lower bands.
+
+CHARACTER:
+A compact wall of sustained firepower. Slightly ridiculous weapon size,
+with the circular barrel cluster as its unmistakable signature.
+
+Suggested hull length: approximately 7 meters.
+No extra cannons, missile pods, individual ammunition belts,
+muzzle flashes, or spinning motion blur.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy vehicle only</button><span>Six-barrel cluster + ammunition housing</span></div></article>
+<article id="flame_tank"><div class="card-head"><span class="number">09</span><div class="card-title"><h2>Incendiary / Flame Tank</h2><div class="type">flame_tank · Enclosed tracks · Flame projector</div></div></div><pre class="prompt vehicle">Create a low-poly tracked flamethrower tank with two large rear fuel drums.
+
+SILHOUETTE:
+A squat armored hull, small forward turret, short thick flame projector,
+and two oversized vertical fuel cylinders mounted side by side at the rear.
+The twin rear cylinders should remain clearly visible from above.
+
+BODY:
+Dark olive armor, charcoal running gear, brick-red fuel drums,
+and restrained orange-yellow warning panels.
+Use thick protective plates around the lower halves of the drums,
+while keeping their cylindrical upper shapes visible.
+Add a broad rear heat shield and a few large painted vent shapes.
+
+WEAPON:
+A short, thick flame projector with a wide dark nozzle and angular
+protective shroud. It should look industrial and heat-resistant.
+Include one small recessed pilot-light detail.
+Use a compact turret with a substantial elevation hinge.
+Avoid the long slender barrel of a conventional tank gun.
+
+RUNNING GEAR:
+Enclosed tracks with road wheels hidden behind broad armor skirts.
+Show only simple dark lower tread bands.
+
+CHARACTER:
+A dangerous little industrial furnace on tracks.
+The short nozzle and twin red rear drums identify its role.
+Keep the design chunky and readable rather than covered in pipes.
+
+Suggested chassis length: approximately 6.2 meters.
+No modeled flames, smoke, burning damage, loose hoses, crew,
+or transparent fuel tanks.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy vehicle only</button><span>Short nozzle + twin red fuel drums</span></div></article>
+<article id="rail_crawler"><div class="card-head"><span class="number">10</span><div class="card-title"><h2>Rail Crawler</h2><div class="type">rail_crawler · Enclosed tracks · Twin-rail weapon</div></div></div><pre class="prompt vehicle">Create a low-poly armored tracked railgun vehicle.
+
+SILHOUETTE:
+A low rectangular armored chassis carrying one exceptionally long,
+straight railgun. The weapon has two parallel rectangular rails separated
+by a clearly visible dark central gap.
+Use a substantial rear breech to balance the long weapon.
+
+BODY:
+Muted blue-gray armor, charcoal gun structure,
+and pale cyan energy inserts.
+Use broad angular plates, a low turret, and two chunky rectangular
+capacitor blocks mounted symmetrically on the rear deck.
+Keep the body restrained so the long twin-rail weapon dominates.
+
+WEAPON:
+Two thick parallel rectangular rails held by a few broad structural braces.
+Keep a visible separation between the rails along most of their length.
+Add narrow cyan inset strips to the inner rail faces and a large squared
+breech housing. Use solid colored inserts that remain readable without glow.
+The muzzle is an open rectangular channel, not a round cannon bore.
+Separate turret shell, elevation cradle, and complete rail assembly.
+
+RUNNING GEAR:
+Enclosed tracked chassis with hidden road wheels and broad armor skirts.
+Use simplified dark lower tread bands.
+
+CHARACTER:
+Precise, heavy experimental artillery with an exaggerated straight-line
+silhouette. More technological than the Siege Tank, while using the same
+simple low-poly construction language.
+
+Suggested chassis length: approximately 6.2 meters, excluding weapon overhang.
+No floating components, energy beams, lightning, round cannon barrel,
+missile pods, or oversized glowing effects.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy vehicle only</button><span>Long open twin rails + cyan inserts</span></div></article>
+<footer><p>Approve the Technical and Siege Tank first, then reuse their proportions, shading, and palette treatment as references for the remaining eight. Generators may miss topology, object separation, or pivots; verify those requirements after generation.</p><p>Visual reference: <a href="https://megabonk.itch.io/megabonk-presskit-release" target="_blank" rel="noopener noreferrer">Megabonk official reference material</a> · Original vehicle designs · New source assets belong in <code>assets/Enemy/</code>.</p></footer>
+</main></div></div>
+<div id="status" role="status" aria-live="polite"></div>
+<script>
+const read = id => document.getElementById(id).textContent.trim();
+let statusTimer;
+function announce(message) {
+  document.getElementById('status').textContent = message;
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => { document.getElementById('status').textContent = ''; }, 3500);
+}
+async function copyText(text) {
+  try {
+    if (!navigator.clipboard || !window.isSecureContext) throw new Error('Fallback');
+    await navigator.clipboard.writeText(text);
+  } catch (error) {
+    const previous = document.activeElement;
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('readonly', '');
+    field.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.appendChild(field);
+    field.select();
+    const copied = document.execCommand('copy');
+    field.remove();
+    if (previous) previous.focus();
+    if (!copied) throw new Error('Copy unavailable');
+  }
+}
+function completePrompt(card) {
+  const parts = [read('style-prompt'), card.querySelector('.vehicle').textContent.trim(), 'NEGATIVE PROMPT:\n' + read('negative-prompt')];
+  if (document.getElementById('include-export').checked) parts.push('3D DELIVERY REQUIREMENTS:\n' + read('export-prompt'));
+  return parts.join('\n\n');
+}
+async function copyAndNotify(text, message) {
+  try { await copyText(text); announce(message); }
+  catch (error) { announce('Clipboard unavailable. Select the prompt text and copy it manually.'); }
+}
+document.querySelectorAll('[data-copy]').forEach(button => {
+  button.addEventListener('click', () => copyAndNotify(read(button.dataset.copy), 'Shared section copied.'));
+});
+document.querySelectorAll('article').forEach(card => {
+  const name = card.querySelector('h2').textContent;
+  const complete = card.querySelector('.complete');
+  const vehicle = card.querySelector('.vehicle-only');
+  complete.setAttribute('aria-label', 'Copy complete ' + name + ' prompt');
+  vehicle.setAttribute('aria-label', 'Copy ' + name + ' vehicle prompt only');
+  complete.addEventListener('click', () => copyAndNotify(completePrompt(card), name + ': complete prompt copied.'));
+  vehicle.addEventListener('click', () => copyAndNotify(card.querySelector('.vehicle').textContent.trim(), name + ': vehicle prompt copied.'));
+});
+document.getElementById('copy-all').addEventListener('click', () => {
+  const text = Array.from(document.querySelectorAll('article')).map((card, index) =>
+    (index + 1) + '. ' + card.querySelector('h2').textContent + ' (' + card.id + ')\n\n' + completePrompt(card)
+  ).join('\n\n' + '='.repeat(64) + '\n\n');
+  copyAndNotify(text, 'All 10 complete prompts copied.');
+});
+let printDetails = [];
+window.addEventListener('beforeprint', () => {
+  printDetails = Array.from(document.querySelectorAll('details')).map(detail => [detail, detail.open]);
+  printDetails.forEach(([detail]) => { detail.open = true; });
+});
+window.addEventListener('afterprint', () => { printDetails.forEach(([detail, open]) => { detail.open = open; }); });
+document.getElementById('print').addEventListener('click', () => window.print());
+</script>
+</body>
+</html>

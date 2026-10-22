@@ -1,0 +1,110 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/enemies/ground/multi_axle_wheel_controller.gd" id="1_g0b18"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/new ground/Desert_Barrage_Rover/desert_chassis_mesh.res" id="2_lxuwm"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/tank_game_ready/universal_wheel_mesh.res" id="3_xu8ky"]
+[ext_resource type="Script" path="res://src/enemies/ground/desert_barrage_launcher.gd" id="4_wfemv"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/new ground/Desert_Barrage_Rover/desert_launcher_base_mesh.res" id="5_kwy5u"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/new ground/Desert_Barrage_Rover/desert_launcher_pods_mesh.res" id="6_6fnlu"]
+
+[node name="DesertBarrageRoverRig" type="Node3D" unique_id=2008062607]
+
+[node name="Visuals" type="Node3D" parent="." unique_id=2114082186]
+script = ExtResource("1_g0b18")
+
+[node name="HullModel" type="Node3D" parent="Visuals" unique_id=1055825433]
+
+[node name="Desert_Chassis" type="MeshInstance3D" parent="Visuals/HullModel" unique_id=50144674]
+transform = Transform3D(0, 0, -6.2, 0, 6.2, 0, 6.2, 0, 0, 0, 1.18, 0)
+mesh = ExtResource("2_lxuwm")
+
+[node name="Wheels" type="Node3D" parent="Visuals" unique_id=1704182347]
+
+[node name="FrontLeftSteer" type="Node3D" parent="Visuals/Wheels" unique_id=576944436]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.31, 0.7, -1.75)
+
+[node name="FrontLeftSpin" type="Node3D" parent="Visuals/Wheels/FrontLeftSteer" unique_id=549426164]
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/FrontLeftSteer/FrontLeftSpin" unique_id=1670044414]
+transform = Transform3D(0, 0, 1.25, 0, 1.25, 0, -1.25, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_xu8ky")
+
+[node name="FrontRightSteer" type="Node3D" parent="Visuals/Wheels" unique_id=2055644062]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.29, 0.7, -1.75)
+
+[node name="FrontRightSpin" type="Node3D" parent="Visuals/Wheels/FrontRightSteer" unique_id=14333140]
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/FrontRightSteer/FrontRightSpin" unique_id=440998527]
+transform = Transform3D(0, 0, -1.25, 0, 1.25, 0, 1.25, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_xu8ky")
+
+[node name="MidLeftSpin" type="Node3D" parent="Visuals/Wheels" unique_id=844520568]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.31, 0.68, 0.78)
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/MidLeftSpin" unique_id=613158603]
+transform = Transform3D(0, 0, 1.25, 0, 1.25, 0, -1.25, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_xu8ky")
+
+[node name="MidRightSpin" type="Node3D" parent="Visuals/Wheels" unique_id=1790895454]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.31, 0.68, 0.78)
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/MidRightSpin" unique_id=975949201]
+transform = Transform3D(0, 0, -1.25, 0, 1.25, 0, 1.25, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_xu8ky")
+
+[node name="RearLeftSpin" type="Node3D" parent="Visuals/Wheels" unique_id=563093818]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.29, 0.64, 2.35)
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/RearLeftSpin" unique_id=477767375]
+transform = Transform3D(0, 0, 1.25, 0, 1.25, 0, -1.25, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_xu8ky")
+
+[node name="RearRightSpin" type="Node3D" parent="Visuals/Wheels" unique_id=1720616870]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.29, 0.64, 2.35)
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/RearRightSpin" unique_id=310549568]
+transform = Transform3D(0, 0, -1.25, 0, 1.25, 0, 1.25, 0, 0, 0, 0, 0)
+mesh = ExtResource("3_xu8ky")
+
+[node name="Turret" type="Node3D" parent="." unique_id=76829970]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.39, 1.98)
+script = ExtResource("4_wfemv")
+
+[node name="MountModel" type="Node3D" parent="Turret" unique_id=1914705301]
+
+[node name="Desert_Launcher_Base" type="MeshInstance3D" parent="Turret/MountModel" unique_id=1916301051]
+transform = Transform3D(0, 0, -6.2, 0, 6.2, 0, 6.2, 0, 0, 0, 0, 0)
+mesh = ExtResource("5_kwy5u")
+
+[node name="LauncherPitch" type="Node3D" parent="Turret" unique_id=479228572]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.43, 0)
+
+[node name="PodModel" type="MeshInstance3D" parent="Turret/LauncherPitch" unique_id=1633985749]
+transform = Transform3D(0, 0, -6.2, 0, 6.2, 0, 6.2, 0, 0, 0, -0.43, 0)
+mesh = ExtResource("6_6fnlu")
+
+[node name="Tubes" type="Node3D" parent="Turret/LauncherPitch" unique_id=1369354456]
+
+[node name="Tube_01_Left_Top_Outer" type="Marker3D" parent="Turret/LauncherPitch/Tubes" unique_id=489124010]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.88, 0.36, -0.84)
+
+[node name="Tube_02_Right_Top_Outer" type="Marker3D" parent="Turret/LauncherPitch/Tubes" unique_id=14997659]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.88, 0.36, -0.84)
+
+[node name="Tube_03_Left_Top_Inner" type="Marker3D" parent="Turret/LauncherPitch/Tubes" unique_id=825008800]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.56, 0.36, -0.84)
+
+[node name="Tube_04_Right_Top_Inner" type="Marker3D" parent="Turret/LauncherPitch/Tubes" unique_id=706336816]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 0.36, -0.84)
+
+[node name="Tube_05_Left_Bottom_Outer" type="Marker3D" parent="Turret/LauncherPitch/Tubes" unique_id=963289372]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.08, 0.29, -0.87)
+
+[node name="Tube_06_Right_Bottom_Outer" type="Marker3D" parent="Turret/LauncherPitch/Tubes" unique_id=1336982765]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.08, 0.29, -0.87)
+
+[node name="Tube_07_Left_Bottom_Inner" type="Marker3D" parent="Turret/LauncherPitch/Tubes" unique_id=1341449708]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.35, 0.29, -0.87)
+
+[node name="Tube_08_Right_Bottom_Inner" type="Marker3D" parent="Turret/LauncherPitch/Tubes" unique_id=1412178422]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0.29, -0.87)

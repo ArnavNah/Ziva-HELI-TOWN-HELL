@@ -1,0 +1,69 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://src/world/weather_system.gd" id="1_weather"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.18, 0.52, 0.92, 1)
+sky_horizon_color = Color(0.68, 0.84, 0.98, 1)
+sky_curve = 0.12
+ground_bottom_color = Color(0.22, 0.39, 0.16, 1)
+ground_horizon_color = Color(0.45, 0.60, 0.33, 1)
+sun_angle_max = 35.0
+sun_curve = 0.12
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+radiance_size = 3
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 2
+ambient_light_color = Color(0.72, 0.82, 0.90, 1)
+ambient_light_energy = 0.48
+reflected_light_source = 2
+tonemap_mode = 3
+tonemap_exposure = 1.0
+tonemap_white = 1.0
+glow_enabled = true
+glow_intensity = 0.10
+glow_strength = 0.80
+glow_bloom = 0.08
+glow_hdr_threshold = 1.05
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.68, 0.84, 0.98, 1)
+fog_light_energy = 0.25
+fog_depth_begin = 150.0
+fog_depth_end = 330.0
+fog_aerial_perspective = 0.75
+adjustment_enabled = false
+adjustment_brightness = 1.0
+adjustment_contrast = 1.0
+adjustment_saturation = 1.0
+
+[node name="WeatherSystem" type="Node3D"]
+script = ExtResource("1_weather")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.788011, 0.457526, -0.411958, 0, 0.669131, 0.743145, 0.615662, -0.585606, 0.527282, 0, 80, 0)
+light_color = Color(1.0, 0.97, 0.88, 1)
+light_energy = 0.95
+light_indirect_energy = 0.35
+shadow_enabled = true
+shadow_bias = 0.02
+shadow_normal_bias = 1.4
+shadow_blur = 0.7
+directional_shadow_mode = 1
+directional_shadow_split_1 = 0.25
+directional_shadow_max_distance = 110.0
+
+[node name="DirectionalLight3D_Fill" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.766044, 0.454519, 0.454519, 0, 0.707107, -0.707107, -0.642788, -0.541675, -0.541675, 0, 60, 0)
+light_color = Color(0.70, 0.82, 0.93, 1)
+light_energy = 0.22
+light_indirect_energy = 0.20
+shadow_enabled = false
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")

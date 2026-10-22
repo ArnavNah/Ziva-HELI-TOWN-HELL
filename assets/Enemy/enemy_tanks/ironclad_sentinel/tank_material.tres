@@ -1,0 +1,18 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/Enemy/enemy_tanks/ironclad_sentinel/tank_assembled_Image_0.jpg" id="1_rt456"]
+[ext_resource type="Texture2D" path="res://assets/Enemy/enemy_tanks/ironclad_sentinel/tank_assembled_Image_1.jpg" id="2_eywxe"]
+[ext_resource type="Texture2D" path="res://assets/Enemy/enemy_tanks/ironclad_sentinel/tank_assembled_Image_2.jpg" id="3_xrdwg"]
+
+[resource]
+resource_name = "Material_0"
+cull_mode = 2
+albedo_texture = ExtResource("1_rt456")
+metallic = 1.0
+metallic_texture = ExtResource("2_eywxe")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("2_eywxe")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("3_xrdwg")
+metadata/_gltf_primary_texture_coord = 0

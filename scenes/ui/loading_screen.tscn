@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://df7834loading"]
+
+[ext_resource type="Script" path="res://src/ui/menus/loading_screen.gd" id="1_load"]
+
+[node name="LoadingScreen" type="CanvasLayer"]
+layer = 125
+script = ExtResource("1_load")

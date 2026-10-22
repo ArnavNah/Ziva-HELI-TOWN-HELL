@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZIVA · 13 low-poly ground enemy prompts</title>
+  <style>
+    :root { color-scheme: light; --paper:#f4f2e9; --card:#fffef9; --ink:#243027; --muted:#636d61; --olive:#4c613a; --line:#d7dbcd; --amber:#d99f3d; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    button,a { -webkit-tap-highlight-color:transparent; }
+    a { color:var(--olive); text-underline-offset:4px; }
+    button { cursor:pointer; font:inherit; }
+    button:focus-visible,a:focus-visible { outline:3px solid var(--amber); outline-offset:4px; }
+    .wrap { max-width:1200px; margin:auto; padding:40px 32px 24px; }
+    .masthead { display:flex; justify-content:space-between; gap:20px; align-items:center; padding-bottom:22px; border-bottom:1px solid var(--line); }
+    .brand { font-weight:850; font-size:18px; letter-spacing:.12em; }
+    .edition { color:var(--muted); font:11px/1.5 ui-monospace,monospace; letter-spacing:.12em; text-align:right; }
+    header { padding:48px 0 26px; }
+    .eyebrow { color:var(--olive); text-transform:uppercase; letter-spacing:.18em; font:700 12px/1.5 ui-monospace,monospace; }
+    h1 { font-size:clamp(36px,6vw,65px); line-height:1.06; letter-spacing:-.055em; margin:14px 0 20px; max-width:820px; }
+    .lead { max-width:770px; color:var(--muted); font-size:18px; margin:0 0 24px; }
+    .steps { display:flex; flex-wrap:wrap; gap:10px; align-items:center; color:var(--olive); font-size:13px; font-weight:650; }
+    .steps span { border:1px solid var(--line); border-radius:4px; padding:7px 11px; background:var(--card); }
+    .steps b { color:var(--muted); }
+    .brief { display:grid; grid-template-columns:1.5fr 1fr; gap:30px; padding:24px 26px; border:1px solid var(--line); border-left:4px solid var(--olive); background:#eaf0df; border-radius:6px; }
+    .brief h2 { font-size:16px; margin:0 0 7px; letter-spacing:-.02em; }
+    .brief p { margin:0; color:#4c5944; font-size:14px; }
+    .palette { display:flex; flex-wrap:wrap; gap:8px 15px; margin-top:12px; font-size:12px; color:#4c5944; }
+    .palette span { display:flex; align-items:center; gap:6px; }
+    .swatch { display:inline-block; width:13px; height:13px; border-radius:3px; border:1px solid #0002; }
+    .tools { margin:30px 0 18px; display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:center; }
+    .tools p { color:var(--muted); font-size:13px; margin:0; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; }
+    button { border:1px solid var(--line); border-radius:5px; background:var(--card); padding:9px 14px; color:var(--ink); font-size:13px; font-weight:650; }
+    button:hover { background:#eaf0df; border-color:#9ca78d; }
+    .primary { background:var(--olive); color:white; border-color:var(--olive); }
+    .primary:hover { background:#35492c; border-color:#35492c; }
+    .roster { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    article { display:flex; flex-direction:column; padding:25px; border:1px solid var(--line); border-radius:8px; background:var(--card); scroll-margin-top:20px; }
+    .card-top { display:flex; align-items:start; gap:14px; margin-bottom:15px; }
+    .number { flex:0 0 36px; font:600 20px/1.4 ui-monospace,monospace; color:#909a7d; border-bottom:2px solid var(--amber); padding-bottom:6px; }
+    h2 { font-size:21px; line-height:1.25; letter-spacing:-.025em; margin:0 0 7px; }
+    .type { font:11px/1.5 ui-monospace,monospace; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+    .prompt { font-size:15px; line-height:1.75; margin:0 0 22px; }
+    .card-bottom { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:auto; }
+    .detail { font-size:12px; color:var(--muted); }
+    .copy { white-space:nowrap; }
+    article:last-child { grid-column:1/-1; }
+    article:last-child .prompt { max-width:870px; }
+    .note { font-size:13px; color:var(--muted); margin:23px 0; max-width:850px; }
+    footer { margin-top:35px; padding:22px 0; border-top:1px solid var(--line); display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:12px; }
+    #status { position:fixed; bottom:22px; left:50%; transform:translateX(-50%); z-index:10; padding:12px 20px; border-radius:6px; background:var(--ink); color:#fffef9; box-shadow:0 6px 25px #0002; font-size:14px; max-width:calc(100% - 32px); text-align:center; }
+    #status:empty { display:none; }
+    @media(max-width:700px) { .wrap { padding:24px 18px 12px; } header { padding-top:32px; } .brief,.roster { grid-template-columns:1fr; } .brief { gap:20px; padding:20px; } article { padding:21px; } .edition { font-size:10px; } .tools { align-items:start; } }
+    @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+    @media print { body { background:#fff; font-size:11pt; } .wrap { max-width:none; padding:0; } header { padding:22px 0 16px; } h1 { font-size:36pt; } .lead { font-size:12pt; } .brief { display:block; background:#f1f3ed; padding:15px; } .brief>div+div { margin-top:12px; } .tools,.actions,.copy,#status,.steps { display:none; } .roster { display:block; margin-top:20px; } article { break-inside:avoid; margin-bottom:12px; padding:16px; } .prompt { font-size:10.5pt; margin-bottom:10px; } h2 { font-size:15pt; } .card-top { margin-bottom:8px; } footer { margin-top:20px; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead"><div class="brand">ZIVA / HELI TOWN HELLL</div><div class="edition">ASSET PROMPT COLLECTION<br>GROUND · 01–13</div></div>
+  <header>
+    <div class="eyebrow">One consistent low-poly enemy collection</div>
+    <h1>Ground forces.<br>13 ready-to-copy prompts.</h1>
+    <p class="lead">Short image prompts for the current ground roster: 12 vehicles and one infantry type. Each prompt is complete—copy one, generate its image in ChatGPT, then use that image as your Meshy reference.</p>
+    <div class="steps"><span>1 · Copy a prompt</span><b aria-hidden="true">→</b><span>2 · Generate one image</span><b aria-hidden="true">→</b><span>3 · Build the low-poly model</span></div>
+  </header>
+  <section class="brief" aria-label="Shared art direction">
+    <div><h2>Keep the whole collection consistent</h2><p>Chunky, faceted military shapes with painted pixel textures: Megabonk-like simplicity and Nuclear Strike-inspired vehicles. Make each weapon easy to recognize from the helicopter camera.</p><div class="palette"><span><i class="swatch" style="background:#69704a" aria-hidden="true"></i>Olive armor</span><span><i class="swatch" style="background:#b8a879" aria-hidden="true"></i>Sand panels</span><span><i class="swatch" style="background:#343a34" aria-hidden="true"></i>Dark metal</span><span><i class="swatch" style="background:#b74731" aria-hidden="true"></i>Red enemy marking</span></div></div>
+    <div><h2>One clear subject per image</h2><p>Keep the same front three-quarter angle, plain white background and soft lighting. Show the complete asset with space around it. Use the first approved image as a style reference for the rest.</p></div>
+  </section>
+  <div class="tools"><p>13 standalone prompts · Ground enemies only</p><div class="actions"><button class="primary" id="copy-all" type="button">Copy all 13 prompts</button><button id="print" type="button">Print / Save PDF</button></div></div>
+  <main class="roster" aria-label="Ground enemy image prompts">
+    <article id="scout-buggy"><div class="card-top"><span class="number">01</span><div><h2>Scout Buggy</h2><div class="type">4 wheels · Light reconnaissance</div></div></div><p class="prompt">Low-poly military scout buggy, four chunky wheels, low hood, sturdy roll cage, small roof machine gun. Faceted shapes, olive-and-sand paint, dark metal, red enemy marking, simple painted pixel textures. One complete vehicle, front three-quarter view, white background, soft light; no driver, text or display base.</p><div class="card-bottom"><span class="detail">Small, fast, lightly armored.</span><button class="copy" type="button" aria-label="Copy Scout Buggy prompt">Copy prompt</button></div></article>
+    <article id="rocket-buggy"><div class="card-top"><span class="number">02</span><div><h2>Rocket Buggy</h2><div class="type">4 wheels · Mobile rockets</div></div></div><p class="prompt">Low-poly military rocket buggy, four oversized wheels, wedge-shaped armored hood, two chunky rectangular rocket pods above the rear. Faceted shapes, olive-and-sand paint, dark metal, red enemy marking, simple painted pixel textures. One complete vehicle, front three-quarter view, white background, soft light; no driver, text or display base.</p><div class="card-bottom"><span class="detail">Twin pods distinguish it from the scout.</span><button class="copy" type="button" aria-label="Copy Rocket Buggy prompt">Copy prompt</button></div></article>
+    <article id="raider-technical"><div class="card-top"><span class="number">03</span><div><h2>Raider Technical</h2><div class="type">4 wheels · Gun truck</div></div></div><p class="prompt">Low-poly military pickup truck, four chunky wheels, boxy cab, open rear bed carrying one heavy machine gun on a thick pedestal. Faceted shapes, olive-and-sand paint, red enemy marking, simple painted pixel textures. One complete vehicle, front three-quarter view, white background, soft light; no crew, text or display base.</p><div class="card-bottom"><span class="detail">Clear pickup silhouette and open gun bed.</span><button class="copy" type="button" aria-label="Copy Raider Technical prompt">Copy prompt</button></div></article>
+    <article id="assault-apc"><div class="card-top"><span class="number">04</span><div><h2>Assault APC</h2><div class="type">6 wheels · Armored transport</div></div></div><p class="prompt">Low-poly military armored personnel carrier, six chunky wheels, broad sloped hull, narrow windshield, compact roof autocannon turret. Faceted shapes, olive-and-sand paint, dark metal, red enemy marking, simple painted pixel textures. One complete vehicle, front three-quarter view, white background, soft light; no crew, text or display base.</p><div class="card-bottom"><span class="detail">Broad armor, six wheels, small turret.</span><button class="copy" type="button" aria-label="Copy Assault APC prompt">Copy prompt</button></div></article>
+    <article id="incendiary-tank"><div class="card-top"><span class="number">05</span><div><h2>Incendiary Tank</h2><div class="type">Tracks · Close-range flame weapon</div></div></div><p class="prompt">Very simple low-poly flamethrower tank, squat turret, short flame nozzle, two rear fuel tanks. Two solid ground-contact armored side pods: smooth uninterrupted side faces, fully closed front and rear, no openings. NO visible wheels, rollers, sprockets, track belts or tread links. Chunky olive-and-sand shapes, minimal painted texture, red panels. Whole vehicle, front three-quarter view, white background; no text or base.</p><div class="card-bottom"><span class="detail">Solid closed side pods—not exposed wheels or linked tracks.</span><button class="copy" type="button" aria-label="Copy Incendiary Tank prompt">Copy prompt</button></div></article>
+    <article id="flak-tank"><div class="card-top"><span class="number">06</span><div><h2>Flak Tank</h2><div class="type">Tracks · Anti-aircraft guns</div></div></div><p class="prompt">Very simple low-poly anti-aircraft tank, compact hull, four thick short gun barrels pointing upward. Two solid ground-contact armored side pods: smooth uninterrupted side faces, fully closed front and rear, no openings. NO visible wheels, rollers, sprockets, track belts or tread links. Chunky olive-and-sand shapes, minimal painted texture, red marking. Whole vehicle, front three-quarter view, white background; no text or base.</p><div class="card-bottom"><span class="detail">Solid closed side pods—not exposed wheels or linked tracks.</span><button class="copy" type="button" aria-label="Copy Flak Tank prompt">Copy prompt</button></div></article>
+    <article id="rail-crawler"><div class="card-top"><span class="number">07</span><div><h2>Rail Crawler</h2><div class="type">Tracks · Precision heavy weapon</div></div></div><p class="prompt">Low-poly military railgun crawler, low tracked chassis, angular turret, one long cannon formed by two thick parallel metal rails. Faceted shapes, olive-and-sand paint, dark steel rails, red enemy marking, simple painted pixel textures. One complete vehicle, front three-quarter view, white background, soft light; no energy effects, crew, text or base.</p><div class="card-bottom"><span class="detail">Long twin-rail barrel, low profile.</span><button class="copy" type="button" aria-label="Copy Rail Crawler prompt">Copy prompt</button></div></article>
+    <article id="mortar-crawler"><div class="card-top"><span class="number">08</span><div><h2>Mortar Crawler</h2><div class="type">Tracks · Mobile artillery</div></div></div><p class="prompt">Low-poly military mortar crawler, short wide tracks, compact armored hull, one thick open-mouthed mortar tube angled steeply upward from the rear. Faceted shapes, olive-and-sand paint, red enemy marking, simple painted pixel textures. One complete vehicle, front three-quarter view, white background, soft light; no shells, crew, text or display base.</p><div class="card-bottom"><span class="detail">One large upward-facing mortar tube.</span><button class="copy" type="button" aria-label="Copy Mortar Crawler prompt">Copy prompt</button></div></article>
+    <article id="sam-launcher"><div class="card-top"><span class="number">09</span><div><h2>SAM Launcher</h2><div class="type">6 wheels · Anti-aircraft missiles</div></div></div><p class="prompt">Low-poly military SAM truck, six chunky wheels, armored cab, four large boxed missile tubes angled upward on a rear rotating launcher. Faceted shapes, olive-and-sand paint, dark metal, red enemy marking, simple painted pixel textures. One complete vehicle, front three-quarter view, white background, soft light; no loose missiles, crew, text or base.</p><div class="card-bottom"><span class="detail">Wheeled truck with four raised launch tubes.</span><button class="copy" type="button" aria-label="Copy SAM Launcher prompt">Copy prompt</button></div></article>
+    <article id="missile-carrier"><div class="card-top"><span class="number">10</span><div><h2>Missile Carrier</h2><div class="type">Tracks · Heavy guided missiles</div></div></div><p class="prompt">Low-poly military missile carrier, long armored tracked hull, two oversized cylindrical missile tubes angled forward, small box radar behind the launcher. Faceted shapes, olive-and-sand paint, red enemy marking, simple painted pixel textures. One complete vehicle, front three-quarter view, white background, soft light; no loose missiles, crew, text or display base.</p><div class="card-bottom"><span class="detail">Tracked hull and two oversized tubes.</span><button class="copy" type="button" aria-label="Copy Missile Carrier prompt">Copy prompt</button></div></article>
+    <article id="siege-tank"><div class="card-top"><span class="number">11</span><div><h2>Siege Tank</h2><div class="type">Heavy tracks · Siege cannon</div></div></div><p class="prompt">Very simple low-poly siege tank, broad turret, thick cannon, large angular armor plates. Two solid ground-contact armored side pods: smooth uninterrupted side faces, fully closed front and rear, no openings. NO visible wheels, rollers, sprockets, track belts or tread links. Chunky olive-and-sand shapes, minimal painted texture, red marking. Whole vehicle, front three-quarter view, white background; no text or base.</p><div class="card-bottom"><span class="detail">Solid closed side pods—not exposed wheels or linked tracks.</span><button class="copy" type="button" aria-label="Copy Siege Tank prompt">Copy prompt</button></div></article>
+    <article id="gatling-heavy"><div class="card-top"><span class="number">12</span><div><h2>Gatling Heavy</h2><div class="type">Tracks · Sustained heavy fire</div></div></div><p class="prompt">Low-poly military armored gun carrier, heavy tracks, boxy reinforced hull, oversized six-barrel rotary cannon, chunky ammunition box beside its turret. Faceted shapes, olive-and-sand paint, dark metal, red enemy marking, simple painted pixel textures. One complete vehicle, front three-quarter view, white background, soft light; no muzzle flash, crew, text or base.</p><div class="card-bottom"><span class="detail">A large rotary barrel cluster, not a tank cannon.</span><button class="copy" type="button" aria-label="Copy Gatling Heavy prompt">Copy prompt</button></div></article>
+    <article id="infantry-squad"><div class="card-top"><span class="number">13</span><div><h2>Infantry Squad — soldier model</h2><div class="type">Infantry · One reusable character</div></div></div><p class="prompt">Low-poly military enemy rifleman, chunky helmet, blocky vest, olive uniform, sand armor, red shoulder marking, sturdy boots. Simple faceted anatomy and painted pixel textures; compact rifle held across the chest, legs slightly apart. One complete standing character, front three-quarter view, white background, soft light; no other soldiers, text or display base.</p><div class="card-bottom"><span class="detail">Generate one soldier model; reuse it to form the squad.</span><button class="copy" type="button" aria-label="Copy Infantry Squad prompt">Copy prompt</button></div></article>
+  </main>
+  <p class="note"><strong>Tank modeling rule:</strong> The Incendiary, Flak and Siege tanks use two solid armored side pods resting on the ground. Each pod has a flat unbroken outer face and closed front and rear ends. Do not show wheels, wheel-shaped circles, rollers, sprockets, exposed track belts or individual tread links. These are fixed low-poly shapes with no running-gear animation. Avoid realistic mechanical undercarriages.</p>
+  <p class="note">The existing ground roster includes infantry, so prompt 13 is a soldier rather than a vehicle. These are image prompts: use Meshy’s low-poly generation or reduction controls when creating the actual meshes.</p>
+  <footer><span>ZIVA HELI TOWN HELLL · Ground asset prompts</span><span>13 prompts · Original military designs · No air enemies</span></footer>
+</div>
+<div id="status" role="status" aria-live="polite"></div>
+<script>
+  let statusTimer;
+  function announce(message) {
+    const status = document.getElementById('status');
+    status.textContent = message;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => { status.textContent = ''; }, 3000);
+  }
+  async function copyText(text) {
+    try {
+      if (!navigator.clipboard || !window.isSecureContext) throw new Error('Use fallback');
+      await navigator.clipboard.writeText(text);
+    } catch (error) {
+      const field = document.createElement('textarea');
+      field.value = text;
+      field.setAttribute('readonly', '');
+      field.style.cssText = 'position:fixed;left:-9999px;top:0';
+      document.body.appendChild(field);
+      field.select();
+      const copied = document.execCommand('copy');
+      field.remove();
+      if (!copied) throw new Error('Copy unavailable');
+    }
+  }
+  document.querySelectorAll('.copy').forEach(button => {
+    button.addEventListener('click', async () => {
+      const card = button.closest('article');
+      try {
+        await copyText(card.querySelector('.prompt').textContent.trim());
+        announce(card.querySelector('h2').textContent + ' prompt copied.');
+      } catch (error) { announce('Select the prompt text and copy it manually.'); }
+    });
+  });
+  document.getElementById('copy-all').addEventListener('click', async () => {
+    const text = Array.from(document.querySelectorAll('article')).map(card =>
+      card.querySelector('.number').textContent + '. ' + card.querySelector('h2').textContent + '\n' + card.querySelector('.prompt').textContent.trim()
+    ).join('\n\n');
+    try { await copyText(text); announce('All 13 prompts copied.'); }
+    catch (error) { announce('Select the prompt text and copy it manually.'); }
+  });
+  document.getElementById('print').addEventListener('click', () => window.print());
+</script>
+</body>
+</html>

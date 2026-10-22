@@ -1,0 +1,17 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/Enemy/new ground/Desert_Barrage_Rover/textures/Image_0.jpg" id="1_0ijgd"]
+[ext_resource type="Texture2D" path="res://assets/Enemy/new ground/Desert_Barrage_Rover/textures/Image_1.jpg" id="2_cpuqo"]
+[ext_resource type="Texture2D" path="res://assets/Enemy/new ground/Desert_Barrage_Rover/textures/Image_2.jpg" id="3_h1fxn"]
+
+[resource]
+resource_name = "Desert_PBR"
+cull_mode = 2
+albedo_texture = ExtResource("1_0ijgd")
+metallic = 1.0
+metallic_texture = ExtResource("2_cpuqo")
+metallic_texture_channel = 2
+roughness_texture = ExtResource("2_cpuqo")
+roughness_texture_channel = 1
+normal_enabled = true
+normal_texture = ExtResource("3_h1fxn")

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shooting lights — Heli-Town Hell</title>
+<style>
+:root{color-scheme:dark;--bg:#101613;--panel:#1b241e;--ink:#eff1df;--muted:#bac3b4;--gold:#efba64;--line:#3a483b;--cyan:#a6d6cd}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:42px 24px 80px}h1{font-size:clamp(32px,6vw,58px);line-height:1.08;max-width:850px;margin:14px 0 24px}h2{font-size:26px;line-height:1.25;margin-top:0}h3{font-size:19px;color:var(--gold);margin:0 0 8px}p{margin:0 0 16px}a{color:var(--cyan)}.eyebrow{font-size:13px;letter-spacing:.15em;color:var(--gold);text-transform:uppercase}.lead{font-size:22px;max-width:850px}.muted,small{color:var(--muted)}section,.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px;margin:24px 0}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.grid .card{margin:0;padding:20px}.note{border-left:4px solid var(--gold);padding:14px 20px;background:#30291d}.flow{display:flex;gap:16px;align-items:stretch;margin:24px 0}.step{flex:1;background:#121b17;border:1px solid var(--line);padding:20px;border-radius:10px}.step strong{display:block;color:var(--gold)}.icon{height:58px;font-size:38px;line-height:58px;color:#ffd78a}.arrow{align-self:center;color:var(--muted)}table{width:100%;border-collapse:collapse;font-size:15px}th,td{padding:13px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--gold)}.tablewrap{overflow:auto}code{font-size:.87em;color:#d8e3c3;overflow-wrap:anywhere}button,.button{display:inline-block;background:var(--gold);color:#171b14;border:0;border-radius:7px;padding:12px 18px;font:700 15px system-ui;cursor:pointer;text-decoration:none}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--cyan);outline-offset:4px}.toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin:20px 0}summary{cursor:pointer;font-weight:700;color:var(--gold);padding:8px 0}pre{font:14px/1.65 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:#0d130f;padding:22px;border-radius:9px;max-height:75vh;overflow:auto;border:1px solid var(--line)}ul,ol{padding-left:23px}li{margin:8px 0}.tag{display:inline-block;border:1px solid var(--line);color:var(--muted);font-size:12px;border-radius:20px;padding:3px 10px;margin:0 5px 8px 0}footer{color:var(--muted);font-size:14px}@media(max-width:740px){main{padding:24px 16px 60px}.grid{grid-template-columns:1fr}.flow{flex-direction:column}.arrow{transform:rotate(90deg)}section{padding:20px}td,th{min-width:145px}.lead{font-size:19px}}
+</style></head><body><main>
+<div class="eyebrow">Heli-Town Hell / weapon art direction / 20 October 2026</div>
+<h1>Make every shot feel bright, sharp and powerful.</h1>
+<p class="lead">Use a small glowing shape at the gun, a visible moving projectile, and a quick flash where it hits. Apply the same system to your helicopter and enemy weapons.</p>
+<div><span class="tag">Godot Compatibility</span><span class="tag">Player + enemies</span><span class="tag">Megabonk-inspired readability</span><span class="tag">Copyable implementation prompt</span></div>
+<div class="toolbar"><a class="button" href="#implementation">Get the full prompt ↓</a><a href="https://www.youtube.com/shorts/JP9b5E_G-QY" target="_blank" rel="noopener">Open your video reference ↗</a></div>
+<section><h2>What the video is doing</h2><p>The Short, <a href="https://www.youtube.com/shorts/JP9b5E_G-QY">“Game Dev Hack about Lights” by @Smitty_Games</a>, shows tank headlights and a quad with an additive, unshaded falloff shader. It makes a flat shape look like a soft pool of light.</p><p class="note"><strong>Easy way to think about it:</strong> a glowing sticker placed in the 3D world. It can look bright, but it does not actually light up the buildings around it.</p><p>For your game, use that idea for brief shooting flashes. Add a few real lights only when a nearby explosion or heavy weapon should brighten a vehicle or wall. This shooting design is my adaptation; the video does not specify these weapon timings or budgets.</p></section>
+<section><h2>The three parts of a good shot</h2><div class="flow"><div class="step"><div class="icon" aria-hidden="true">✦</div><strong>1 · Gun flashes</strong>A tiny burst appears at the barrel when a real shot leaves it.</div><div class="arrow" aria-hidden="true">→</div><div class="step"><div class="icon" aria-hidden="true">━</div><strong>2 · Projectile travels</strong>A short tracer or rocket exhaust follows the actual shot.</div><div class="arrow" aria-hidden="true">→</div><div class="step"><div class="icon" aria-hidden="true">✷</div><strong>3 · Hit flashes</strong>A small spark or blast appears on the exact surface it hits.</div></div><p class="muted">A light patch on the road is optional. A helicopter high above the road should not create a fake bright circle far below every bullet.</p></section>
+<div class="grid"><div class="card"><h3>Your helicopter</h3><p>Small amber star-shaped flashes. Shotgun gets one wider burst. Rockets get a short launcher flare and exhaust.</p></div><div class="card"><h3>Enemy weapons</h3><p>Pointed orange-red flashes, with special colors retained for special weapons. Existing attack warnings stay clear.</p></div><div class="card"><h3>Town surfaces</h3><p>Keep the pixel textures and chunky shapes. Add small, brief light spill where a nearby shot or impact makes sense.</p></div></div>
+<section><h2>What your project already has</h2><p>I inspected the current source. This is a code review of the effect paths, not a new rendered gameplay or performance test.</p><div class="tablewrap"><table><thead><tr><th>Existing piece</th><th>What needs adding or fixing</th></tr></thead><tbody>
+<tr><td>Orange projectile cylinder</td><td>Separate readable bullet, missile, rocket and hostile visual profiles.</td></tr>
+<tr><td>Player barrel markers</td><td>Use the same selected barrel for the projectile and flash. The muzzle getter alternates barrels when called.</td></tr>
+<tr><td>Impact sparks</td><td>Use the true hit point and normal. Coordinate with damage-event sparks to avoid duplicate bursts.</td></tr>
+<tr><td>Explosion particles + lights</td><td>Share a small light pool instead of adding another light to every shot.</td></tr>
+<tr><td>Enemy windup and fire functions</td><td>Connect flashes at actual fire, across all armed enemy families. Keep attack timing unchanged.</td></tr>
+<tr><td>Reduce Flashes + pause/loading flow</td><td>Make new effects obey these existing systems, including cleanup between runs.</td></tr>
+</tbody></table></div><details><summary>Important source files checked</summary><ul><li><code>project.godot</code></li><li><code>src/effects/fx_manager.gd</code></li><li><code>src/player/player_weapons.gd</code>, <code>player_turret.gd</code>, <code>player_salvo.gd</code></li><li><code>src/combat/projectile.gd</code> and <code>scenes/combat/projectile.tscn</code></li><li><code>src/enemies/base_enemy.gd</code>, <code>enemy_spawner.gd</code>, <code>procedural_raider.gd</code>, ground/air firing paths and boss volley path</li><li><code>src/shaders/tactical_toon.gdshader</code>, <code>town_atlas.gdshader</code></li><li><code>autoload/ui_flow.gd</code>, <code>settings_store.gd</code>, <code>audio_manager.gd</code></li></ul></details></section>
+<section><h2>Keep the look simple</h2><div class="tablewrap"><table><thead><tr><th>Weapon</th><th>What you should see</th><th>Starting flash time</th></tr></thead><tbody><tr><td>Machine gun</td><td>Tiny warm burst + short tracer</td><td>0.04–0.07 seconds</td></tr><tr><td>Shotgun</td><td>One wider fan burst per trigger</td><td>0.06–0.09 seconds</td></tr><tr><td>Missile</td><td>Launcher flare + thin curved exhaust trail</td><td>0.06–0.10 seconds</td></tr><tr><td>Rocket</td><td>Stronger launcher flash + compact blast</td><td>0.08–0.12 seconds</td></tr><tr><td>Enemy gun</td><td>Small pointed hostile burst + readable projectile</td><td>Tune to weapon family</td></tr></tbody></table></div><p class="muted">These are proposed starting values. Tune from the actual gameplay camera. No long headlight cone on every gun, giant glow clouds, or full-screen white flashes.</p></section>
+<section><h2>You do not need AI images for the first version</h2><p>Godot can build the flash and soft light shape using a simple mesh and shader. Your town models and textures can stay as they are.</p><p>If a hand-drawn burst texture is wanted later, start with a small 32–64 pixel transparent mask, nearest filtering and clean chunky edges. Image generation alone cannot create the timing, barrel attachment, collision placement or pooling.</p><details><summary>Optional image-generation prompt for a texture draft</summary><p>One isolated stylized muzzle-flash sprite, centered on a transparent background, chunky low-resolution pixel art, compact four-point star with a short directional flame, pale amber center and orange outer pixels, sharp stepped silhouette, readable at 32 by 32 pixels, no weapon, no scenery, no text, no shadow, no baked background, no large soft bloom. Produce one sprite, not a sheet or a scene. Intended as a draft for a Godot low-poly military action game.</p><p class="muted">Clean and resize the result before use. AI output does not guarantee exact pixel layout or a production-ready alpha mask.</p></details></section>
+<section id="implementation"><div class="eyebrow">Ready to give to a coding AI</div><h2>The detailed implementation prompt</h2><p>Copy everything below and give it to the AI working inside this Godot project. It includes the files to inspect, the visual design, all firing paths, pooling, pause behavior and checks.</p><div class="toolbar"><button id="copy" type="button">Copy full prompt</button><a href="IMPLEMENT_SHOOTING_LIGHT_FX_PROMPT.md" download>Download Markdown</a><span id="status" role="status" aria-live="polite"></span></div><details open><summary>Show / hide the full prompt</summary><pre id="prompt" tabindex="0"># Implement shooting light effects in Heli-Town Hell
+
+Work in `C:/Users/Prime 3/Documents/ziva-heli-town-helll`.
+
+Implement the following shooting presentation pass in the existing Godot game. Read AGENTS.md, GRAPHICS_ART_DIRECTION.md and MENU_FLOW_NOTES.md first. Inspect current source before editing because other project work may have changed it. Preserve unrelated changes. This task concerns weapon presentation; preserve weapon damage, fire cadence, ammo, spread, targeting, homing, collision, enemy decisions, attack-slot rules, rewards and menu behavior.
+
+REFERENCE AND INTENT
+
+Reference: https://www.youtube.com/shorts/JP9b5E_G-QY — “Game Dev Hack about Lights,” @Smitty_Games.
+The inspected visual sequence shows tank headlight patches, a quad in the Godot editor, and an unshaded additive shader with a UV falloff. Adapt that inexpensive fake-light technique to shooting. The reference demonstrates lighting, not a complete shooting-effects specification. The timings, shapes and budgets below are proposed art direction for THIS game, not measurements from the video.
+
+Desired result: when the helicopter or an enemy actually fires, a small warm flash appears at the correct barrel, a readable tracer or rocket exhaust moves along the real projectile, and a short impact flash appears exactly where it hits. A nearby road or wall may receive a subtle light patch. Heavy blasts may briefly illuminate nearby surfaces using a tightly budgeted real light. Keep the chunky, pixel-textured Megabonk-inspired readability and the military Nuclear Strike identity. Do not turn the town into a smooth neon or photorealistic scene.
+
+A glowing quad is a visible piece of geometry: it does NOT cast light onto surrounding models, create shadows, or automatically conform to a road. Emission is not scene illumination. Do not call a flat light patch a real projected light or claim bloom is required. Ordinary muzzle flashes should work without bloom. Separate three things: an attached muzzle flash, an independently moving projectile visual, and an optional patch aligned to a real surface.
+
+CURRENT PROJECT FINDINGS TO RECHECK
+
+- project.godot uses gl_compatibility and has an existing FXManager autoload at src/effects/fx_manager.gd. Keep that renderer and extend the existing service rather than adding a competing manager.
+- src/player/player_weapons.gd::_launch_weapon_projectiles spawns the primary projectiles. It obtains one muzzle transform before its projectile loop. Add one muzzle burst per successful firing action, not one flash per shotgun pellet.
+- src/player/player_turret.gd::get_active_muzzle_transform alternates barrels EVERY time it is called. Reuse the transform chosen for the actual shot; do not call this getter again merely to place an effect.
+- src/player/player_salvo.gd::_fire_salvo is a separate launch path. At inspection it calls p.setup twice for each missile. Do not attach one-shot FX to setup without an idempotency guard. Normalize this local initialization only if needed and prove that shot counts, projectile behavior and damage remain unchanged.
+- scenes/combat/projectile.tscn currently uses one small orange emissive cylinder for many projectile types. src/combat/projectile.gd handles swept collision, homing, impact, expiry, explosions and cluster children. Preserve that simulation. Provide explicit visual profiles rather than inferring friendliness from weapon type alone.
+- projectile.gd::_on_impact currently discards the collision normal, calls damage/mod effects, then generic impact sparks. Capture the collision point and normal before resolving damage because the impacted object can be destroyed by that resolution.
+- FXManager also spawns sparks from damage_dealt at a randomized position near an entity center. Without coordination this can duplicate projectile impact sparks. Keep non-projectile damage feedback through an explicit fallback and choose a single owner for each projectile impact burst; avoid broad timing-based suppression that could hide legitimate simultaneous hits.
+- FXManager::spawn_explosion currently caps explosion containers at 16 but creates a fresh OmniLight3D per explosion with range 32 * scale_mult. This is a candidate for the shared flash-light budget, not a reason to add another light to every bullet.
+- Enemy firing is distributed across src/enemies/ground/*.gd, src/enemies/air/*.gd, src/enemies/procedural_raider.gd and src/enemies/boss/heavy_gunship_boss.gd. Inventory all actual projectile-spawn functions and map each to a visual profile. Procedural raiders already apply variant-specific tracer overrides; preserve or deliberately translate their meaning.
+- src/enemies/base_enemy.gd owns start_telegraph/update_telegraph/clear_telegraph. Preserve windup, aim commitment, cover checks, attack permissions and cancellation. A muzzle flash means a projectile was actually emitted, not that an attack was merely planned.
+- src/enemies/enemy_spawner.gd uses multiple visual builders including raider_visuals.gd and field_raider_visuals.gd. Inspect imported model paths as well as procedural builds before locating muzzle markers.
+- src/shaders/tactical_toon.gdshader and town_atlas.gdshader contain lit surface paths. Verify that any optional real flash light affects actual in-game materials. Do not replace the town material or bake weapon flashes into the atlas.
+- UIFlow owns transitions and clears combat transients. FXManager currently processes ALWAYS. New gameplay effects must be explicitly pause-safe and cleared when leaving/restarting a run.
+- SettingsStore already applies AudioManager.reduce_flashes and screen_shake_level. Reuse those settings.
+- Preserve capital E in assets/Enemy/ paths. Scout Buggy source models live under assets/Enemy/scout_buggy_Game_Asset/. Do not modify or re-export supplied enemy models just to add an external Marker3D.
+
+1. BUILD THE SMALL SHARED EFFECT SYSTEM FIRST
+
+Extend FXManager with typed, clearly named methods for muzzle bursts, projectile presentation and impacts. Suggested API shapes (adapt to existing conventions):
+  play_muzzle(profile_id, muzzle_transform, source_node, shot_direction)
+  play_impact(profile_id, hit_position, hit_normal, surface_context)
+  request_flash_light(position, color, energy, radius, duration, priority)
+  clear_combat_effects()
+
+Use explicit profiles carrying faction, weapon family and optional variant; damage data remains authoritative for combat. Shot direction must come from the final launch velocity or committed aim, not the helicopter body&#x27;s heading. Recoil/spread can make these different. One muzzle burst can represent a multi-pellet volley while each pellet retains its own simulation. Cluster submunitions create impact feedback without generating a new vehicle muzzle flash.
+
+Prefer a small Resource class plus reusable effect nodes under src/effects/ and scenes/effects/. Suggested names: WeaponFXProfile, MuzzleFlashFX, ImpactFlashFX, SurfaceLightPatch. Put the common shader under src/shaders/weapon_fake_light.gdshader. Names are suggestions, not permission to duplicate existing systems.
+
+Warm reusable meshes, materials and pools during world preparation, before the loading screen reveals gameplay. Pool cosmetic nodes only unless there is a demonstrated need to change projectile allocation. Do not rewrite the combat/projectile lifecycle as part of this presentation pass.
+
+2. IMPLEMENT THE FAKE LIGHT MATERIAL
+
+Create a Godot spatial shader with unshaded, blend_add, cull_disabled and depth_draw_never. Keep depth testing ENABLED. Disable shadow casting on effect mesh instances. Do not use depth_test_disabled to make flashes visible through buildings.
+
+Expose tint, intensity, opacity, UV scale, falloff and optional UV quantization. Build a centered radial mask from UV distance with a smooth or stepped falloff. For an elongated patch, stretch the mesh or scale UV axes. Use the mask for alpha and test the actual additive result in Compatibility so the visible edge fades to nothing and no rectangular border remains. Keep shader math simple; do not depend on screen/depth textures, Forward+ features, Decal nodes, volumetric fog or a glow post-process.
+
+Use one small emissive star/core and a slightly larger soft falloff shape for a muzzle burst. Most of the glow should be restrained; the bright core stays chunky. A short crossed-quad or low-poly burst must remain readable from the gameplay camera. Billboard only the halo if needed; preserve the barrel direction in the directional burst. Do not billboard a surface patch away from its surface.
+
+Avoid huge transparent quads with mostly empty pixels. Share meshes and shaders. Use per-instance values supported by this renderer or a bounded material pool; do not mutate a single shared material&#x27;s tint/intensity when that would change all active effects. Avoid an unbounded duplicate ShaderMaterial for every bullet.
+
+3. PLAYER WEAPON LOOKS — STARTING VALUES, THEN TUNE IN CAMERA
+
+All distances below are approximate world meters and must be judged from the normal gameplay camera, not a close-up preview. Durations use simulation time.
+
+Machine gun: pale amber core #FFF0B0 and orange edge #FFAD48; roughly 0.35–0.75 m wide, 0.8–1.5 m directional burst, 0.04–0.07 s. Alternate exactly with the real muzzle selected for the shot. Short amber tracer, no persistent headlight beam. Repeated flashes must remain separate restrained pulses rather than a giant opaque sphere.
+
+Shotgun: one wider fan burst per trigger, approximately 0.7–1.2 m wide and 0.06–0.09 s. Preserve the actual pellet directions. One optional subtle surface splash per trigger, not one surface raycast/light per pellet. Impacts remain small and bounded under many simultaneous pellets.
+
+Missile: brief launcher flare 0.06–0.10 s, small orange exhaust core and a thin capped smoke/exhaust trail following the moving missile. Emit trail samples by distance or capped time step; never connect the muzzle to the missile with a full-length glowing beam. Homing turns must bend the trail correctly and an exploding missile must leave no orphan trail.
+
+Rocket: more forceful short launcher flash 0.08–0.12 s, warm exhaust and a compact readable impact burst. Preserve existing recoil. Visual blast radius should relate to the real blast but be clamped for visibility; a level-5 giant damage radius must not become a screen-filling transparent quad. Distinguish the impact core from the wider danger area if one is shown.
+
+Painted salvo: apply the same family style through its separate launch function. Coalesce flashes from the same barrel in one frame to avoid overbrightness; do not drop or combine actual missiles. Preserve equipped mod presentation, trajectory, attribution and statistics.
+
+Mods: add restrained accents only when their corresponding gameplay effect actually applies. For example EMP/shock may use a brief cool accent; napalm may leave a small warm fire effect. Preserve existing flame/rail/rocket enemy distinctions. Do not infer a new damage/status effect merely from a cosmetic color.
+
+4. ENEMY SHOOTING MUST BE READABLE
+
+Use an orange-red triangular/pointed burst for ordinary hostile fire so it differs in shape as well as hue from the player&#x27;s compact amber star. Keep an existing special variant&#x27;s cyan or flame identity when important. Do not use color alone to communicate danger: retain projectile shape, motion and the existing telegraph.
+
+Wire all armed types found in the current spawner: infantry, gatling/flak/siege ground weapons, missile carriers/SAM, scout/interceptor/gunship weapons, procedural field raiders and boss volleys. Map shared families to one profile and use variant overrides only when needed. Unarmed support enemies and kamikaze contact attacks should not emit gun flashes.
+
+At the actual projectile spawn, use a real barrel-tip Marker3D where available. Add a marker under the correct moving turret/barrel transform in procedural visuals or an external wrapper for an imported model. Use a documented safe fallback only for assets without a barrel. Verify barrel tips on the Scout Buggy body/turret assembly and other visual builders; avoid hardcoded vehicle-center flashes when a turret exists. Markers must not alter collision shapes or animation pivots.
+
+Do not trigger fire effects on attack-slot request, LOS failure, canceled windup, disabled weapon, stun or reloading. Preserve all such behavior. Boss multi-projectile volleys may use one stronger burst per physical barrel, not a separate real light for every projectile. Enemy warning meshes remain clearer and longer-lived than decorative sparks.
+
+5. IMPACTS AND OPTIONAL SURFACE PATCHES
+
+At a swept hit, use the real collision point and normal. Orient the burst outward from the surface. For projectile impacts use one cosmetic event per impact, even when direct damage, blast damage, status damage and entity_destroyed signals occur in the same frame. A distinct death explosion can still coexist with the hit burst; do not spawn two copies of the same blast presentation.
+
+Non-explosive lifetime expiry fades the tracer without inventing a wall impact. Explosive expiry already resolves gameplay blast damage: give that one coherent blast visual at the same location. Ensure cluster and napalm paths each resolve their intended cosmetic event once. Do not apply damage from FX code.
+
+If adding the video-like light patch, place a short-lived additive quad on a verified road/ground/wall surface with a small normal offset to avoid z-fighting. Raycast using existing environment mask 2, filtering out unsuitable dynamic objects as necessary. Cast from the relevant light/impact region and limit distance; do not force every helicopter muzzle flash onto the road far below it. Omit the patch when no valid surface is nearby.
+
+For walls, align to the hit normal. For roads, follow the actual ground height. Check a small set of edge samples for larger patches; shrink/fade or skip a patch that crosses a curb, wall, roof edge or disconnected surface. This technique is an approximation and cannot wrap around geometry. A flat quad is not a decal projector. Keep it small enough that this limitation is rarely visible.
+
+Do not draw an enemy warning ring as decoration. A patch is weak light spill, not a laser aim line or damage-area promise. Start optional road patches at roughly 0.8–2 m across and 0.06–0.14 s; let near heavy impacts use a larger but capped patch. A helicopter firing high above the road can show a muzzle flash with no ground patch.
+
+6. USE A SMALL REAL-LIGHT BUDGET ONLY WHERE IT HELPS
+
+Default ordinary machine-gun/infantry shots to geometry-only flashes. To make a nearby helicopter side, tank or building actually brighten, reserve a bounded pool of short-lived OmniLight3D nodes for high-priority nearby launcher flashes and explosions. All pooled flash lights must have shadows disabled. Start with at most 4 active weapon/explosion flash lights in total, not 4 per enemy; tune after profiling. Give player/heavy nearby events priority and merge nearby simultaneous requests rather than accumulating lights.
+
+Start ranges around 6–12 m, durations around 0.06–0.18 s, and energy tuned to the existing exposure and art palette. Reduce oversized explosion light ranges only as part of this shared budget, retaining the explosion particle presentation. Existing helicopter fire/strobes are separate continuous lights: include them when assessing overlap; do not silently disable unrelated effects.
+
+Add hysteresis or a brief ownership interval when prioritizing lights so they do not pop between distant events every frame. Never trade away projectile visibility or damage when the light pool is full. Quad flashes still play when optional illumination is unavailable. Keep this effect functional on current lit materials and clearly report any surface that is intentionally unshaded.
+
+7. POOLING, PAUSE, CLEANUP AND SETTINGS
+
+Initial cosmetic budgets (tuning targets, not benchmark claims): 48 simultaneous muzzle bursts, 32 impact bursts, 16 surface patches, 32 missile/rocket trails and 4 real flash lights. Share budgets across both factions. Distance/screen cull decoration and prioritize nearby player-threatening shots. A visible hostile projectile&#x27;s core must remain even if its extra halo/trail is dropped. Never cull combat simulation according to FX visibility.
+
+Use reusable slots and bounded trail buffers; no per-bullet new Timer, Tween, Mesh or ShaderMaterial in steady state. Expiry can use one pausable update loop. Keep trail segments short and cap their total count as well as emitter count. Distinguish cosmetic dropped requests from actual fired shots in debugging. Pool counts must return to zero when combat ends.
+
+FXManager being ALWAYS must not cause active-run effects to animate while gameplay is paused. Use a gameplay effect root with explicit PAUSABLE behavior and do not advance lifetimes from an always-processing manager while paused. Do not use shader TIME for lifetime animation that would continue independently of simulation time. UI effects, if any, remain separate. Avoid default always-processing SceneTreeTimers for gameplay expiry.
+
+Wire cleanup into existing UIFlow transitions and run teardown. On menu, retry, results, loading, player death or scene replacement, clear the appropriate combat effect slots and release all pooled light owners. Ensure old callbacks cannot affect a newly loaded run. If a muzzle owner is freed or a surface is destroyed, stop following it safely. An effect attached to a moving vehicle must not stick to world origin after despawn. Clean shutdown must not emit freed-instance errors.
+
+Respect Reduce Flashes at spawn AND for currently active effects when changed. Reduce intensity, alpha, bright-core area and real-light contribution; keep a readable muted projectile and attack warnings. Screen Shake Off stays off. Do not introduce a new full-screen flash or unrequested camera shake. Avoid adding settings controls unless there is a clear need; reuse existing settings first.
+
+8. IMPLEMENT IN REVIEWABLE STAGES
+
+A. Inventory the actual spawn functions, visual builders and ownership paths. Record a profile-coverage checklist. Create the shared shader/pool and a small isolated FX showcase scene with a ground tile, wall, player barrel and enemy barrel. Compare geometry-only and optional real illumination without changing normal play.
+B. Integrate primary player fire, then salvo, then enemy families and boss volleys. Preserve all combat math. Integrate collision-normal impact events and remove only duplicate effects that this pass can identify reliably.
+C. Add restrained trails/surface patches and the shared real-light budget. Keep optional layers individually switchable for developer profiling, without cluttering player menus.
+D. Validate normal gameplay in the town from the normal camera; tune against texture detail, aircraft altitude, outlines, dense enemies and explosion overlap. Do not stop at a beautiful close-up showcase.
+
+9. VERIFICATION AND ACCEPTANCE
+
+Use isolated test data through ZIVA_TEST_DATA_DIR and the existing tools/run_menu_checks.py conventions. Do not change the user&#x27;s profile or purchases during testing. Add focused tests for lifecycle/event correctness rather than snapshot tests that only mirror constants.
+
+- One successful MG trigger creates one correctly alternating barrel burst. Empty ammo, cooldown and reload create none. A shotgun trigger creates one muzzle burst regardless of pellet count. Spread, ammo and damage are identical with FX on/off.
+- Salvo missiles and cluster children each preserve their spawn counts, damage and shot statistics. Repeated setup or a repeated callback cannot duplicate one-shot FX.
+- Verify each armed spawner family and boss volley visually. Canceled telegraphs, blocked LOS and lost attack slots create no firing flash. Threat cores and existing attack warnings remain readable when cosmetic budgets are exhausted.
+- A building/ground hit creates one impact at the collision point with the correct outward normal. One blast causes one blast visual. Ordinary expiry creates no fake impact; explosive expiry produces the existing gameplay blast and its matching FX once.
+- Test low and high helicopter altitude, close walls, roofs, building destruction, curb boundaries and camera rotation. No visible glow through opaque cover, large floating light rectangles, copied ground patch on a distant road, or obvious patch bleeding across a wall.
+- Hold rapid fire with enemies and Overdrive; pause for several seconds, open settings, change Reduce Flashes, resume, die, retry and return to menu. No paused lifetimes advancing, stuck lights, orphan trails or old-run FX after transition. Repeat at least five runs.
+- Record active/pooled counts during stress and after cleanup. Pool exhaustion must degrade decoration only. Check that material/resource count plateaus after warm-up rather than increasing for every shot.
+- Capture a reproducible rendered before/after comparison with the same seed, camera, population and fire pattern. Measure frame time and rendering statistics after warm-up, report median and p95 over a useful sample, plus maximum visible FX and light counts. State the hardware, renderer, resolution and sample duration. Do not claim 60 FPS or a specific overhead without measurement. If software/headless rendering is the only available test, say so; it cannot establish the user&#x27;s GPU performance.
+- Run relevant existing weapon/enemy damage, pursuit and menu transition checks where available. Parse new shaders and scripts and inspect the rendered game for transparency, wall occlusion and orientation; headless tests alone cannot validate appearance. Report existing unrelated failures separately.
+
+DELIVER
+
+Implement the working effects, not just a plan. Return a short explanation, changed-file list, screenshots or short captures of player/enemy fire and impact examples, coverage checklist for all firing families, verification results, measured performance and any remaining limits. Document the effect profiles/budgets so later weapons and enemy models can use the same service.
+
+Do not redesign menus, enemy AI, progression, map layout or base textures. Do not replace the renderer, require an external VFX plugin, generate a new enemy model, or modify damage balance to make the visuals look stronger. The effects should make the current combat easier to read and more satisfying.
+</pre></details></section>
+<section><h2>What a finished implementation must prove</h2><ol><li>Player and enemy flashes come from the actual barrel.</li><li>Walls hide flashes; impacts follow the surface.</li><li>Damage, ammo, AI timing and projectile counts are unchanged.</li><li>Pause, Reduce Flashes, retry and menu transitions work cleanly.</li><li>Dense combat stays readable and effect counts remain bounded.</li><li>Rendered screenshots and measured performance support the result.</li></ol></section>
+<footer><p><strong>Technical references:</strong> Godot documents <a href="https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/spatial_shader.html">additive and unshaded shader modes</a>. Real light behavior and shadow costs are described in <a href="https://docs.godotengine.org/en/stable/tutorials/3d/lights_and_shadows.html">Lights and shadows</a>. Check feature support against <a href="https://docs.godotengine.org/en/stable/tutorials/rendering/renderers.html">the renderer comparison</a>.</p><p>Delivered: a project-specific implementation brief. No gameplay source was changed for this request.</p></footer>
+</main><script>
+const button=document.getElementById('copy'), status=document.getElementById('status'), prompt=document.getElementById('prompt');
+button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(prompt.textContent);status.textContent='Full prompt copied.';}catch(error){const selection=window.getSelection(),range=document.createRange();range.selectNodeContents(prompt);selection.removeAllRanges();selection.addRange(range);status.textContent='Prompt selected. Press Ctrl+C to copy.';}});
+</script></body></html>

@@ -1,0 +1,75 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/enemies/ground/scout_buggy_wheel_controller.gd" id="1_qx015"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/scout_buggy_Game_Asset/buggy_body_mesh.res" id="2_body"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/scout_buggy_Game_Asset/buggy_glass_mesh.res" id="3_glass"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/tank_game_ready/universal_wheel_mesh.res" id="4_dqh53"]
+[ext_resource type="Script" path="res://src/enemies/ground/scout_buggy_turret.gd" id="5_cyu0y"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/scout_buggy_Game_Asset/turret_mount.res" id="6_xvrsx"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/scout_buggy_Game_Asset/turret_gun.res" id="7_ib8hx"]
+
+[node name="ScoutBuggyRig" type="Node3D"]
+
+[node name="Visuals" type="Node3D" parent="."]
+script = ExtResource("1_qx015")
+
+[node name="BodyModel" type="Node3D" parent="Visuals"]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 1.18, 0)
+
+[node name="Desert_Recon_Buggy_Body" type="MeshInstance3D" parent="Visuals/BodyModel"]
+mesh = ExtResource("2_body")
+
+[node name="Desert_Recon_Buggy_Glass" type="MeshInstance3D" parent="Visuals/BodyModel"]
+mesh = ExtResource("3_glass")
+
+[node name="Wheels" type="Node3D" parent="Visuals"]
+
+[node name="FrontLeftSteer" type="Node3D" parent="Visuals/Wheels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.88, 0.5, -1.2)
+
+[node name="FrontLeftSpin" type="Node3D" parent="Visuals/Wheels/FrontLeftSteer"]
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/FrontLeftSteer/FrontLeftSpin"]
+transform = Transform3D(-4.5723212e-08, 0, -1.0460252, 0, 1.0460252, 0, 1.0460252, 0, -4.5723212e-08, 0, 0, 0)
+mesh = ExtResource("4_dqh53")
+
+[node name="FrontRightSteer" type="Node3D" parent="Visuals/Wheels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.88, 0.5, -1.2)
+
+[node name="FrontRightSpin" type="Node3D" parent="Visuals/Wheels/FrontRightSteer"]
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/FrontRightSteer/FrontRightSpin"]
+transform = Transform3D(-4.5723212e-08, 0, 1.0460252, 0, 1.0460252, 0, -1.0460252, 0, -4.5723212e-08, 0, 0, 0)
+mesh = ExtResource("4_dqh53")
+
+[node name="RearLeftSpin" type="Node3D" parent="Visuals/Wheels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.88, 0.5, 0.89)
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/RearLeftSpin"]
+transform = Transform3D(-4.5723212e-08, 0, -1.0460252, 0, 1.0460252, 0, 1.0460252, 0, -4.5723212e-08, 0, 0, 0)
+mesh = ExtResource("4_dqh53")
+
+[node name="RearRightSpin" type="Node3D" parent="Visuals/Wheels"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.88, 0.5, 0.89)
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/RearRightSpin"]
+transform = Transform3D(-4.5723212e-08, 0, 1.0460252, 0, 1.0460252, 0, -1.0460252, 0, -4.5723212e-08, 0, 0, 0)
+mesh = ExtResource("4_dqh53")
+
+[node name="Turret" type="Node3D" parent="."]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 0, 1.764, 0.52)
+script = ExtResource("5_cyu0y")
+
+[node name="MountModel" type="MeshInstance3D" parent="Turret"]
+mesh = ExtResource("6_xvrsx")
+
+[node name="GunPitch" type="Node3D" parent="Turret"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.009, 0.0547, -0.0007)
+
+[node name="Recoil" type="Node3D" parent="Turret/GunPitch"]
+
+[node name="GunModel" type="MeshInstance3D" parent="Turret/GunPitch/Recoil"]
+mesh = ExtResource("7_ib8hx")
+
+[node name="Muzzle" type="Marker3D" parent="Turret/GunPitch/Recoil"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0114, 0.0403, -0.2845)

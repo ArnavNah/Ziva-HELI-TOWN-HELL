@@ -1,0 +1,75 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/enemies/ground/assault_apc_wheel_controller.gd" id="1_1oxnv"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/tank_game_ready/tank_hull_mesh.res" id="2_oycno"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/tank_game_ready/universal_wheel_mesh.res" id="3_f10no"]
+[ext_resource type="Script" path="res://src/enemies/ground/assault_apc_turret.gd" id="4_wvht7"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/tank_game_ready/tank_turret_base_mesh.res" id="5_80ju7"]
+[ext_resource type="ArrayMesh" path="res://assets/Enemy/tank_game_ready/tank_turret_gun_mesh.res" id="6_spcud"]
+
+[node name="AssaultAPCRig" type="Node3D" unique_id=1489618544]
+
+[node name="Visuals" type="Node3D" parent="." unique_id=930428617]
+script = ExtResource("1_1oxnv")
+
+[node name="HullModel" type="Node3D" parent="Visuals" unique_id=2045226886]
+
+[node name="Tank_Hull" type="MeshInstance3D" parent="Visuals/HullModel" unique_id=1286645226]
+transform = Transform3D(-2.710106e-07, 0, -6.2, 0, 6.2, 0, 6.2, 0, -2.710106e-07, 0, 1.35, 0)
+mesh = ExtResource("2_oycno")
+
+[node name="Wheels" type="Node3D" parent="Visuals" unique_id=1536403044]
+
+[node name="FrontLeftSteer" type="Node3D" parent="Visuals/Wheels" unique_id=1266547208]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.25, 0.58, -1.75)
+
+[node name="FrontLeftSpin" type="Node3D" parent="Visuals/Wheels/FrontLeftSteer" unique_id=2096449933]
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/FrontLeftSteer/FrontLeftSpin" unique_id=56623296]
+transform = Transform3D(-4.9830984e-08, 0, -1.14, 0, 1.14, 0, 1.14, 0, -4.9830984e-08, 0, 0, 0)
+mesh = ExtResource("3_f10no")
+
+[node name="FrontRightSteer" type="Node3D" parent="Visuals/Wheels" unique_id=1252611593]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 0.58, -1.75)
+
+[node name="FrontRightSpin" type="Node3D" parent="Visuals/Wheels/FrontRightSteer" unique_id=2078815948]
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/FrontRightSteer/FrontRightSpin" unique_id=1346359072]
+transform = Transform3D(-4.9830984e-08, 0, 1.14, 0, 1.14, 0, -1.14, 0, -4.9830984e-08, 0, 0, 0)
+mesh = ExtResource("3_f10no")
+
+[node name="RearLeftSpin" type="Node3D" parent="Visuals/Wheels" unique_id=1891718633]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.25, 0.58, 2.15)
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/RearLeftSpin" unique_id=1054461537]
+transform = Transform3D(-4.9830984e-08, 0, -1.14, 0, 1.14, 0, 1.14, 0, -4.9830984e-08, 0, 0, 0)
+mesh = ExtResource("3_f10no")
+
+[node name="RearRightSpin" type="Node3D" parent="Visuals/Wheels" unique_id=1801870879]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.25, 0.58, 2.15)
+
+[node name="WheelModel" type="MeshInstance3D" parent="Visuals/Wheels/RearRightSpin" unique_id=1935154598]
+transform = Transform3D(-4.9830984e-08, 0, 1.14, 0, 1.14, 0, -1.14, 0, -4.9830984e-08, 0, 0, 0)
+mesh = ExtResource("3_f10no")
+
+[node name="Turret" type="Node3D" parent="." unique_id=948848112]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.004, 2.081, -0.056)
+script = ExtResource("4_wvht7")
+
+[node name="MountModel" type="Node3D" parent="Turret" unique_id=338407006]
+
+[node name="Tank_Turret_Base" type="MeshInstance3D" parent="Turret/MountModel" unique_id=1537198278]
+transform = Transform3D(-2.710106e-07, 0, -6.2, 0, 6.2, 0, 6.2, 0, -2.710106e-07, 0, 0, 0)
+mesh = ExtResource("5_80ju7")
+
+[node name="GunPitch" type="Node3D" parent="Turret" unique_id=1157492337]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0215, 0.3148, -0.7146)
+
+[node name="Recoil" type="Node3D" parent="Turret/GunPitch" unique_id=1712396661]
+
+[node name="GunModel" type="MeshInstance3D" parent="Turret/GunPitch/Recoil" unique_id=697567557]
+transform = Transform3D(-2.710106e-07, 0, -6.2, 0, 6.2, 0, 6.2, 0, -2.710106e-07, 0, 0, 0)
+mesh = ExtResource("6_spcud")
+
+[node name="Muzzle" type="Marker3D" parent="Turret/GunPitch/Recoil" unique_id=1130998189]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.5167)

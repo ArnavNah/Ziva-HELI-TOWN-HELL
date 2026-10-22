@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="TankModelConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/enemies/ground/tank_model_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+model_name = "ironclad_sentinel"
+assigned_role = "gatling_heavy"
+visual_scale = 6.8
+ground_contact_lift = 1.8278
+hull_center_offset_z = 0.3155
+turret_mount_offset = Vector3(0, 1.7966, 0.3366)
+gun_hinge_offset = Vector3(0, 0.8915, -0.8316)
+muzzle_offset = Vector3(0.0384, 0.0621, -3.0695)
+min_pitch_deg = -10.0
+max_pitch_deg = 55.0
+turn_speed_deg = 180.0
+pitch_speed_deg = 120.0
+default_aim_tolerance_deg = 18.0
+recoil_distance = 0.04
+recoil_recovery_time = 0.06
+has_rotary_barrels = true
+barrel_bore_offset = Vector3(0.0384, 0.0024, 0)
+windup_spin_speed = 28.0
+fire_spin_speed = 42.0
+max_pitch_settle_deg = 1.8
+max_roll_settle_deg = 1.5
+chassis_pitch_speed = 6.5
+chassis_roll_speed = 7.5
+chassis_return_speed = 8.5

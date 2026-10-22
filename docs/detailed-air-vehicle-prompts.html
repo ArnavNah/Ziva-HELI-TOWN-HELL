@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ZIVA · Six essential air vehicle prompts</title><style>
+:root{color-scheme:light;--paper:#f4f2e9;--card:#fffef9;--ink:#243027;--muted:#626c60;--olive:#4c613a;--line:#d7dbcd;--amber:#d99f3d}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif}a{color:var(--olive);text-underline-offset:4px}button,input{font:inherit}button{cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:9px 14px;font-size:13px;font-weight:650}button:hover{background:#eaf0df}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--amber);outline-offset:4px}.primary{background:var(--olive);color:white;border-color:var(--olive)}.primary:hover{background:#35492c}.wrap{max-width:1320px;margin:auto;padding:32px}.masthead{display:flex;justify-content:space-between;gap:18px;border-bottom:1px solid var(--line);padding-bottom:20px}.brand{font-weight:850;letter-spacing:.1em}.edition,.eyebrow,.type,.number{font:12px/1.5 ui-monospace,monospace}.edition{color:var(--muted);text-align:right}.eyebrow{color:var(--olive);letter-spacing:.15em;text-transform:uppercase}header{padding:42px 0 28px}h1{font-size:clamp(36px,5vw,64px);line-height:1.08;letter-spacing:-.05em;max-width:850px;margin:12px 0 20px}.lead{max-width:800px;font-size:18px;color:var(--muted)}.brief{background:#eaf0df;border-left:4px solid var(--olive);padding:20px 24px;border-radius:5px}.brief p{margin:0}.brief p+p{margin-top:10px}.layout{display:grid;grid-template-columns:225px minmax(0,1fr);gap:32px;margin-top:28px}nav{align-self:start;position:sticky;top:24px}nav p{margin:0 0 12px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.1em}nav a{display:block;padding:7px 0;font-size:14px;text-decoration:none}nav a:hover{text-decoration:underline}main{min-width:0}.toolbar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin:0 0 20px}.toolbar label{font-size:13px;display:flex;gap:8px;align-items:center}.toolbar input{accent-color:var(--olive)}section,article{scroll-margin-top:24px}details,article{border:1px solid var(--line);border-radius:8px;background:var(--card);margin-bottom:20px}details{padding:18px 22px}summary{cursor:pointer;font-weight:750}summary small{font-weight:400;color:var(--muted);margin-left:8px}.shared-copy{margin-top:14px}article{padding:28px}.card-head{display:flex;gap:16px;align-items:start}.number{color:var(--olive);font-size:21px;border-bottom:3px solid var(--amber);padding-bottom:5px}.card-title{flex:1;min-width:0}h2{margin:0 0 6px;font-size:25px;line-height:1.25;letter-spacing:-.025em}.type{color:var(--muted)}.note{font-size:13px;color:var(--muted);border-left:3px solid var(--amber);padding-left:12px;margin:16px 0}.prompt{font:14px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:20px 0 0}.card-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:22px}.card-actions span{font-size:12px;color:var(--muted)}footer{border-top:1px solid var(--line);padding:24px 0;margin-top:24px;color:var(--muted);font-size:13px}#status{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);background:var(--ink);color:white;border-radius:6px;padding:12px 20px;box-shadow:0 6px 25px #0002;z-index:5}#status:empty{display:none}
+@media(max-width:850px){.wrap{padding:22px 18px}.layout{grid-template-columns:1fr;gap:18px}nav{position:static;display:flex;flex-wrap:wrap;gap:4px 16px}nav p{width:100%;margin-bottom:0}nav a{font-size:13px}article{padding:22px}.masthead{font-size:13px}.edition{font-size:10px}.card-head{gap:12px}h2{font-size:22px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{body{background:white}.wrap{max-width:none;padding:0}nav,.toolbar,button,#status{display:none!important}.layout{display:block}header{padding:20px 0}h1{font-size:34pt}.lead{font-size:12pt}article{break-before:page;padding:18px;border-color:#bbb}.prompt{font-size:10pt;line-height:1.5}details{border-color:#bbb}.brief{background:#f0f2eb}.masthead{font-size:10pt}footer{font-size:10pt}}
+</style></head><body>
+<div class="wrap"><div class="masthead"><div class="brand">ZIVA / HELI TOWN HELLL</div><div class="edition">DETAILED ASSET PROMPT PACK<br>AIR VEHICLES · SIX ESSENTIAL DESIGNS</div></div>
+<header><div class="eyebrow">One clear silhouette for each combat role</div><h1>Six aircraft.<br>Six clear roles.</h1><p class="lead">Six detailed prompts selected for variety: a cannon helicopter, fast interceptor, heavy bomber, guided-projectile VTOL, diving explosive drone, and shield-support drone. Match the ground collection with chunky geometry, matte color blocks, and immediately readable silhouettes.</p><p><a href="remaining-ground-vehicle-prompts.html">← Open the detailed ground vehicle pack</a></p></header>
+<aside class="brief"><p><strong>How to use:</strong> “Copy complete prompt” combines the shared style, selected aircraft, and negative prompt. Enable the 3D requirements for a modeling agent or 3D generator.</p><p><strong>Model the machinery; add effects in game.</strong> Show stationary solid blades, attached weapons, and physical support emitters. Keep rotors, gun cradles, and bay doors separate for later animation.</p><p><strong>The selected six:</strong> Attack Gunship, Interceptor, Heavy Bomber, Torpedo VTOL, Kamikaze Drone, and Shield Drone. Each earns its place through a distinct shape and tactical role. This page is the reduced modeling prompt shortlist.</p></aside>
+<div class="layout"><nav aria-label="Air prompt navigation"><p>Prompt index</p><a href="#shared">Shared style &amp; requirements</a><a href="#attack_gunship">01 · Attack Gunship</a><a href="#interceptor">02 · Interceptor</a><a href="#heavy_bomber">03 · Heavy Bomber</a><a href="#torpedo_vtol">04 · Torpedo VTOL</a><a href="#kamikaze_drone">05 · Kamikaze Drone</a><a href="#shield_drone">06 · Shield Drone</a></nav><main>
+<div class="toolbar"><button class="primary" id="copy-all" type="button">Copy all 6 complete prompts</button><button id="print" type="button">Print / Save PDF</button><label><input id="include-export" type="checkbox">Include 3D delivery requirements</label></div>
+<section id="shared" aria-label="Shared prompt sections"><details open><summary>Shared style prompt · included in complete prompts</summary><pre class="prompt" id="style-prompt">Create one original low-poly enemy aircraft for a colorful arcade helicopter
+combat game. Use the same chunky, playful, exaggerated military art direction
+as the ground vehicle collection, inspired by Megabonk.
+
+ART DIRECTION:
+Broad flat surfaces, visible polygon facets, squat fuselages, thick wings,
+oversized functional equipment, and bold silhouettes. Slightly toy-like,
+threatening, and a little absurd. Every unit must be recognizable from an
+elevated helicopter camera through its shape before its color.
+
+GEOMETRY:
+Genuinely low-poly geometry with flat shading. Use approximately 6-10 sides
+for small cylinders. Bevel only silhouette-defining edges. Rotor blades,
+wings, fins, and mounts have visible thickness. Avoid small fragile details.
+Separate moving machinery from the airframe for later animation.
+
+MATERIALS:
+Matte painted armor, charcoal mechanics, dark opaque canopy panels, and a
+few broad accent panels. Minimal texture noise. Large painted vents and
+simple panel divisions. Match the approved ground assets in shading and
+surface detail. Colored lenses should remain legible without bloom.
+
+PRESENTATION:
+One aircraft only, fully assembled in a neutral flight pose, centered on a
+plain light-gray background. Elevated front three-quarter view showing the
+nose, roof, one side, wings, and propulsion. Soft neutral studio lighting.
+Leave generous space around every rotor, wingtip, tail, and weapon.
+Show stationary physical rotor blades, never motion-blurred discs.
+No scenery, ground plane, stand, cast-shadow platform, text, labels, or effects.</pre><button class="shared-copy" data-copy="style-prompt" type="button">Copy section</button></details><details><summary>Negative prompt · included in complete prompts</summary><pre class="prompt" id="negative-prompt">Photorealistic, high-poly, subdivision surfaces, dense bevels, realistic
+military simulation, intricate machinery, individual bolts, noisy weathering,
+heavy scratches, rust, chrome, glossy plastic, transparent cockpit glass,
+visible pilot, crew, tiny markings, text, logos, watermark, thin antennas,
+razor-thin wings, paper-thin blades, fused rotors, warped symmetry,
+extra propellers, missing blades, blocked gun muzzle, detached weapons,
+exploded view, multiple aircraft, cropped wingtip, cropped rotor, display
+stand, diorama, background scenery, motion blur, spinning translucent disc,
+smoke, fire, engine trails, muzzle flashes, falling bombs, loose mines,
+energy beams, shield bubble, sparks, floating holograms.</pre><button class="shared-copy" data-copy="negative-prompt" type="button">Copy section</button></details><details><summary>3D delivery requirements · optional when copying</summary><pre class="prompt" id="export-prompt">Deliver a modular game asset. Join static armor details into the relevant
+parent mesh. Keep Airframe, each Rotor assembly, aiming Gun/Turret, and
+any moving BayDoors or Projector mechanically separate where applicable.
+Do not create a separate object for every panel, bolt, vent, or blade.
+
+ROTORS AND FANS:
+Each rotor assembly includes its hub and blades with a pivot at the true
+shaft center. All blades of that rotor rotate together. Keep fixed fan ducts
+separate. Leave real blade-to-duct and blade-to-airframe clearance.
+Helicopter main rotors spin about their local shaft, tail rotors about their
+side-facing shaft. Keep fixed fan ducts and wings stationary while their rotor assemblies spin.
+No baked blur discs. Reuse compatible mesh/material resources across repeated
+propulsion units; keep individual placement and animation transforms.
+
+WEAPONS AND SOCKETS:
+Provide named Muzzle markers at the visible barrel openings and launch or
+drop sockets for each functional launcher, bay, or dispenser as applicable.
+Muzzle local -Z points outward along the actual barrel. Separate aiming
+cradles from static mounts. Keep gun traverse and doors clear of the hull.
+Model only the equipment required by the unit&#x27;s role; support drones do not
+need guns. Additional decorative equipment does not imply new gameplay.
+
+EXPORT:
+Export GLB/glTF 2.0 with sensible object names, applied scale, clean normals,
+and no accidental interior fragments. Final Godot orientation: +Y up,
+-Z forward. Use meters; root at a documented central airframe reference.
+Keep rotors and sockets aligned in the assembled bind pose.
+
+Suggested complete-asset budgets, including blades and weapons:
+Small drones: approximately 800-2,000 triangles.
+Regular aircraft: approximately 2,000-4,000 triangles.
+Heavy bomber/VTOL: approximately 3,000-5,000 triangles.
+These are design targets, not measured performance guarantees.
+
+Prefer one shared color atlas/material for painted surfaces and mechanics;
+use an optional second emissive material for lenses or projector lenses.
+No baked lighting, transparent shield mesh, trails, or particle effects.
+Keep original source files and store new enemy assets under assets/Enemy/.
+
+Generation does not guarantee usable topology, separation, UVs, pivots,
+triangle counts, or sockets. Inspect and correct those in the modeling stage.
+Match the actual gameplay scale and camera before finalizing import.
+This is an art asset specification; preserve existing AI, weapon balance,
+projectile behavior, and collision dimensions during later integration.</pre><button class="shared-copy" data-copy="export-prompt" type="button">Copy section</button></details></section>
+<article id="attack_gunship"><div class="card-head"><span class="number">01</span><div class="card-title"><h2>Attack Gunship</h2><div class="type">attack_gunship · Helicopter · Chin autocannon</div></div></div><pre class="prompt vehicle">Create a low-poly military attack helicopter focused on an articulated
+chin autocannon.
+
+SILHOUETTE:
+A narrow chisel nose, stepped tandem cockpit, chunky central engine body,
+long tapered tail boom, short weapon wings, and one broad four-blade main
+rotor. Add a small side-facing tail rotor. Keep the cockpit and tail
+unmistakably helicopter-shaped from above.
+
+BODY AND COLOR:
+Dark olive armor, charcoal engine vents, a dark red opaque canopy, and
+small mustard-yellow recognition panels. Use two simple engine housings
+behind the cockpit and short thick landing skids. Armor is broad and
+faceted, with only a few large panel divisions.
+
+WEAPON:
+One prominent chin autocannon with a thick receiver and faceted barrel.
+Show a distinct yaw mount and elevation cradle with clearance below the nose.
+Small compact side stores may remain secondary to the gun.
+
+PROPULSION AND PARTS:
+Separate main rotor, tail rotor, airframe, turret shell, and aiming gun.
+Pose every blade stationary and keep the complete rotor span in frame.
+
+CHARACTER:
+An aggressive nose-forward attack helicopter with an oversized chin gun.
+Keep it slim, with the chin cannon as its defining weapon.
+No giant cargo cabin, additional main rotor, or weapons firing.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy aircraft only</button><span>Slim armored nose + single main rotor</span></div></article>
+<article id="interceptor"><div class="card-head"><span class="number">02</span><div class="card-title"><h2>Interceptor</h2><div class="type">interceptor · Fixed-wing jet · High-speed burst fire</div></div></div><pre class="prompt vehicle">Create a low-poly high-speed interceptor jet with a long aggressive profile.
+
+SILHOUETTE:
+A long faceted spear-like nose, narrow central fuselage, sharply swept
+triangular delta wings, one tall swept tail fin, and one oversized rear
+exhaust. Keep the whole shape long and streamlined, with a clearly readable
+arrowhead planform. Wing tips should be thick enough to survive
+low-poly conversion without becoming paper-thin.
+
+BODY AND COLOR:
+Desaturated steel-blue armor, charcoal wing undersides and exhaust,
+small warm ivory panels, and a brick-red dorsal stripe. Dark opaque canopy
+set behind the long nose. Minimal panel divisions.
+
+WEAPON:
+Two short reinforced forward gun openings near the front wing roots.
+The guns communicate rapid precision bursts without creating a huge
+exposed turret. Keep the nose clean and straight.
+
+PROPULSION AND PARTS:
+One dark rear jet outlet, simple wing-root intakes, and retracted landing
+gear. No rotors, propellers, articulated wings, or unnecessary mechanisms.
+Provide clear forward weapon sockets for later integration.
+
+CHARACTER:
+A flying dart: pointed, fast, and uncompromising.
+No broad bomber fuselage, twin tails, heavy external payload, or effects.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy aircraft only</button><span>Long spear nose + tight delta silhouette</span></div></article>
+<article id="heavy_bomber"><div class="card-head"><span class="number">03</span><div class="card-title"><h2>Heavy Bomber</h2><div class="type">heavy_bomber · Fixed-wing jet · Heavy payload</div></div></div><pre class="prompt vehicle">Create a low-poly heavy tactical bomber with exaggerated carrying capacity.
+
+SILHOUETTE:
+A thick slab-like fuselage, blunt armored cockpit, very broad mildly swept
+wings, two large underwing engine nacelles, a substantial horizontal tail,
+and one tall central tail fin. It should feel broad, weighty, and slower
+than every regular fighter in the collection.
+
+BODY AND COLOR:
+Muted olive wings, blue-gray fuselage armor, charcoal engines, and large
+sand-yellow recognition panels. Use simple dark cockpit windows and a
+few broad roof vents. Avoid intricate panel seams.
+
+PAYLOAD:
+A prominent central belly bomb bay with two closed rectangular doors,
+plus compact closed equipment housings under the outer wings.
+Give the underside enough thickness for the bay to be structurally plausible.
+Do not hang dozens of separate bombs from the wings.
+
+PARTS:
+Separate bomb-bay doors around actual hinge lines if opening is required
+later. Show the closed-door bind pose in the reference. Keep engine nacelles
+static and provide a central drop socket below the bay.
+
+CHARACTER:
+A chunky flying cargo box adapted for bombing. Its broad planform should
+remain clear beside the slim fighters.
+No four-engine redesign, extra turrets, falling bombs, or open exploded bay.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy aircraft only</button><span>Broad wings + thick fuselage + two engines</span></div></article>
+<article id="torpedo_vtol"><div class="card-head"><span class="number">04</span><div class="card-title"><h2>Torpedo VTOL</h2><div class="type">torpedo_vtol · Ducted-fan VTOL · Twin guided projectiles</div></div></div><pre class="prompt vehicle">Create a low-poly heavy VTOL attack aircraft with two large ducted lift fans
+and two long guided-projectile launch housings.
+
+SILHOUETTE:
+A chunky rectangular armored fuselage, short broad cross-wing, and one
+large circular fan pod near each wingtip. Each fan has a thick polygonal
+protective ring with visible stationary blades inside. Two long belly
+launcher housings project forward beneath the body.
+
+BODY AND COLOR:
+Muted olive and sand armor, charcoal fan recesses, brick-red launcher
+housings, and pale cyan opaque cockpit panels. Use a blunt sloped nose
+and a compact rear stabilizer.
+
+WEAPON:
+Exactly two substantial elongated launch housings, one per side beneath
+the wing roots. Use dark recessed front openings and thick retaining mounts.
+The torpedo-like payload is an aerial guided projectile; do not turn the
+vehicle into a boat or add naval equipment.
+
+PROPULSION AND PARTS:
+Separate the two fan rotors from the fixed ducts and airframe.
+Keep blade tips clear of the rings. A small nose sensor is sufficient;
+the belly launchers should dominate the weapon silhouette.
+
+CHARACTER:
+A heavy hovering delivery platform. Its defining features are the circular
+fan ducts and bulky launcher pair, distinct from the gun helicopter.
+No open tiltrotors, nautical details, missile trails, or firing effects.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy aircraft only</button><span>Twin circular fan pods + long belly launchers</span></div></article>
+<article id="kamikaze_drone"><div class="card-head"><span class="number">05</span><div class="card-title"><h2>Kamikaze Drone</h2><div class="type">kamikaze_drone · Quadrotor · Diving explosive attack</div></div></div><pre class="prompt vehicle">Create a low-poly kamikaze quadrotor with an oversized armored explosive core.
+
+SILHOUETTE:
+A compact four-arm X frame surrounding a thick faceted central warhead body.
+Exactly four small two-blade rotors at the arm ends. The central core should
+be large and blunt relative to the short rotor arms.
+Give the front a short downward-angled impact wedge for a diving attitude.
+
+BODY AND COLOR:
+Brick-red warhead armor, charcoal arms and propellers, olive rear casing,
+and small yellow caution panels without text. Use a dark red inset center
+that can receive a subtle runtime warning glow later.
+The model must still read clearly with emission disabled.
+
+EQUIPMENT:
+No separate gun, launcher, bomb hanging below, or attack turret.
+The entire vehicle is the threat. Use a broad front impact plate and a few
+simple reinforcement ribs to communicate the heavy central payload.
+Avoid intricate explosive wiring or tiny components.
+
+PARTS:
+Separate all four rotor assemblies and keep blade clearances intact.
+The warhead shell remains one static body; any warning light material should
+be isolated from the painted armor.
+
+CHARACTER:
+A compact angry flying charge with an unmistakable red center.
+Make the core dominate its outline so it reads as a flying charge.
+No plane wings, nose propeller, explosion, smoke, exposed wiring, or loose bombs.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy aircraft only</button><span>Compact X frame + oversized red warhead core</span></div></article>
+<article id="shield_drone"><div class="card-head"><span class="number">06</span><div class="card-title"><h2>Shield Drone</h2><div class="type">shield_drone · Support quadrotor · Protects nearby enemies</div></div></div><pre class="prompt vehicle">Create a low-poly shield-support quadrotor with a large physical shield
+projector built into its armored body.
+
+SILHOUETTE:
+A broad flattened hexagonal center, four thick short arms, and four compact
+rotor assemblies inside sturdy protective ducts. Keep the duct rings simple
+and polygonal. The overall form is broad and defensive rather than pointed.
+
+BODY AND COLOR:
+Muted olive-blue armor, charcoal fan recesses, sand recognition panels,
+and one large pale blue projector lens. Use thick layered upper armor plates
+with very few panel lines. The blue hardware must be visible from above
+and from the front three-quarter camera.
+
+SUPPORT EQUIPMENT:
+A substantial central projector housing with a recessed faceted blue lens
+on the upper-front face and a smaller underside emitter.
+These are physical mounted components. Do not model the protective bubble,
+floating rings, or holographic shield symbols.
+This support unit carries no gun or missile launcher.
+
+PARTS:
+Separate four fan rotors from their fixed ducts.
+Keep projector lens material separately controllable for a runtime pulse.
+Use solid lens geometry; transparency is unnecessary.
+
+CHARACTER:
+A little flying armored guardian. Its broad shell and blue projector should
+identify it without relying on an active shield effect.
+No giant energy sphere, repair tools, attack barrel, or transparent armor.</pre><div class="card-actions"><button class="primary complete" type="button">Copy complete prompt</button><button class="vehicle-only" type="button">Copy aircraft only</button><span>Broad hexagonal shell + blue projector lens</span></div></article>
+<footer><p>Approve the Attack Gunship, Interceptor, and Shield Drone first. Reuse those approved images as style references for the rotorcraft, fixed-wing aircraft, and drones respectively. Keep the same shading, panel detail, camera angle, and matte material treatment across the collection.</p><p>The 3D budgets and mechanisms are design targets. Inspect actual meshes, blade clearances, pivots, sockets, and assembled scale before integration. New source assets belong in <code>assets/Enemy/</code>.</p><p><a href="remaining-ground-vehicle-prompts.html">Detailed ground vehicle prompts</a> · Visual reference: <a href="https://megabonk.itch.io/megabonk-presskit-release" target="_blank" rel="noopener noreferrer">Megabonk official reference material</a></p></footer>
+</main></div></div><div id="status" role="status" aria-live="polite"></div><script>
+const read = id => document.getElementById(id).textContent.trim();
+let statusTimer;
+function announce(message) {
+  document.getElementById('status').textContent = message;
+  clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => { document.getElementById('status').textContent = ''; }, 3500);
+}
+async function copyText(text) {
+  try {
+    if (!navigator.clipboard || !window.isSecureContext) throw new Error('Fallback');
+    await navigator.clipboard.writeText(text);
+  } catch (error) {
+    const previous = document.activeElement;
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('readonly', '');
+    field.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.appendChild(field);
+    field.select();
+    const copied = document.execCommand('copy');
+    field.remove();
+    if (previous) previous.focus();
+    if (!copied) throw new Error('Copy unavailable');
+  }
+}
+function completePrompt(card) {
+  const parts = [read('style-prompt'), card.querySelector('.vehicle').textContent.trim(), 'NEGATIVE PROMPT:\n' + read('negative-prompt')];
+  if (document.getElementById('include-export').checked) parts.push('3D DELIVERY REQUIREMENTS:\n' + read('export-prompt'));
+  return parts.join('\n\n');
+}
+async function copyAndNotify(text, message) {
+  try { await copyText(text); announce(message); }
+  catch (error) { announce('Clipboard unavailable. Select the prompt text and copy it manually.'); }
+}
+document.querySelectorAll('[data-copy]').forEach(button => {
+  button.addEventListener('click', () => copyAndNotify(read(button.dataset.copy), 'Shared section copied.'));
+});
+document.querySelectorAll('article').forEach(card => {
+  const name = card.querySelector('h2').textContent;
+  const complete = card.querySelector('.complete');
+  const vehicle = card.querySelector('.vehicle-only');
+  complete.setAttribute('aria-label', 'Copy complete ' + name + ' prompt');
+  vehicle.setAttribute('aria-label', 'Copy ' + name + ' vehicle prompt only');
+  complete.addEventListener('click', () => copyAndNotify(completePrompt(card), name + ': complete prompt copied.'));
+  vehicle.addEventListener('click', () => copyAndNotify(card.querySelector('.vehicle').textContent.trim(), name + ': vehicle prompt copied.'));
+});
+document.getElementById('copy-all').addEventListener('click', () => {
+  const text = Array.from(document.querySelectorAll('article')).map((card, index) =>
+    (index + 1) + '. ' + card.querySelector('h2').textContent + ' (' + card.id + ')\n\n' + completePrompt(card)
+  ).join('\n\n' + '='.repeat(64) + '\n\n');
+  copyAndNotify(text, 'All 6 complete prompts copied.');
+});
+let printDetails = [];
+window.addEventListener('beforeprint', () => {
+  printDetails = Array.from(document.querySelectorAll('details')).map(detail => [detail, detail.open]);
+  printDetails.forEach(([detail]) => { detail.open = true; });
+});
+window.addEventListener('afterprint', () => { printDetails.forEach(([detail, open]) => { detail.open = open; }); });
+document.getElementById('print').addEventListener('click', () => window.print());
+</script></body></html>

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZIVA · 15 low-poly air enemy prompts</title>
+  <style>
+    :root { color-scheme: light; --paper:#f4f2e9; --card:#fffef9; --ink:#243027; --muted:#636d61; --olive:#4c613a; --line:#d7dbcd; --amber:#d99f3d; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    button,a { -webkit-tap-highlight-color:transparent; }
+    a { color:var(--olive); text-underline-offset:4px; }
+    button { cursor:pointer; font:inherit; }
+    button:focus-visible,a:focus-visible { outline:3px solid var(--amber); outline-offset:4px; }
+    .wrap { max-width:1200px; margin:auto; padding:40px 32px 24px; }
+    .masthead { display:flex; justify-content:space-between; gap:20px; align-items:center; padding-bottom:22px; border-bottom:1px solid var(--line); }
+    .brand { font-weight:850; font-size:18px; letter-spacing:.12em; }
+    .edition { color:var(--muted); font:11px/1.5 ui-monospace,monospace; letter-spacing:.12em; text-align:right; }
+    header { padding:48px 0 26px; }
+    .eyebrow { color:var(--olive); text-transform:uppercase; letter-spacing:.18em; font:700 12px/1.5 ui-monospace,monospace; }
+    h1 { font-size:clamp(36px,6vw,65px); line-height:1.06; letter-spacing:-.055em; margin:14px 0 20px; max-width:820px; }
+    .lead { max-width:770px; color:var(--muted); font-size:18px; margin:0 0 24px; }
+    .steps { display:flex; flex-wrap:wrap; gap:10px; align-items:center; color:var(--olive); font-size:13px; font-weight:650; }
+    .steps span { border:1px solid var(--line); border-radius:4px; padding:7px 11px; background:var(--card); }
+    .steps b { color:var(--muted); }
+    .brief { display:grid; grid-template-columns:1.5fr 1fr; gap:30px; padding:24px 26px; border:1px solid var(--line); border-left:4px solid var(--olive); background:#eaf0df; border-radius:6px; }
+    .brief h2 { font-size:16px; margin:0 0 7px; letter-spacing:-.02em; }
+    .brief p { margin:0; color:#4c5944; font-size:14px; }
+    .palette { display:flex; flex-wrap:wrap; gap:8px 15px; margin-top:12px; font-size:12px; color:#4c5944; }
+    .palette span { display:flex; align-items:center; gap:6px; }
+    .swatch { display:inline-block; width:13px; height:13px; border-radius:3px; border:1px solid #0002; }
+    .tools { margin:30px 0 18px; display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; align-items:center; }
+    .tools p { color:var(--muted); font-size:13px; margin:0; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; }
+    button { border:1px solid var(--line); border-radius:5px; background:var(--card); padding:9px 14px; color:var(--ink); font-size:13px; font-weight:650; }
+    button:hover { background:#eaf0df; border-color:#9ca78d; }
+    .primary { background:var(--olive); color:white; border-color:var(--olive); }
+    .primary:hover { background:#35492c; border-color:#35492c; }
+    .roster { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    article { display:flex; flex-direction:column; padding:25px; border:1px solid var(--line); border-radius:8px; background:var(--card); scroll-margin-top:20px; }
+    .card-top { display:flex; align-items:start; gap:14px; margin-bottom:15px; }
+    .number { flex:0 0 36px; font:600 20px/1.4 ui-monospace,monospace; color:#909a7d; border-bottom:2px solid var(--amber); padding-bottom:6px; }
+    h2 { font-size:21px; line-height:1.25; letter-spacing:-.025em; margin:0 0 7px; }
+    .type { font:11px/1.5 ui-monospace,monospace; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+    .prompt { font-size:15px; line-height:1.75; margin:0 0 22px; }
+    .card-bottom { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:auto; }
+    .detail { font-size:12px; color:var(--muted); }
+    .copy { white-space:nowrap; }
+    article:last-child { grid-column:1/-1; }
+    article:last-child .prompt { max-width:870px; }
+    .note { font-size:13px; color:var(--muted); margin:23px 0; max-width:850px; }
+    footer { margin-top:35px; padding:22px 0; border-top:1px solid var(--line); display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:var(--muted); font-size:12px; }
+    #status { position:fixed; bottom:22px; left:50%; transform:translateX(-50%); z-index:10; padding:12px 20px; border-radius:6px; background:var(--ink); color:#fffef9; box-shadow:0 6px 25px #0002; font-size:14px; max-width:calc(100% - 32px); text-align:center; }
+    #status:empty { display:none; }
+    @media(max-width:700px) { .wrap { padding:24px 18px 12px; } header { padding-top:32px; } .brief,.roster { grid-template-columns:1fr; } .brief { gap:20px; padding:20px; } article { padding:21px; } .edition { font-size:10px; } .tools { align-items:start; } }
+    @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+    @media print { body { background:#fff; font-size:11pt; } .wrap { max-width:none; padding:0; } header { padding:22px 0 16px; } h1 { font-size:36pt; } .lead { font-size:12pt; } .brief { display:block; background:#f1f3ed; padding:15px; } .brief>div+div { margin-top:12px; } .tools,.actions,.copy,#status,.steps { display:none; } .roster { display:block; margin-top:20px; } article { break-inside:avoid; margin-bottom:12px; padding:16px; } .prompt { font-size:10.5pt; margin-bottom:10px; } h2 { font-size:15pt; } .card-top { margin-bottom:8px; } footer { margin-top:20px; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="masthead"><div class="brand">ZIVA / HELI TOWN HELLL</div><div class="edition">ASSET PROMPT COLLECTION<br>AIR · 01–15</div></div>
+  <header>
+    <div class="eyebrow">Attack helicopters, attack planes and aerial support</div>
+    <h1>Air forces.<br>15 ready-to-copy prompts.</h1>
+    <p class="lead">The complete flying roster: 12 air enemies, 2 support drones and a bonus Heavy Gunship boss. Attack helicopters and fixed-wing attack planes come first, alongside VTOLs, the minelayer and drones.</p>
+    <div class="steps"><span>1 · Copy a prompt</span><b aria-hidden="true">→</b><span>2 · Generate one image</span><b aria-hidden="true">→</b><span>3 · Build the low-poly model</span></div>
+  </header>
+  <section class="brief" aria-label="Shared art direction">
+    <div><h2>Match the ground collection</h2><p>Chunky, faceted military silhouettes with painted pixel textures: Megabonk-like simplicity and Nuclear Strike-inspired aircraft. Keep the weapons, wings and rotors easy to recognize from the helicopter camera.</p><div class="palette"><span><i class="swatch" style="background:#69704a" aria-hidden="true"></i>Olive armor</span><span><i class="swatch" style="background:#b8a879" aria-hidden="true"></i>Sand panels</span><span><i class="swatch" style="background:#343a34" aria-hidden="true"></i>Dark metal</span><span><i class="swatch" style="background:#b74731" aria-hidden="true"></i>Red enemy marking</span></div></div>
+    <div><h2>Show the complete aircraft</h2><p>Use one aircraft per image, a slightly elevated front three-quarter angle, white background and soft light. Leave room around every wing and rotor tip. Keep blades still and weapons attached.</p></div>
+  </section>
+  <div class="tools"><p>15 standalone prompts · 14 regular enemies + 1 boss</p><div class="actions"><button class="primary" id="copy-all" type="button">Copy all 15 prompts</button><button id="print" type="button">Print / Save PDF</button></div></div>
+  <main class="roster" aria-label="Air enemy image prompts">
+    <article id="attack-helicopter"><div class="card-top"><span class="number">01</span><div><h2>Attack Gunship</h2><div class="type">Attack helicopter · Cannon strafing</div></div></div><p class="prompt">Low-poly military attack helicopter, slim armored fuselage, tandem cockpit, four broad stationary rotor blades, tail rotor, short weapon wings, chunky chin cannon. Faceted shapes, olive-and-sand paint, red enemy marking, painted pixel textures. One complete aircraft, elevated front three-quarter view, white background, soft light; no rotor blur, text or display base.</p><div class="card-bottom"><span class="detail">A clear attack helicopter silhouette with a nose cannon.</span><button class="copy" type="button" aria-label="Copy Attack Gunship prompt">Copy prompt</button></div></article>
+    <article id="rocket-helicopter"><div class="card-top"><span class="number">02</span><div><h2>Rocket Gunship</h2><div class="type">Heavy attack helicopter · Rocket volleys</div></div></div><p class="prompt">Low-poly heavy military attack helicopter, wide armored cockpit, bulky twin-engine housing, broad stationary main rotor, tail rotor, thick stub wings carrying two large rocket pods. Faceted shapes, olive-and-sand paint, red enemy marking, painted pixel textures. One complete aircraft, elevated front three-quarter view, white background, soft light; no rotor blur, text or base.</p><div class="card-bottom"><span class="detail">Heavier than the attack gunship; emphasize the rocket pods.</span><button class="copy" type="button" aria-label="Copy Rocket Gunship prompt">Copy prompt</button></div></article>
+    <article id="attack-plane"><div class="card-top"><span class="number">03</span><div><h2>Attack Wing</h2><div class="type">Propeller attack plane · Ground attack</div></div></div><p class="prompt">Low-poly military ground-attack plane, chunky fuselage, single cockpit, broad straight wings, thick stationary nose propeller, two underwing rocket pods. Faceted shapes, olive-and-sand paint, dark metal, red enemy marking, painted pixel textures. One complete aircraft, elevated front three-quarter view, white background, soft light; no propeller blur, text or display base.</p><div class="card-bottom"><span class="detail">A fixed-wing attack plane with a visible nose propeller.</span><button class="copy" type="button" aria-label="Copy Attack Wing prompt">Copy prompt</button></div></article>
+    <article id="escort-fighter"><div class="card-top"><span class="number">04</span><div><h2>Escort Fighter</h2><div class="type">Jet fighter · Fast escort</div></div></div><p class="prompt">Low-poly military escort fighter jet, compact armored fuselage, swept wings, twin tail fins, two chunky engine exhausts, two attached underwing missiles. Faceted shapes, olive-and-sand paint, dark canopy, red enemy marking, painted pixel textures. One complete aircraft, elevated front three-quarter view, white background, soft light; no exhaust effects, text or display base.</p><div class="card-bottom"><span class="detail">Swept wings and twin tails distinguish this fighter.</span><button class="copy" type="button" aria-label="Copy Escort Fighter prompt">Copy prompt</button></div></article>
+    <article id="interceptor"><div class="card-top"><span class="number">05</span><div><h2>Interceptor</h2><div class="type">Interceptor jet · High-speed attack passes</div></div></div><p class="prompt">Low-poly military interceptor jet, long pointed nose, triangular delta wings, single tall tail fin, large rear exhaust, two compact wing-mounted missile rails. Faceted shapes, olive-and-sand paint, dark canopy, red enemy marking, painted pixel textures. One complete aircraft, elevated front three-quarter view, white background, soft light; no exhaust effects, text or base.</p><div class="card-bottom"><span class="detail">Long nose, delta wings and one tall tail fin.</span><button class="copy" type="button" aria-label="Copy Interceptor prompt">Copy prompt</button></div></article>
+    <article id="heavy-bomber"><div class="card-top"><span class="number">06</span><div><h2>Heavy Bomber</h2><div class="type">Fixed-wing bomber · Heavy payload</div></div></div><p class="prompt">Low-poly military heavy bomber plane, broad straight wings, thick fuselage, four chunky jet-engine pods, twin tail fins, closed belly bomb-bay doors. Faceted shapes, olive-and-sand paint, dark metal, red enemy marking, painted pixel textures. One complete aircraft, elevated front three-quarter view, white background, soft light; no falling bombs, text or display base.</p><div class="card-bottom"><span class="detail">The broadest regular aircraft, with four engine pods.</span><button class="copy" type="button" aria-label="Copy Heavy Bomber prompt">Copy prompt</button></div></article>
+    <article id="torpedo-vtol"><div class="card-top"><span class="number">07</span><div><h2>Torpedo VTOL</h2><div class="type">Tiltrotor aircraft · Guided missile attack</div></div></div><p class="prompt">Low-poly military tiltrotor attack aircraft, armored cockpit, short broad wings, two large wingtip rotors tilted upward with stationary blades, two attached belly missile tubes. Faceted shapes, olive-and-sand paint, red enemy marking, painted pixel textures. One complete aircraft, elevated front three-quarter view, white background, soft light; no rotor blur, text or base.</p><div class="card-bottom"><span class="detail">Two large tiltrotors and a pair of belly launch tubes.</span><button class="copy" type="button" aria-label="Copy Torpedo VTOL prompt">Copy prompt</button></div></article>
+    <article id="stealth-vtol"><div class="card-top"><span class="number">08</span><div><h2>Stealth VTOL</h2><div class="type">Angular VTOL · Evasive attacks</div></div></div><p class="prompt">Low-poly military stealth VTOL aircraft, flat angular fuselage, two large circular lift fans embedded in short wings, canted twin tail fins, small nose cannon. Faceted shapes, muted olive-and-sand paint, red enemy marking, painted pixel textures. One complete aircraft, elevated front three-quarter view, white background, soft light; no motion blur, text or base.</p><div class="card-bottom"><span class="detail">Wide angular hull with two visible embedded lift fans.</span><button class="copy" type="button" aria-label="Copy Stealth VTOL prompt">Copy prompt</button></div></article>
+    <article id="minelayer"><div class="card-top"><span class="number">09</span><div><h2>Minelayer</h2><div class="type">Utility helicopter · Aerial mine deployment</div></div></div><p class="prompt">Low-poly military minelayer helicopter, boxy utility fuselage, broad stationary main rotor, tail rotor, short landing skids, bulky closed belly mine dispenser with attached round mine housings. Faceted shapes, olive-and-sand paint, red enemy marking, painted pixel textures. One complete aircraft, elevated front three-quarter view, white background, soft light; no loose mines, text or base.</p><div class="card-bottom"><span class="detail">A helicopter with a mine dispenser, rather than another drone.</span><button class="copy" type="button" aria-label="Copy Minelayer prompt">Copy prompt</button></div></article>
+    <article id="hunter-drone"><div class="card-top"><span class="number">10</span><div><h2>Hunter Drone</h2><div class="type">Combat quadrotor · Close pursuit</div></div></div><p class="prompt">Low-poly military hunter drone, compact armored center, four thick rotor arms, broad stationary propellers, chunky underslung gun, small forward camera. Faceted shapes, olive-and-sand paint, dark metal, red enemy marking, painted pixel textures. One complete drone, elevated front three-quarter view, white background, soft light; no propeller blur, text or display base.</p><div class="card-bottom"><span class="detail">Four exposed rotor arms and a clearly visible gun.</span><button class="copy" type="button" aria-label="Copy Hunter Drone prompt">Copy prompt</button></div></article>
+    <article id="scout-drone"><div class="card-top"><span class="number">11</span><div><h2>Scout Drone</h2><div class="type">Light drone · Reconnaissance and small-arms fire</div></div></div><p class="prompt">Low-poly military scout drone, small capsule body, two large circular ducted fans, prominent forward camera lens, tiny underside gun, short antenna block. Faceted shapes, olive-and-sand paint, dark metal, red enemy marking, painted pixel textures. One complete drone, elevated front three-quarter view, white background, soft light; no motion blur, text or display base.</p><div class="card-bottom"><span class="detail">Small capsule body with two protected fan rings.</span><button class="copy" type="button" aria-label="Copy Scout Drone prompt">Copy prompt</button></div></article>
+    <article id="kamikaze-drone"><div class="card-top"><span class="number">12</span><div><h2>Kamikaze Drone</h2><div class="type">Suicide drone · Diving explosive attack</div></div></div><p class="prompt">Low-poly military kamikaze drone, compact wedge-shaped fuselage, short triangular wings, thick rear pusher propeller with stationary blades, oversized red armored warhead nose. Faceted shapes, olive-and-sand paint, dark metal, painted pixel textures. One complete drone, elevated front three-quarter view, white background, soft light; no explosion, motion blur, text or display base.</p><div class="card-bottom"><span class="detail">A compact flying warhead with a red nose.</span><button class="copy" type="button" aria-label="Copy Kamikaze Drone prompt">Copy prompt</button></div></article>
+    <article id="shield-drone"><div class="card-top"><span class="number">13</span><div><h2>Shield Drone</h2><div class="type">Support drone · Protects nearby enemies</div></div></div><p class="prompt">Low-poly military shield-support drone, chunky hexagonal armored body, four enclosed lift fans, large blue shield-projector lens attached beneath the center. Faceted shapes, olive-and-sand paint, red enemy marking, painted pixel textures. One complete drone, elevated front three-quarter view, white background, soft light; no energy bubble, detached parts, text or display base.</p><div class="card-bottom"><span class="detail">Show the physical shield projector; omit the energy effect.</span><button class="copy" type="button" aria-label="Copy Shield Drone prompt">Copy prompt</button></div></article>
+    <article id="repair-drone"><div class="card-top"><span class="number">14</span><div><h2>Repair Drone</h2><div class="type">Support drone · Repairs nearby enemies</div></div></div><p class="prompt">Low-poly military repair drone, boxy armored body, two large ducted lift fans, yellow tool compartment, two thick folded repair arms attached underneath. Faceted shapes, olive-and-sand paint, red enemy marking, painted pixel textures. One complete drone, elevated front three-quarter view, white background, soft light; no sparks, floating tools, text or display base.</p><div class="card-bottom"><span class="detail">Folded repair arms keep the reference image clean.</span><button class="copy" type="button" aria-label="Copy Repair Drone prompt">Copy prompt</button></div></article>
+    <article id="heavy-gunship-boss"><div class="card-top"><span class="number">15</span><div><h2>Heavy Gunship Boss</h2><div class="type">Bonus boss · Heavy assault helicopter</div></div></div><p class="prompt">Low-poly giant military gunship helicopter boss, massive armored fuselage, tandem stationary rotors, broad weapon sponsons, two heavy cannon turrets, large rocket pods, reinforced orange central armor panel. Faceted shapes, olive-and-sand paint, red enemy markings, painted pixel textures. One complete aircraft, elevated front three-quarter view, white background, soft light; no firing effects, text or base.</p><div class="card-bottom"><span class="detail">Larger than regular gunships; two rotors and a distinct central panel.</span><button class="copy" type="button" aria-label="Copy Heavy Gunship Boss prompt">Copy prompt</button></div></article>
+  </main>
+  <p class="note">Each prompt is complete: paste one into ChatGPT, then use its image as your Meshy reference. Use the first approved image as the style reference for the remaining aircraft. These are visual designs for the existing enemy roles; this document does not change the game.</p>
+  <p class="note">Ask for every wing, rotor blade and weapon to remain fully inside the image. Avoid motion-blurred rotor discs, smoke, energy shields and loose ammunition in the model reference. Create those effects separately in the game. Use Meshy's low-poly generation or reduction controls for the actual meshes.</p>
+  <footer><span>ZIVA HELI TOWN HELLL · Air asset prompts</span><span><a href="ground-enemy-model-prompts.html">Open the 13 ground prompts</a></span></footer>
+</div>
+<div id="status" role="status" aria-live="polite"></div>
+<script>
+  let statusTimer;
+  function announce(message) {
+    const status = document.getElementById('status');
+    status.textContent = message;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => { status.textContent = ''; }, 3000);
+  }
+  async function copyText(text) {
+    try {
+      if (!navigator.clipboard || !window.isSecureContext) throw new Error('Use fallback');
+      await navigator.clipboard.writeText(text);
+    } catch (error) {
+      const field = document.createElement('textarea');
+      field.value = text;
+      field.setAttribute('readonly', '');
+      field.style.cssText = 'position:fixed;left:-9999px;top:0';
+      document.body.appendChild(field);
+      field.select();
+      const copied = document.execCommand('copy');
+      field.remove();
+      if (!copied) throw new Error('Copy unavailable');
+    }
+  }
+  document.querySelectorAll('.copy').forEach(button => {
+    button.addEventListener('click', async () => {
+      const card = button.closest('article');
+      try {
+        await copyText(card.querySelector('.prompt').textContent.trim());
+        announce(card.querySelector('h2').textContent + ' prompt copied.');
+      } catch (error) { announce('Select the prompt text and copy it manually.'); }
+    });
+  });
+  document.getElementById('copy-all').addEventListener('click', async () => {
+    const text = Array.from(document.querySelectorAll('article')).map(card =>
+      card.querySelector('.number').textContent + '. ' + card.querySelector('h2').textContent + '\n' + card.querySelector('.prompt').textContent.trim()
+    ).join('\n\n');
+    try { await copyText(text); announce('All 15 prompts copied.'); }
+    catch (error) { announce('Select the prompt text and copy it manually.'); }
+  });
+  document.getElementById('print').addEventListener('click', () => window.print());
+</script>
+</body>
+</html>

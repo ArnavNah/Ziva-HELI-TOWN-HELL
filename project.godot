@@ -1,0 +1,58 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="ZIVA HELI TOWN HELLL"
+run/main_scene="res://scenes/ui/main_menu.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+run/max_fps=60
+config/icon="res://icon.svg"
+
+[autoload]
+
+EventBus="*res://autoload/event_bus.gd"
+GameManager="*res://autoload/game_manager.gd"
+InputManager="*res://autoload/input_manager.gd"
+CombatDirector="*res://autoload/combat_director.gd"
+ProfileManager="*res://autoload/profile_manager.gd"
+AudioManager="*res://autoload/audio_manager.gd"
+FXManager="*res://src/effects/fx_manager.gd"
+ShaderManager="*res://autoload/shader_manager.gd"
+SettingsStore="*res://autoload/settings_store.gd"
+UIFlow="*res://autoload/ui_flow.gd"
+XpManager="*res://src/player/xp_manager.gd"
+
+[debug]
+
+gdscript/warnings/unused_signal=0
+
+[display]
+
+window/size/viewport_width=1280.0
+window/size/viewport_height=720.0
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/vsync/vsync_mode=0
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+common/physics_interpolation=true
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+rendering_device/driver.windows="d3d12"
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+lights_and_shadows/directional_shadow/size=1024.0
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
+textures/default_filters/texture_filter_3d=1

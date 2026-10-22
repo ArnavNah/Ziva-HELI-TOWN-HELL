@@ -1,0 +1,39 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Local agent tooling, audit captures, and working copies
+/.codex-backups/
+/artifacts/
+/addons/ziva_agent/
+
+# Builds and local editor state
+/build/
+/builds/
+/exports/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
+*.tmp
+*.log
+*.blend1
+*.blend2
+
+# Local credentials and environment files
+.env
+.env.*
+*.pem
+*.key
+export_credentials.cfg
+
+# Temporary root-level verification output and thumbnails
+/env_test.txt
+/test*_out.txt
+/test_out.txt
+/test_run.txt
+/page4_5.txt
+/thumb_*.png
+/thumb_*.png.import

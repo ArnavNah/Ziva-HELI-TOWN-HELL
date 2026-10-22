@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://c3m7x4arttest1"]
+
+[ext_resource type="Script" path="res://scenes/art_test/art_test_street.gd" id="1_street"]
+
+[node name="ArtTestStreet" type="Node3D"]
+script = ExtResource("1_street")
+
+[node name="CameraRig" type="Node3D" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+transform = Transform3D(1, 0, 0, 0, 0.743145, 0.669131, 0, -0.669131, 0.743145, 0, 22, 24)
+fov = 52.0

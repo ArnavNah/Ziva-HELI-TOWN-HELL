@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bndry01playarea"]
+
+[ext_resource type="Script" path="res://src/world/playable_area.gd" id="1_playable_area"]
+
+[node name="PlayableArea" type="Node3D"]
+script = ExtResource("1_playable_area")
