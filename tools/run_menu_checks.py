@@ -23,7 +23,9 @@ if args.profile_source:
     if Path(args.profile_source).name != args.profile_source or not args.profile_source.startswith('profile-'):
         parser.error('profile-source must name an isolated profile directory under artifacts/menu-repair-tests')
     env['ZIVA_TEST_DATA_DIR'] = str(out / args.profile_source)
-command = [r'C:\Users\Prime 3\Desktop\Godot.exe', '--path', str(ROOT), '--script', script]
+import shutil
+godot_bin = shutil.which('godot') or r'D:\Godot\Godot.exe'
+command = [godot_bin, '--path', str(ROOT), '--script', script]
 if not args.rendered:
     command.append('--headless')
 else:

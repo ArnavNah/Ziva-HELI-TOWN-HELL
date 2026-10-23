@@ -215,41 +215,11 @@ static func _update_modular_addons(root_node: Node3D, spec: Dictionary, body_mat
 
 	# Clear previous modular addons
 	for child in addons.get_children():
+		addons.remove_child(child)
 		child.queue_free()
 
-	# Addon 1: Mast-Mounted Longbow Radar Dome (Apache)
-	if spec.has_mast_radar:
-		var mast_radar = Node3D.new()
-		mast_radar.name = "MastRadar"
-		addons.add_child(mast_radar)
-
-		# Find the main rotor to anchor directly to its hub
-		var main_rotor = root_node.find_child("Main_Rotor", true, false)
-		var anchor_pos = main_rotor.position if main_rotor else Vector3(0, 1.85, 0.0)
-
-		# Radar mast stalk
-		var stalk = MeshInstance3D.new()
-		var s_mesh = CylinderMesh.new()
-		s_mesh.top_radius = 0.07
-		s_mesh.bottom_radius = 0.08
-		s_mesh.height = 0.32
-		s_mesh.radial_segments = 12
-		stalk.mesh = s_mesh
-		stalk.material_override = dark_mat
-		stalk.position = anchor_pos + Vector3(0, 0.16, 0)
-		mast_radar.add_child(stalk)
-
-		# Flattened spheroid Longbow dome
-		var dome = MeshInstance3D.new()
-		var d_mesh = SphereMesh.new()
-		d_mesh.radius = 0.35
-		d_mesh.height = 0.26
-		d_mesh.radial_segments = 16
-		d_mesh.rings = 8
-		dome.mesh = d_mesh
-		dome.material_override = body_mat
-		dome.position = anchor_pos + Vector3(0, 0.36, 0)
-		mast_radar.add_child(dome)
+	# Addon 1: Mast-Mounted Longbow Radar Dome
+	# (The base player.glb already incorporates the authentic AH-64 Longbow mast radome)
 
 	# Addon 2: Swept Stealth Winglets & Canted Tail Fins (Nighthawk)
 	if spec.has_stealth_fins:
@@ -278,7 +248,7 @@ static func _update_modular_addons(root_node: Node3D, spec: Dictionary, body_mat
 			winglet.rotation_degrees = Vector3(0.0, 0.0, side * 35.0)
 			stealth_kit.add_child(winglet)
 
-	# Addon 3: Titanium Cockpit Cheek Armor & Auxiliary Pods (Warlock)
+	# Addon 3: Titanium Heavy Rocket Pods (Warlock)
 	if spec.has_titanium_plates:
 		var heavy_kit = Node3D.new()
 		heavy_kit.name = "HeavyArmorKit"
@@ -289,16 +259,7 @@ static func _update_modular_addons(root_node: Node3D, spec: Dictionary, body_mat
 		armor_mat.metallic = 0.65
 		armor_mat.roughness = 0.45
 
-		# Cockpit cheek armor deflector plates
 		for side in [-1.0, 1.0]:
-			var plate = MeshInstance3D.new()
-			var p_mesh = BoxMesh.new()
-			p_mesh.size = Vector3(0.10, 0.50, 1.35)
-			plate.mesh = p_mesh
-			plate.material_override = armor_mat
-			plate.position = Vector3(side * 0.68, -0.30, -2.00) if is_preview else Vector3(side * 0.80, -0.35, -2.20)
-			plate.rotation_degrees = Vector3(0.0, side * -5.0, 0.0)
-			heavy_kit.add_child(plate)
 
 			# Auxiliary Heavy Blast Pods mounted under sponson wings
 			var pod = MeshInstance3D.new()

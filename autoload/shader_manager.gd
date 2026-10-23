@@ -150,9 +150,9 @@ func _setup_post_process_layer() -> void:
 
 	post_process_mat.set_shader_parameter("color_depth", 32.0)
 
-
-
 	post_process_rect.material = post_process_mat
+
+	post_process_rect.visible = false
 
 	post_process_layer.add_child(post_process_rect)
 
@@ -374,6 +374,9 @@ func set_pixelation_mode(mode: int) -> void:
 
 		return
 
+	if post_process_rect:
+		post_process_rect.visible = (mode != 0 or dithering_enabled)
+
 	match mode:
 
 		0: # Native 1x
@@ -403,6 +406,9 @@ func set_dithering_enabled(enabled: bool) -> void:
 	if post_process_mat:
 
 		post_process_mat.set_shader_parameter("enable_dither", enabled)
+
+	if post_process_rect:
+		post_process_rect.visible = (pixelation_mode != 0 or enabled)
 
 
 

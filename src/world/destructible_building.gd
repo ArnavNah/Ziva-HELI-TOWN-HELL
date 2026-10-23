@@ -61,8 +61,8 @@ func _setup_structure() -> void:
 		if not damage_receiver.destroyed.is_connected(_on_destroyed):
 			damage_receiver.destroyed.connect(_on_destroyed)
 
-	mesh_instance.visibility_range_end = 260.0
-	mesh_instance.visibility_range_end_margin = 35.0
+	mesh_instance.visibility_range_end = 160.0
+	mesh_instance.visibility_range_end_margin = 25.0
 	mesh_instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	_update_visuals_and_collision()
 
