@@ -18,6 +18,11 @@ var smoothed_target_pos: Vector3 = Vector3.ZERO
 var current_look_target: Vector3 = Vector3.ZERO
 var is_initialized: bool = false
 var trauma: float = 0.0
+var cannon_kick := 0.0
+
+func _on_weapon_fired(weapon: int, _ammo: int) -> void:
+	if weapon == GameConstants.WeaponType.MACHINE_GUN:
+		cannon_kick = minf(0.18, cannon_kick + 0.06)
 
 # Lazy Follow & Banking Dynamics
 var current_cam_roll: float = 0.0
@@ -32,8 +37,12 @@ func add_trauma(amount: float) -> void:
 	trauma = clampf(trauma + amount, 0.0, 1.0)
 
 func _ready() -> void:
+	if has_node("/root/EventBus"):
+		get_node("/root/EventBus").weapon_fired.connect(_on_weapon_fired)
 	current = true
 	top_level = true # Decouples camera transform from direct parent hierarchy
+	# This camera already smooths the physics target once in render time.
+	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	fov = base_fov
 	current_cam_dist = base_distance
 	current_cam_height = base_height
@@ -72,7 +81,7 @@ func update_camera(delta: float) -> void:
 	if not is_initialized:
 		init_camera(target_node)
 
-	var target_transform := target_node.global_transform
+	var target_transform := target_node.get_global_transform_interpolated()
 	var target_pos: Vector3 = target_transform.origin
 	var target_forward: Vector3 = -target_transform.basis.z.normalized()
 
@@ -142,6 +151,11 @@ func update_camera(delta: float) -> void:
 	current_occlusion_factor = lerpf(current_occlusion_factor, target_occ_factor, 1.0 - exp(-occ_speed * delta))
 	var target_cam_pos: Vector3 = focus_point + (desired_cam_pos - focus_point) * current_occlusion_factor
 	global_position = target_cam_pos
+	cannon_kick = move_toward(cannon_kick, 0.0, delta * 1.4)
+	var kick_scale := 1.0
+	if has_node("/root/AudioManager"):
+		kick_scale = [0.0, 0.3, 1.0][clampi(get_node("/root/AudioManager").screen_shake_level, 0, 2)]
+	global_position -= target_forward * cannon_kick * kick_scale
 
 	# Camera Shake / Trauma from impacts and explosions
 	if trauma > 0.0:

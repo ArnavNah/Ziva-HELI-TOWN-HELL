@@ -279,6 +279,19 @@ static func _initialize_master_deck() -> void:
 		{"drag_mult": -0.35, "speed_mult": 0.25, "evasion": 0.15}
 	))
 
+	var flak := UpgradeCard.create("cannon_devastator_evolution", "DEVASTATOR FLAK AUTOCANNON",
+		"EVOLUTION: Rotary Overdrive + High Explosive. Cannon rounds explode in a 3m radius; +40% cannon damage.",
+		UpgradeCard.RarityTier.LEGENDARY, UpgradeCard.SubsystemType.PRIMARY_CANNON,
+		{"blast_radius_add": 3.0, "damage_mult": 0.40})
+	flak.required_cards = PackedStringArray(["cannon_rotary_overdrive", "rocket_shaped_charge"])
+	_master_deck.append(flak)
+	var inferno := UpgradeCard.create("rocket_inferno_evolution", "INFERNO SATURATION PODS",
+		"EVOLUTION: Incendiary Munitions + expanded blast rockets. Rocket impacts ignite targets and leave burning ground.",
+		UpgradeCard.RarityTier.LEGENDARY, UpgradeCard.SubsystemType.ROCKET_PODS,
+		{"burn_chance": 1.0, "lingering_burn": true, "blast_radius_mult": 0.25})
+	# Prerequisites use actual card IDs; both appear in the normal production draft.
+	inferno.required_cards = PackedStringArray(["cannon_incendiary_cascade", "rocket_blast_enhancer"])
+	_master_deck.append(inferno)
 	for card in _master_deck:
 		card.icon = _get_icon(card.target_subsystem)
 		card.min_level = [1, 1, 2, 4, 6][card.rarity]

@@ -33,6 +33,7 @@ var pause_return_state: RunState = RunState.ACTIVE
 
 # Run Tracking
 var selected_aircraft: String = "apache"
+var selected_biome: String = "town"
 var current_wave: int = 1
 var run_time: float = 0.0
 var kills_count: int = 0
@@ -357,6 +358,9 @@ func _on_wave_cleared(wave_number: int) -> void:
 
 func _on_mission_completed(mission_data: Dictionary, bonus_achieved: bool) -> void:
 	counted_objectives += 1
+	if mission_data.get("rewards_settled", false):
+		add_score(int(mission_data.get("base_cr", 0)) * 2)
+		return
 	var payout: int = mission_data.get("base_payout", 200)
 	if bonus_achieved:
 		payout += mission_data.get("bonus_payout", 100)
@@ -365,6 +369,9 @@ func _on_mission_completed(mission_data: Dictionary, bonus_achieved: bool) -> vo
 
 func _on_cargo_delivered(cargo_data: Dictionary, speed_bonus: bool, sam_bonus: bool) -> void:
 	counted_objectives += 1
+	if cargo_data.get("rewards_settled", false):
+		add_score(int(cargo_data.get("base_price", 0)))
+		return
 	var payout: int = cargo_data.get("payout", 300)
 	if speed_bonus:
 		payout = int(payout * 1.25)

@@ -10,6 +10,9 @@ const BLOCK_SIZE: float = 38.0
 const HALF_GRID: int = 9 # Covers -9 to +9 (-342m to +342m, covering entire 16x16 city district & boundary)
 
 static var _astar: AStar3D = null
+static var _route_cache: Dictionary = {}
+static var _route_keys: Array[Vector2i] = []
+const MAX_CACHED_ROUTES: int = 128
 
 static func _ensure_initialized() -> void:
 	if _astar != null:
@@ -70,8 +73,8 @@ static func find_street_path(from_pos: Vector3, to_pos: Vector3) -> PackedVector
 	var flat_from = Vector3(from_pos.x, 0.5, from_pos.z)
 	var flat_to = Vector3(to_pos.x, 0.5, to_pos.z)
 
-	var start_id = _astar.get_closest_point(flat_from)
-	var end_id = _astar.get_closest_point(flat_to)
+	var start_id = _nearest_point_id(flat_from)
+	var end_id = _nearest_point_id(flat_to)
 
 	if start_id < 0 or end_id < 0:
 		var fallback = PackedVector3Array()
@@ -83,13 +86,37 @@ static func find_street_path(from_pos: Vector3, to_pos: Vector3) -> PackedVector
 		p.append(_astar.get_point_position(end_id))
 		return p
 
+	var route_key := Vector2i(start_id, end_id)
+	if _route_cache.has(route_key):
+		return (_route_cache[route_key] as PackedVector3Array).duplicate()
 	var pts = _astar.get_point_path(start_id, end_id)
 	if pts.is_empty():
 		var p = PackedVector3Array()
 		p.append(_astar.get_point_position(start_id))
 		return p
 
+	if _route_keys.size() >= MAX_CACHED_ROUTES:
+		_route_cache.erase(_route_keys.pop_front())
+	_route_keys.append(route_key)
+	_route_cache[route_key] = pts.duplicate()
 	return pts
+
+## The regular graph's closest point is one of two rounded candidates.
+## Avoid scanning all 2,413 graph points twice per ground-vehicle replan.
+static func _nearest_point_id(pos: Vector3) -> int:
+	var ix := clampi(roundi(pos.x / BLOCK_SIZE), -HALF_GRID, HALF_GRID)
+	var iz := clampi(roundi(pos.z / BLOCK_SIZE), -HALF_GRID, HALF_GRID)
+	var quarter_x := clampi(roundi(pos.x * 4.0 / BLOCK_SIZE), -HALF_GRID * 4, HALF_GRID * 4)
+	var quarter_z := clampi(roundi(pos.z * 4.0 / BLOCK_SIZE), -HALF_GRID * 4, HALF_GRID * 4)
+	var block_x := floori(float(quarter_x) / 4.0)
+	var block_z := floori(float(quarter_z) / 4.0)
+	var step_x := quarter_x - block_x * 4
+	var step_z := quarter_z - block_z * 4
+	var avenue := _intersection_id(ix, block_z) if step_z == 0 else _ave_sub_id(ix, block_z, step_z)
+	var street := _intersection_id(block_x, iz) if step_x == 0 else _str_sub_id(block_x, iz, step_x)
+	var avenue_point := Vector3(ix * BLOCK_SIZE, 0.5, quarter_z * BLOCK_SIZE * 0.25)
+	var street_point := Vector3(quarter_x * BLOCK_SIZE * 0.25, 0.5, iz * BLOCK_SIZE)
+	return avenue if pos.distance_squared_to(avenue_point) <= pos.distance_squared_to(street_point) else street
 
 ## Checks line-of-sight against buildings (Mask 2)
 static func has_line_of_sight(from_pos: Vector3, to_pos: Vector3, space: PhysicsDirectSpaceState3D) -> bool:

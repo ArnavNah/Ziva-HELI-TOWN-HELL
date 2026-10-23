@@ -142,9 +142,13 @@ func start_loading(path: String = "res://scenes/main_game.tscn", aircraft_id: St
 	_request.call_deferred(_attempt)
 
 func _request(attempt: int) -> void:
+	if not _attempt_is_current(attempt):
+		return
 	await get_tree().process_frame
+	if not _attempt_is_current(attempt):
+		return
 	await get_tree().process_frame
-	if attempt != _attempt or not is_inside_tree():
+	if not _attempt_is_current(attempt):
 		return
 	if not ResourceLoader.exists(target_scene_path):
 		_fail("The destination scene is missing. You can retry or return to the menu.")
@@ -154,6 +158,12 @@ func _request(attempt: int) -> void:
 		_fail("The scene could not be requested: " + error_string(error))
 		return
 	phase = Phase.RESOURCES
+
+func _attempt_is_current(attempt: int) -> bool:
+	return attempt == _attempt and is_inside_tree() and not is_queued_for_deletion()
+
+func _exit_tree() -> void:
+	_attempt += 1
 
 func _process(delta: float) -> void:
 	var dt: float = minf(delta, 0.033)
@@ -263,6 +273,7 @@ func _reveal(scene: Node) -> void:
 	if _in_reveal:
 		return
 	_in_reveal = true
+	var attempt := _attempt
 	phase = Phase.REVEAL
 	target_progress = 1.0
 	displayed_progress = 1.0
@@ -275,13 +286,17 @@ func _reveal(scene: Node) -> void:
 	if not is_headless:
 		# Give GPU 2 frames to warm up viewport, terrain shaders, and camera before dropping curtain
 		await get_tree().process_frame
+		if attempt != _attempt or not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(scene) or scene.is_queued_for_deletion():
+			return
 		await RenderingServer.frame_post_draw
+		if attempt != _attempt or not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(scene) or scene.is_queued_for_deletion():
+			return
 
 	var tween := create_tween().set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	var fade_dur: float = 0.0 if is_headless else 0.35
 	tween.tween_property(root_control, "modulate:a", 0.0, fade_dur).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	tween.tween_callback(func():
-		if is_instance_valid(scene):
+		if _attempt_is_current(attempt) and is_instance_valid(scene) and not scene.is_queued_for_deletion() and get_tree().current_scene == scene:
 			get_node("/root/UIFlow").finish_loading(scene)
 		queue_free()
 	)

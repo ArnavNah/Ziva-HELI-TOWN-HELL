@@ -73,6 +73,7 @@ func _attempt_paint_lock() -> void:
 
 func _find_valid_lock_target(aim_center: Vector3) -> Node3D:
 	var enemies = get_tree().get_nodes_in_group("enemies")
+	enemies.append_array(get_tree().get_nodes_in_group("hostile_mission_targets"))
 	var best_enemy: Node3D = null
 	var min_dist: float = GameConstants.SALVO_SEARCH_RADIUS * lock_range_multiplier
 

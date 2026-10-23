@@ -85,6 +85,7 @@ func apply_subsystem_upgrade(w_type: int, stats: Dictionary) -> void:
 		upgrade_weapon_magazine(w_type, float(stats.get("magazine_capacity_mult", 0.0)), int(stats.get("ammo_max_add", 0)))
 
 func apply_subsystem_damage(w_type: int, data: RefCounted) -> void:
+	data.blast_radius += get_subsystem_modifier(w_type, "blast_radius_add")
 	data.blast_radius *= 1.0 + get_subsystem_modifier(w_type, "blast_radius_mult")
 	data.armored_bonus += get_subsystem_modifier(w_type, "armor_pierce")
 	data.structure_bonus += get_subsystem_modifier(w_type, "structure_damage_mult")

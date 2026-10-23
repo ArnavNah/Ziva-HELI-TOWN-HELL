@@ -50,36 +50,27 @@ class RetroShaderRunner extends Node:
 						var mat = m.get_active_material(0)
 						if not mat and m.material_override:
 							mat = m.material_override
-						if mat and mat.next_pass is ShaderMaterial:
+						if m.material_overlay is ShaderMaterial or (mat and mat.next_pass is ShaderMaterial):
 							has_outline = true
 							break
 			if has_outline:
-				print("  [PASS] 3. Selective Outlines: Inverted hull outline attached to Player Helicopter via next_pass.")
+				print("  [PASS] 3. Selective Outlines: Player Helicopter retains its instance outline.")
 				tests_passed += 1
 			else:
-				print("  [FAIL] 3. Player Helicopter missing outline next_pass.")
+				print("  [FAIL] 3. Player Helicopter missing outline.")
 
 		elif frame == 20:
 			# Test 4: Selective Outlines on Hostile Enemy Units, but NOT on City/Roads
 			var spawner = scene_root.get_node_or_null("EnemySpawner")
 			var enemy_has_outline = false
 			if spawner:
-				var enemy = spawner.spawn_enemy_type("siege_tank", Vector3(-14.0, 1.0, 5.0))
+				var enemy = spawner.spawn_enemy_type("siege_tank", Vector3(-14.0, 1.0, 5.0), true)
 				if enemy:
-					# Check enemy meshes for outline next_pass
-					for c in enemy.get_children():
-						if c is MeshInstance3D:
-							var mat = c.get_active_material(0)
-							if mat and mat.next_pass is ShaderMaterial:
-								enemy_has_outline = true
-								break
-						elif c is Node3D:
-							for sub in c.get_children():
-								if sub is MeshInstance3D:
-									var mat2 = sub.get_active_material(0)
-									if mat2 and mat2.next_pass is ShaderMaterial:
-										enemy_has_outline = true
-										break
+					for mesh in enemy.find_children("*", "MeshInstance3D", true, false):
+						var mat = mesh.get_active_material(0)
+						if mesh.material_overlay is ShaderMaterial or (mat and mat.next_pass is ShaderMaterial):
+							enemy_has_outline = true
+							break
 
 			# Verify city roads do NOT have outline next_pass (avoid outlining every road tile)
 			var road_clean = true

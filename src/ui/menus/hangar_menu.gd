@@ -43,7 +43,7 @@ const SYSTEM_METADATA: Dictionary = {
 	},
 	"armor": {
 		"name": "COMPOSITE HULL ARMOR",
-		"desc": "Reinforces ballistic survivability against flak, rockets, and collisions.",
+		"desc": "+15 hull and 0.5 flat small-arms damage reduction per rank.",
 		"stat_unit": " Bonus Hull HP",
 		"stat_step": 15.0,
 		"base_val": 0.0
@@ -64,7 +64,7 @@ const SYSTEM_METADATA: Dictionary = {
 	},
 	"targeting": {
 		"name": "FIRE CONTROL RADAR",
-		"desc": "Accelerates chin turret auto-assist tracking speed and lock acquisition.",
+		"desc": "+15% turret tracking / lock speed and +10% radar scan range per rank.",
 		"stat_unit": "% Lock & Tracking Speed",
 		"stat_step": 15.0,
 		"base_val": 0.0
@@ -78,7 +78,7 @@ const SYSTEM_METADATA: Dictionary = {
 	},
 	"countermeasures": {
 		"name": "FLARE DISPENSER RIG",
-		"desc": "Reduces countermeasure reload cooldown and expands decoy capacity.",
+		"desc": "+1 flare and -0.5s deployment cooldown per rank. Rank 3 enables automatic chaff against missiles within 25m; consumes a normal flare charge.",
 		"stat_unit": " Flares / -0.5s CD",
 		"stat_step": 1.0,
 		"base_val": 3.0

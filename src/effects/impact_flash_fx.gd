@@ -23,6 +23,9 @@ var mat_axial2: ShaderMaterial
 func _init() -> void:
 	_build_geometry()
 
+func _ready() -> void:
+	set_process(active)
+
 func _build_geometry() -> void:
 	var q_mesh = QuadMesh.new()
 	q_mesh.size = Vector2(1.0, 1.0)
@@ -70,6 +73,7 @@ func activate(
 	p_duration: float = 0.08
 ) -> void:
 	active = true
+	set_process(true)
 	elapsed = 0.0
 	visible = true
 
@@ -138,4 +142,5 @@ func _process(delta: float) -> void:
 
 func deactivate() -> void:
 	active = false
+	set_process(false)
 	visible = false

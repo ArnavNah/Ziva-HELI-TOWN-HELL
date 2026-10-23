@@ -15,6 +15,8 @@ var current_charges: int = GameConstants.FLARE_BASE_CHARGES
 var cooldown_timer: float = 0.0
 var decoy_window_timer: float = 0.0
 var is_decoy_active: bool = false
+var auto_chaff_enabled := false
+var auto_scan_timer := 0.0
 
 @export var player_helicopter: CharacterBody3D
 
@@ -34,11 +36,22 @@ func _process(delta: float) -> void:
 
 	if Input.is_action_just_pressed("deploy_flares"):
 		try_deploy_flares()
+	auto_scan_timer -= delta
+	if auto_chaff_enabled and auto_scan_timer <= 0.0 and is_instance_valid(player_helicopter) and not player_helicopter.is_dying:
+		auto_scan_timer = 0.15
+		for missile in get_tree().get_nodes_in_group("combat_projectiles"):
+			if missile.is_homing and missile.target_node == player_helicopter and missile.global_position.distance_to(player_helicopter.global_position) <= 25.0:
+				try_deploy_flares()
+				break
 
 func deploy_flares() -> bool:
 	return try_deploy_flares()
 
 func try_deploy_flares() -> bool:
+	if is_inside_tree() and get_tree().paused:
+		return false
+	if is_instance_valid(player_helicopter) and player_helicopter.is_dying:
+		return false
 	if current_charges <= 0 or cooldown_timer > 0.0:
 		return false
 
@@ -61,9 +74,9 @@ func _divert_incoming_missiles() -> void:
 
 	var my_pos = player_helicopter.global_position
 	# Find all active projectiles in group or tree
-	var projectiles = get_tree().get_nodes_in_group("homing_missiles")
+	var projectiles = get_tree().get_nodes_in_group("combat_projectiles")
 	for m in projectiles:
-		if m is Node3D and is_instance_valid(m) and m.get("is_homing"):
+		if m is Node3D and is_instance_valid(m) and m.get("is_homing") and m.target_node == player_helicopter:
 			var d = my_pos.distance_to(m.global_position)
 			# Page 13: Within 135 units diverted; 135-190 probabilistic; >190 unaffected
 			if d <= GameConstants.FLARE_DIVERSION_CLOSE_RADIUS:

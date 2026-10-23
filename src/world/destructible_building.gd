@@ -32,6 +32,7 @@ var details_root: Node3D = null
 ## Central archetype geometry and collision shape cache for repeatable town structures
 static var intact_mesh_cache: Dictionary = {}
 static var box_shape_cache: Dictionary = {}
+const GEOMETRY_CACHE_VERSION := 2
 
 static func clear_geometry_cache() -> void:
 	intact_mesh_cache.clear()
@@ -61,8 +62,8 @@ func _setup_structure() -> void:
 		if not damage_receiver.destroyed.is_connected(_on_destroyed):
 			damage_receiver.destroyed.connect(_on_destroyed)
 
-	mesh_instance.visibility_range_end = 160.0
-	mesh_instance.visibility_range_end_margin = 25.0
+	mesh_instance.visibility_range_end = 260.0
+	mesh_instance.visibility_range_end_margin = 35.0
 	mesh_instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	_update_visuals_and_collision()
 
@@ -101,7 +102,8 @@ func _update_visuals_and_collision() -> void:
 			mesh_instance.material_override = null
 
 			# Shared immutable BoxShape3D cache by dimensions
-			var shape_key := "%.1f_%.1f_%.1f" % [building_width, building_height, building_depth]
+			var dimensions := Vector3(building_width, building_height, building_depth)
+			var shape_key := var_to_bytes(dimensions).hex_encode()
 			var shape: BoxShape3D = box_shape_cache.get(shape_key, null)
 			if not shape:
 				shape = BoxShape3D.new()
@@ -112,7 +114,14 @@ func _update_visuals_and_collision() -> void:
 
 			var arch := _resolved_archetype(h)
 			var wall_tile := _wall_tile(arch, h)
-			var cache_key := "%s_%.1f_%.1f_%.1f_%d" % [arch, building_width, building_height, building_depth, wall_tile]
+			# Hash influences house siding/roof and apartment wall colors. Cache the
+			# actual palette variant, not the location, to keep safe sharing useful.
+			var palette := Vector2i.ZERO
+			if arch == "townhouse":
+				palette = Vector2i(h % 3, int(h / 3.0) % 3)
+			elif arch == "apartment":
+				palette.x = h % 4
+			var cache_key := var_to_str([GEOMETRY_CACHE_VERSION, arch, shape_key, wall_tile, palette])
 			var cached_mesh: ArrayMesh = intact_mesh_cache.get(cache_key, null)
 
 			if cached_mesh:

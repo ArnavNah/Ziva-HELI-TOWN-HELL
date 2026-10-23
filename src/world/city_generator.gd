@@ -32,26 +32,52 @@ var terrain_lots: Array[Vector3] = []
 var building_footprints: Dictionary = {}
 var district_rng := RandomNumberGenerator.new()
 signal generation_complete
+signal generation_settled(completed: bool)
 var is_generating: bool = false
 var generation_ratio: float = 0.0
 var generation_stage: String = "INITIALIZING"
 
 const WORK_BUDGET_USEC: int = 5000 # 5.0 ms generation budget per frame
 var _budget_start_usec: int = 0
+var _generation_id: int = 0
+var generation_metrics: Dictionary = {}
+static var road_mesh_cache: Dictionary = {}
 
-func _check_frame_budget() -> void:
+func generation_is_current(attempt: int) -> bool:
+	return attempt == _generation_id and is_generating and is_inside_tree() and not is_queued_for_deletion()
+
+func cancel_generation() -> void:
+	_generation_id += 1
+	if is_generating:
+		is_generating = false
+		generation_settled.emit(false)
+
+func _exit_tree() -> void:
+	cancel_generation()
+
+func _check_frame_budget(attempt: int) -> bool:
+	if not generation_is_current(attempt):
+		return false
 	if _budget_start_usec == 0:
 		_budget_start_usec = Time.get_ticks_usec()
 	if has_node("/root/UIFlow") and get_node("/root/UIFlow").busy:
 		if Time.get_ticks_usec() - _budget_start_usec >= WORK_BUDGET_USEC:
 			await get_tree().process_frame
+			if not generation_is_current(attempt):
+				return false
 			_budget_start_usec = Time.get_ticks_usec()
+			generation_metrics["yields"] += 1
+	return true
 
 func _ready() -> void:
 	generate_district(current_district, 1337)
 
 func generate_district(district_name: String, seed_val: int) -> void:
+	cancel_generation()
+	var attempt := _generation_id
 	is_generating = true
+	generation_metrics = {"yields": 0}
+	var phase_started := Time.get_ticks_usec()
 	generation_ratio = 0.05
 	generation_stage = "BUILDING ARTERIAL ROAD NETWORK"
 	_clear_existing()
@@ -63,7 +89,11 @@ func generate_district(district_name: String, seed_val: int) -> void:
 	var half_z: int = int(grid_depth * 0.5)
 
 	# 1. Generate Arterial Road Network with Crosswalks and Sidewalks
-	await _spawn_road_network(half_x, half_z)
+	await _spawn_road_network(half_x, half_z, attempt)
+	if not generation_is_current(attempt):
+		return
+	generation_metrics["roads_ms"] = float(Time.get_ticks_usec() - phase_started) / 1000.0
+	phase_started = Time.get_ticks_usec()
 	generation_ratio = 0.22
 	generation_stage = "CONSTRUCTING URBAN BLOCKS"
 
@@ -87,19 +117,27 @@ func generate_district(district_name: String, seed_val: int) -> void:
 			generation_ratio = 0.22 + 0.58 * (float(block_idx) / float(total_blocks))
 			if block_idx % 4 == 0 or block_idx == total_blocks:
 				generation_stage = "CONSTRUCTING URBAN DISTRICT (%d/%d)" % [block_idx, total_blocks]
-			await _check_frame_budget()
+			if not await _check_frame_budget(attempt):
+				return
 
+	generation_metrics["blocks_ms"] = float(Time.get_ticks_usec() - phase_started) / 1000.0
+	phase_started = Time.get_ticks_usec()
 	generation_ratio = 0.80
 	generation_stage = "DEPLOYING VEGETATION & URBAN DRESSING"
 	var dressing := FieldDressing.new()
 	dressing.name = "FieldDressing"
 	add_child(dressing)
 	spawned_blocks.append(dressing)
-	await dressing.generate(seed_val, grid_width, grid_depth, block_size, meadow_lots, building_footprints, terrain_lots, self)
+	if preload("res://src/world/sortie_biome.gd").selected() == "town":
+		await dressing.generate(seed_val, grid_width, grid_depth, block_size, meadow_lots, building_footprints, terrain_lots, self, attempt)
+	if not generation_is_current(attempt):
+		return
+	generation_metrics["dressing_ms"] = float(Time.get_ticks_usec() - phase_started) / 1000.0
 	is_generating = false
 	generation_ratio = 1.0
 	generation_stage = "URBAN SECTOR OPERATIONAL"
 	generation_complete.emit()
+	generation_settled.emit(true)
 
 func _clear_existing() -> void:
 	for b in spawned_blocks:
@@ -110,7 +148,7 @@ func _clear_existing() -> void:
 	terrain_lots.clear()
 	building_footprints.clear()
 
-func _spawn_road_network(half_x: int, half_z: int) -> void:
+func _spawn_road_network(half_x: int, half_z: int, attempt: int) -> void:
 	var total_w = float(half_x * 2) * block_size + block_size
 	var total_d = float(half_z * 2) * block_size + block_size
 
@@ -150,154 +188,185 @@ func _spawn_road_network(half_x: int, half_z: int) -> void:
 		add_child(str_mesh)
 		spawned_blocks.append(str_mesh)
 
+	# Cache only complete, immutable road chunks; each row bounds mesh upload work.
+	var road_key := var_to_str([1, half_x, half_z, block_size, main_avenue_width, secondary_street_width])
+	var cached: Dictionary = road_mesh_cache.get(road_key, {})
+	var marking_chunks: Array = cached.get("markings", []).duplicate()
+	var sidewalk_chunks: Array = cached.get("sidewalks", []).duplicate()
+	generation_metrics["road_cache_hit"] = not cached.is_empty()
 	# 2. Road Markings (Zebra Crosswalks, Stop Lines, Dashed Centerlines) Merged into 1 ArrayMesh!
-	var markings := DetailMesh.new()
 	var white_line_col := Color(0.78, 0.80, 0.78)
 	var yellow_line_col := Color(0.85, 0.70, 0.25)
 
 	# Intersection Crosswalks and Centerlines
 	var total_intersections: int = (half_x * 2 + 1) * (half_z * 2 + 1)
 	var inter_idx: int = 0
-	for ix in range(-half_x, half_x + 1):
-		var ave_x = float(ix) * block_size
-		var is_central_x = (ix == 0)
-		var w_x = main_avenue_width if is_central_x else secondary_street_width
-
-		for iz in range(-half_z, half_z + 1):
-			inter_idx += 1
-			await _check_frame_budget()
-			if inter_idx % 8 == 0:
-				generation_ratio = 0.05 + 0.17 * (float(inter_idx) / float(total_intersections))
-				generation_stage = "BUILDING ARTERIAL ROADWAYS (%d%%)" % int(generation_ratio * 100)
-			var str_z = float(iz) * block_size
-			var is_central_z = (iz == 0)
-			var w_z = main_avenue_width if is_central_z else secondary_street_width
-
-			var is_fob_center = (ix == 0 and iz == 0)
-
-			# Zebra Crosswalks approaching intersection from 4 sides
-			if not is_fob_center:
-				# North approach (Z negative)
-				var n_z = str_z - w_z * 0.5 - 1.6
-				for s in range(5):
-					var sx = ave_x + (-2.0 + float(s)) * (w_x * 0.18)
-					markings.box(Vector3(w_x * 0.12, 0.02, 2.2), Vector3(sx, 0.038, n_z), white_line_col)
-				# Stop line
-				markings.box(Vector3(w_x * 0.85, 0.02, 0.35), Vector3(ave_x, 0.038, str_z - w_z * 0.5 - 3.1), white_line_col)
-
-				# South approach (Z positive)
-				var s_z = str_z + w_z * 0.5 + 1.6
-				for s in range(5):
-					var sx = ave_x + (-2.0 + float(s)) * (w_x * 0.18)
-					markings.box(Vector3(w_x * 0.12, 0.02, 2.2), Vector3(sx, 0.038, s_z), white_line_col)
-				# Stop line
-				markings.box(Vector3(w_x * 0.85, 0.02, 0.35), Vector3(ave_x, 0.038, str_z + w_z * 0.5 + 3.1), white_line_col)
-
-				# West approach (X negative)
-				var w_x_pos = ave_x - w_x * 0.5 - 1.6
-				for s in range(5):
-					var sz = str_z + (-2.0 + float(s)) * (w_z * 0.18)
-					markings.box(Vector3(2.2, 0.02, w_z * 0.12), Vector3(w_x_pos, 0.038, sz), white_line_col)
-				# Stop line
-				markings.box(Vector3(0.35, 0.02, w_z * 0.85), Vector3(ave_x - w_x * 0.5 - 3.1, 0.038, str_z), white_line_col)
-
-				# East approach (X positive)
-				var e_x_pos = ave_x + w_x * 0.5 + 1.6
-				for s in range(5):
-					var sz = str_z + (-2.0 + float(s)) * (w_z * 0.18)
-					markings.box(Vector3(2.2, 0.02, w_z * 0.12), Vector3(e_x_pos, 0.038, sz), white_line_col)
-				# Stop line
-				markings.box(Vector3(0.35, 0.02, w_z * 0.85), Vector3(ave_x + w_x * 0.5 + 3.1, 0.038, str_z), white_line_col)
-
-			# Center dashed lines along avenue between this intersection and the next
-			if iz < half_z:
-				var z_start = str_z + w_z * 0.5 + 3.6
-				var z_end = (iz + 1) * block_size - w_z * 0.5 - 3.6
-				var seg_len = z_end - z_start
-				if seg_len > 4.0:
-					if is_central_x:
-						# Main avenue yellow center lines
-						if abs(ave_x) < 0.1 and (abs(z_start) < 14.0 or abs(z_end) < 14.0):
-							pass
+	if marking_chunks.is_empty():
+		for ix in range(-half_x, half_x + 1):
+			var markings := DetailMesh.new()
+			var ave_x = float(ix) * block_size
+			var is_central_x = (ix == 0)
+			var w_x = main_avenue_width if is_central_x else secondary_street_width
+	
+			for iz in range(-half_z, half_z + 1):
+				inter_idx += 1
+				if not await _check_frame_budget(attempt):
+					return
+				if inter_idx % 8 == 0:
+					generation_ratio = 0.05 + 0.17 * (float(inter_idx) / float(total_intersections))
+					generation_stage = "BUILDING ARTERIAL ROADWAYS (%d%%)" % int(generation_ratio * 100)
+				var str_z = float(iz) * block_size
+				var is_central_z = (iz == 0)
+				var w_z = main_avenue_width if is_central_z else secondary_street_width
+	
+				var is_fob_center = (ix == 0 and iz == 0)
+	
+				# Zebra Crosswalks approaching intersection from 4 sides
+				if not is_fob_center:
+					# North approach (Z negative)
+					var n_z = str_z - w_z * 0.5 - 1.6
+					for s in range(5):
+						var sx = ave_x + (-2.0 + float(s)) * (w_x * 0.18)
+						markings.box(Vector3(w_x * 0.12, 0.02, 2.2), Vector3(sx, 0.038, n_z), white_line_col)
+					# Stop line
+					markings.box(Vector3(w_x * 0.85, 0.02, 0.35), Vector3(ave_x, 0.038, str_z - w_z * 0.5 - 3.1), white_line_col)
+	
+					# South approach (Z positive)
+					var s_z = str_z + w_z * 0.5 + 1.6
+					for s in range(5):
+						var sx = ave_x + (-2.0 + float(s)) * (w_x * 0.18)
+						markings.box(Vector3(w_x * 0.12, 0.02, 2.2), Vector3(sx, 0.038, s_z), white_line_col)
+					# Stop line
+					markings.box(Vector3(w_x * 0.85, 0.02, 0.35), Vector3(ave_x, 0.038, str_z + w_z * 0.5 + 3.1), white_line_col)
+	
+					# West approach (X negative)
+					var w_x_pos = ave_x - w_x * 0.5 - 1.6
+					for s in range(5):
+						var sz = str_z + (-2.0 + float(s)) * (w_z * 0.18)
+						markings.box(Vector3(2.2, 0.02, w_z * 0.12), Vector3(w_x_pos, 0.038, sz), white_line_col)
+					# Stop line
+					markings.box(Vector3(0.35, 0.02, w_z * 0.85), Vector3(ave_x - w_x * 0.5 - 3.1, 0.038, str_z), white_line_col)
+	
+					# East approach (X positive)
+					var e_x_pos = ave_x + w_x * 0.5 + 1.6
+					for s in range(5):
+						var sz = str_z + (-2.0 + float(s)) * (w_z * 0.18)
+						markings.box(Vector3(2.2, 0.02, w_z * 0.12), Vector3(e_x_pos, 0.038, sz), white_line_col)
+					# Stop line
+					markings.box(Vector3(0.35, 0.02, w_z * 0.85), Vector3(ave_x + w_x * 0.5 + 3.1, 0.038, str_z), white_line_col)
+	
+				# Center dashed lines along avenue between this intersection and the next
+				if iz < half_z:
+					var z_start = str_z + w_z * 0.5 + 3.6
+					var z_end = (iz + 1) * block_size - w_z * 0.5 - 3.6
+					var seg_len = z_end - z_start
+					if seg_len > 4.0:
+						if is_central_x:
+							# Main avenue yellow center lines
+							if abs(ave_x) < 0.1 and (abs(z_start) < 14.0 or abs(z_end) < 14.0):
+								pass
+							else:
+								markings.box(Vector3(0.35, 0.02, seg_len), Vector3(ave_x, 0.038, (z_start + z_end) * 0.5), yellow_line_col)
 						else:
-							markings.box(Vector3(0.35, 0.02, seg_len), Vector3(ave_x, 0.038, (z_start + z_end) * 0.5), yellow_line_col)
-					else:
-						# Secondary street white dashed center line
-						var dashes = int(seg_len / 4.4)
-						for d in range(dashes):
-							var dz = z_start + float(d) * 4.4 + 1.2
-							markings.box(Vector3(0.24, 0.02, 2.2), Vector3(ave_x, 0.038, dz), white_line_col)
-
-			# Center dashed lines along cross street between this intersection and the next
-			if ix < half_x:
-				var x_start = ave_x + w_x * 0.5 + 3.6
-				var x_end = (ix + 1) * block_size - w_x * 0.5 - 3.6
-				var seg_len_x = x_end - x_start
-				if seg_len_x > 4.0:
-					if is_central_z:
-						# Main cross boulevard yellow center lines
-						if abs(str_z) < 0.1 and (abs(x_start) < 14.0 or abs(x_end) < 14.0):
-							pass
+							# Secondary street white dashed center line
+							var dashes = int(seg_len / 4.4)
+							for d in range(dashes):
+								var dz = z_start + float(d) * 4.4 + 1.2
+								markings.box(Vector3(0.24, 0.02, 2.2), Vector3(ave_x, 0.038, dz), white_line_col)
+	
+				# Center dashed lines along cross street between this intersection and the next
+				if ix < half_x:
+					var x_start = ave_x + w_x * 0.5 + 3.6
+					var x_end = (ix + 1) * block_size - w_x * 0.5 - 3.6
+					var seg_len_x = x_end - x_start
+					if seg_len_x > 4.0:
+						if is_central_z:
+							# Main cross boulevard yellow center lines
+							if abs(str_z) < 0.1 and (abs(x_start) < 14.0 or abs(x_end) < 14.0):
+								pass
+							else:
+								markings.box(Vector3(seg_len_x, 0.02, 0.35), Vector3((x_start + x_end) * 0.5, 0.038, str_z), yellow_line_col)
 						else:
-							markings.box(Vector3(seg_len_x, 0.02, 0.35), Vector3((x_start + x_end) * 0.5, 0.038, str_z), yellow_line_col)
-					else:
-						# Secondary cross street white dashed center line
-						var dashes_x = int(seg_len_x / 4.4)
-						for d in range(dashes_x):
-							var dx = x_start + float(d) * 4.4 + 1.2
-							markings.box(Vector3(2.2, 0.02, 0.24), Vector3(dx, 0.038, str_z), white_line_col)
-
-	var markings_node = MeshInstance3D.new()
-	markings_node.name = "RoadMarkings"
-	markings_node.mesh = markings.build()
-	markings_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(markings_node)
-	spawned_blocks.append(markings_node)
+							# Secondary cross street white dashed center line
+							var dashes_x = int(seg_len_x / 4.4)
+							for d in range(dashes_x):
+								var dx = x_start + float(d) * 4.4 + 1.2
+								markings.box(Vector3(2.2, 0.02, 0.24), Vector3(dx, 0.038, str_z), white_line_col)
+	
+			var mesh: ArrayMesh = markings.build()
+			marking_chunks.append(mesh)
+			_add_road_detail("RoadMarkings_%d" % ix, mesh)
+	else:
+		for mesh in marking_chunks:
+			if not await _check_frame_budget(attempt):
+				return
+			_add_road_detail("RoadMarkings", mesh)
 
 	# 3. Continuous Sidewalks & Curbs Framing Every City Block Merged into 1 ArrayMesh!
-	var sidewalks := DetailMesh.new()
 	var sidewalk_col := Color(0.71, 0.67, 0.55) # Plaster/stone #B6AA8B curb
 	var curb_w := 1.8
 	var curb_h := 0.09
 
-	for ix in range(-half_x, half_x):
-		var is_w_central = (ix == 0)
-		var is_e_central = (ix + 1 == 0)
-		var hw_w = (main_avenue_width if is_w_central else secondary_street_width) * 0.5
-		var hw_e = (main_avenue_width if is_e_central else secondary_street_width) * 0.5
+	if sidewalk_chunks.is_empty():
+		for ix in range(-half_x, half_x):
+			var sidewalks := DetailMesh.new()
+			var is_w_central = (ix == 0)
+			var is_e_central = (ix + 1 == 0)
+			var hw_w = (main_avenue_width if is_w_central else secondary_street_width) * 0.5
+			var hw_e = (main_avenue_width if is_e_central else secondary_street_width) * 0.5
+	
+			var x_min = float(ix) * block_size + hw_w
+			var x_max = float(ix + 1) * block_size - hw_e
+			var lot_w = x_max - x_min
+			var center_x = (x_min + x_max) * 0.5
+	
+			for iz in range(-half_z, half_z):
+				if not await _check_frame_budget(attempt):
+					return
+				var is_s_central = (iz == 0)
+				var is_n_central = (iz + 1 == 0)
+				var hw_s = (main_avenue_width if is_s_central else secondary_street_width) * 0.5
+				var hw_n = (main_avenue_width if is_n_central else secondary_street_width) * 0.5
+	
+				var z_min = float(iz) * block_size + hw_s
+				var z_max = float(iz + 1) * block_size - hw_n
+				var lot_d = z_max - z_min
+				var center_z = (z_min + z_max) * 0.5
+	
+				# Perimeter Sidewalks (South, North, West, East)
+				sidewalks.box(Vector3(lot_w, curb_h, curb_w), Vector3(center_x, curb_h * 0.5, z_min + curb_w * 0.5), sidewalk_col)
+				sidewalks.box(Vector3(lot_w, curb_h, curb_w), Vector3(center_x, curb_h * 0.5, z_max - curb_w * 0.5), sidewalk_col)
+				sidewalks.box(Vector3(curb_w, curb_h, lot_d - curb_w * 2.0), Vector3(x_min + curb_w * 0.5, curb_h * 0.5, center_z), sidewalk_col)
+				sidewalks.box(Vector3(curb_w, curb_h, lot_d - curb_w * 2.0), Vector3(x_max - curb_w * 0.5, curb_h * 0.5, center_z), sidewalk_col)
+	
+			var mesh: ArrayMesh = sidewalks.build(Materials.sidewalk())
+			sidewalk_chunks.append(mesh)
+			_add_road_detail("Sidewalks_%d" % ix, mesh)
+	else:
+		for mesh in sidewalk_chunks:
+			if not await _check_frame_budget(attempt):
+				return
+			_add_road_detail("Sidewalks", mesh)
 
-		var x_min = float(ix) * block_size + hw_w
-		var x_max = float(ix + 1) * block_size - hw_e
-		var lot_w = x_max - x_min
-		var center_x = (x_min + x_max) * 0.5
+	if generation_is_current(attempt):
+		if road_mesh_cache.size() >= 4 and not road_mesh_cache.has(road_key):
+			road_mesh_cache.erase(road_mesh_cache.keys()[0])
+		road_mesh_cache[road_key] = {"markings": marking_chunks, "sidewalks": sidewalk_chunks}
 
-		for iz in range(-half_z, half_z):
-			var is_s_central = (iz == 0)
-			var is_n_central = (iz + 1 == 0)
-			var hw_s = (main_avenue_width if is_s_central else secondary_street_width) * 0.5
-			var hw_n = (main_avenue_width if is_n_central else secondary_street_width) * 0.5
-
-			var z_min = float(iz) * block_size + hw_s
-			var z_max = float(iz + 1) * block_size - hw_n
-			var lot_d = z_max - z_min
-			var center_z = (z_min + z_max) * 0.5
-
-			# Perimeter Sidewalks (South, North, West, East)
-			sidewalks.box(Vector3(lot_w, curb_h, curb_w), Vector3(center_x, curb_h * 0.5, z_min + curb_w * 0.5), sidewalk_col)
-			sidewalks.box(Vector3(lot_w, curb_h, curb_w), Vector3(center_x, curb_h * 0.5, z_max - curb_w * 0.5), sidewalk_col)
-			sidewalks.box(Vector3(curb_w, curb_h, lot_d - curb_w * 2.0), Vector3(x_min + curb_w * 0.5, curb_h * 0.5, center_z), sidewalk_col)
-			sidewalks.box(Vector3(curb_w, curb_h, lot_d - curb_w * 2.0), Vector3(x_max - curb_w * 0.5, curb_h * 0.5, center_z), sidewalk_col)
-
-	var sidewalks_node = MeshInstance3D.new()
-	sidewalks_node.name = "Sidewalks"
-	sidewalks_node.mesh = sidewalks.build(Materials.sidewalk())
-	sidewalks_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(sidewalks_node)
-	spawned_blocks.append(sidewalks_node)
+func _add_road_detail(label: String, mesh: Mesh) -> void:
+	var instance := MeshInstance3D.new()
+	instance.name = label
+	instance.mesh = mesh
+	instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(instance)
+	spawned_blocks.append(instance)
 
 func _generate_block(origin: Vector3, district_name: String, is_central_fob: bool, ix: int, iz: int) -> void:
 	if is_central_fob:
 		_spawn_staging_yard(origin, "fob")
+		return
+	if preload("res://src/world/sortie_biome.gd").selected() in ["desert", "harbor"]:
+		preload("res://src/world/sortie_biome.gd").block(self, origin, ix, iz)
 		return
 
 	# Natural meadow clearings interrupting grid

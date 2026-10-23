@@ -38,6 +38,8 @@ func _process(delta: float) -> void:
 				target_radius = 120.0
 			RadarZoomMode.WIDE:
 				target_radius = 260.0
+		if "radar_range_multiplier" in player:
+			target_radius *= player.radar_range_multiplier
 		world_detection_radius = lerpf(world_detection_radius, target_radius, delta * 3.0)
 
 	redraw_timer -= delta
@@ -135,6 +137,12 @@ func _draw() -> void:
 					draw_arc(pos_val, d_size + 2.5, 0, TAU, 16, Color(sam_color.r, sam_color.g, sam_color.b, 0.65), 1.2)
 				else:
 					draw_rect(Rect2(pos_val - Vector2.ONE * 3, Vector2.ONE * 6), Color("ec914e"), false, 2)
+	for objective in get_tree().get_nodes_in_group("mission_objectives"):
+		if not is_instance_valid(objective) or not objective.marker_active: continue
+		var point := project_world_position(objective.global_position, true)
+		var color: Color = objective.marker_color
+		draw_colored_polygon(PackedVector2Array([point + Vector2(0, -5), point + Vector2(5, 0), point + Vector2(0, 5), point + Vector2(-5, 0)]), color)
+		draw_arc(point, 7, 0, TAU, 16, color, 1.5)
 	_draw_cargo_marker()
 	_draw_compass()
 	var heading := world_offset_to_map(-player.global_transform.basis.z).normalized()

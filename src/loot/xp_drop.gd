@@ -14,6 +14,7 @@ extends Area3D
 var is_collected: bool = false
 var bob_offset: float = 0.0
 var initial_y: float = 0.0
+var run_generation: int = -1
 
 @onready var collision_shape: CollisionShape3D = get_node_or_null("CollisionShape3D")
 @onready var mesh_instance: MeshInstance3D = get_node_or_null("MeshInstance3D")
@@ -22,7 +23,10 @@ func _ready() -> void:
 	add_to_group("xp_drops")
 	collision_layer = 16 # Pickups / drops layer
 	collision_mask = 1   # Player layer
-	initial_y = global_position.y
+	initial_y = position.y
+	var xp = get_node_or_null("/root/XpManager")
+	if xp:
+		run_generation = xp.run_generation
 	bob_offset = randf() * TAU
 
 	body_entered.connect(_on_body_entered)
@@ -44,7 +48,7 @@ func _setup_visual_materials() -> void:
 	mesh_instance.material_override = mat
 
 func start_attraction(player: Node3D) -> void:
-	if is_collected:
+	if is_collected or not _can_collect(player):
 		return
 	target_player = player
 	is_being_attracted = true
@@ -52,6 +56,14 @@ func start_attraction(player: Node3D) -> void:
 func _physics_process(delta: float) -> void:
 	if is_collected:
 		return
+	if not _belongs_to_current_run():
+		queue_free()
+		return
+	if is_being_attracted and not _can_collect(target_player):
+		is_being_attracted = false
+		target_player = null
+		attract_speed = 0.0
+		initial_y = position.y
 
 	if not is_being_attracted or not target_player or not is_instance_valid(target_player):
 		# Idle visual floating bob & rotation when not actively pulled
@@ -99,7 +111,7 @@ func _physics_process(delta: float) -> void:
 	rotation.x += lerpf(1.0, 8.0, speed_ratio) * delta
 
 func _trigger_collection() -> void:
-	if is_collected:
+	if is_collected or not _can_collect(target_player):
 		return
 	is_collected = true
 
@@ -124,7 +136,22 @@ func _on_body_entered(body: Node3D) -> void:
 	if is_collected:
 		return
 	if body.is_in_group("player"):
+		target_player = body
 		_trigger_collection()
+
+func _belongs_to_current_run() -> bool:
+	if not is_inside_tree() or is_queued_for_deletion():
+		return false
+	var xp = get_node_or_null("/root/XpManager")
+	return xp != null and run_generation == xp.run_generation
+
+func _can_collect(player: Node3D) -> bool:
+	if not _belongs_to_current_run() or not is_instance_valid(player) or not player.is_inside_tree() or player.is_queued_for_deletion():
+		return false
+	if "is_dying" in player and player.is_dying:
+		return false
+	var gm = get_node_or_null("/root/GameManager")
+	return gm != null and gm.current_state in [gm.RunState.ACTIVE, gm.RunState.EXTRACTION, gm.RunState.TUTORIAL] and not get_tree().paused
 
 func _on_area_entered(area: Area3D) -> void:
 	if is_collected:

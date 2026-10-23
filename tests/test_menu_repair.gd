@@ -32,6 +32,8 @@ func click(button: BaseButton) -> void:
 	motion.position = center
 	motion.global_position = center
 	Input.parse_input_event(motion)
+	# Let GUI hover routing consume the synthetic motion before button-down.
+	await frames(1)
 	for pressed in [true, false]:
 		var event := InputEventMouseButton.new()
 		event.button_index = MOUSE_BUTTON_LEFT
@@ -220,18 +222,19 @@ func run() -> void:
 		pause._on_resume_pressed()
 		check(not paused and gm.current_state == gm.RunState.ACTIVE, "Resume restores active state")
 		# Mandatory modal cannot be dismissed by pause.
-		var progression = player.get_node("RunProgression")
-		progression.queued_level_ups = 1
-		progression._offer_next_upgrade_choice()
-		check(game.upgrade_dialog.visible, "upgrade offered")
+		var xp = root.get_node("XpManager")
+		var draft = game.get_node("UI/LevelUpUi")
+		xp.add_xp(ceili(float(xp.target_xp - xp.current_xp) / xp.xp_multiplier))
+		var draft_deadline := Time.get_ticks_msec() + 5000
+		while not draft.visible and Time.get_ticks_msec() < draft_deadline:
+			await process_frame
+		check(draft.visible, "production upgrade offered")
 		pause.toggle_pause()
 		check(paused and gm.current_state == gm.RunState.UPGRADE_CHOICE, "pause cannot bypass upgrade")
 		if cycle == 0:
 			await screenshot("08-upgrade")
-		var offered: String = progression.current_offers[0]
-		game.upgrade_dialog._choose_card(0)
-		progression.apply_upgrade_choice(offered)
-		check(progression.queued_level_ups == 0 and gm.current_state == gm.RunState.ACTIVE, "upgrade applies once")
+		await click(draft.card_buttons[0])
+		check(xp.queued_level_ups == 0 and gm.current_state == gm.RunState.ACTIVE, "production upgrade applies once")
 		if cycle == 0:
 			var boss = game.get_node("UI/BossDecisionDialog")
 			boss._on_boss_defeated()
@@ -288,4 +291,4 @@ func run() -> void:
 		current_scene.queue_free()
 	root.get_node("UIFlow")._clear_transients()
 	await frames(8)
-	quit(0 if failures.is_empty() else 1)
+	await load("res://tests/runtime_cleanup.gd").finish(self, 0 if failures.is_empty() else 1)

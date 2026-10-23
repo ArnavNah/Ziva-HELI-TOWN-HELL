@@ -185,5 +185,7 @@ func _notify_event_bus(data: RefCounted) -> void:
 			w_name = GameConstants.WEAPONS.get(data.weapon_type, {}).get("name", "Weapon")
 		var is_enemy: bool = get_parent() != null and get_parent().is_in_group("enemies")
 		var score_val: int = 50 if is_enemy else 25
+		if is_enemy and "score_value" in get_parent():
+			score_val = maxi(0, int(get_parent().score_value))
 		# Physical XP gems dropped by LootManager govern in-run leveling; emit 0 direct XP to avoid double attribution
 		get_node("/root/EventBus").entity_destroyed.emit(get_parent(), w_name, score_val, 0)

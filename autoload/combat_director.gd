@@ -598,13 +598,20 @@ func _check_wave_10_boss() -> void:
 		return
 	var player = get_tree().get_first_node_in_group("player")
 	var center = player.global_position if player else Vector3.ZERO
+	var gm = get_node_or_null("/root/GameManager")
+	var biome: String = gm.selected_biome if gm else "town"
 	var boss_pos = center + Vector3(0, 26, 75)
 	var spawner = _find_enemy_spawner()
 	if spawner and player:
-		boss_pos = spawner.find_valid_spawn_position("air", center, "attack_gunship")
+		var boss_key := "boss_ground_fortress" if biome == "desert" else ("boss_air_titan" if biome == "harbor" else "attack_gunship")
+		boss_pos = spawner.find_valid_spawn_position("ground" if biome == "desert" else "air", center, boss_key)
 		if boss_pos == Vector3.INF:
 			return
 	var boss = HeavyGunshipBossScript.new()
+	if biome in ["desert", "harbor"]:
+		boss.free()
+		boss = preload("res://src/enemies/boss/modular_fortress_boss.gd").new()
+		boss.fortress_kind = "ground" if biome == "desert" else "air"
 	boss.position = boss_pos
 	var parent = get_tree().current_scene if get_tree().current_scene else get_tree().root
 	parent.add_child(boss)

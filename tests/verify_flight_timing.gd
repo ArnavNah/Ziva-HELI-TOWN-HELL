@@ -3,6 +3,15 @@ var failures: Array[String] = []
 var checks := 0
 const HUD = preload("res://src/ui/survival_hud.gd")
 var player: CharacterBody3D
+func advance_simulated(seconds: float) -> void:
+    var manager = root.get_node("GameManager")
+    var director = root.get_node("CombatDirector")
+    var remaining := seconds
+    while remaining > 0.000001:
+        var step := minf(remaining, 0.05)
+        manager._process(step)
+        director._process(step)
+        remaining -= step
 func _init() -> void:
     call_deferred("run")
 func check(condition: bool, description: String) -> void:
@@ -27,6 +36,8 @@ func run() -> void:
     var game = load("res://scenes/main_game.tscn").instantiate()
     root.add_child(game)
     current_scene = game
+    while not game.session_started:
+        await process_frame
     var manager = root.get_node("GameManager")
     var director = root.get_node("CombatDirector")
     var flow = root.get_node("UIFlow")
@@ -46,6 +57,8 @@ func run() -> void:
     await ticks(48)
     var straight_speed := Vector2(player.velocity.x, player.velocity.z).length()
     check(straight_speed > 34 and straight_speed <= 36.1, "Forward flight settles at controlled cruise speed")
+    await ticks(60)
+    straight_speed = Vector2(player.velocity.x, player.velocity.z).length()
     Input.action_press("strafe_right")
     await ticks(60)
     check(Vector2(player.velocity.x, player.velocity.z).length() <= straight_speed + 0.5, "Diagonal flight cannot exceed straight-line cruise")
@@ -77,8 +90,7 @@ func run() -> void:
     check(camera.global_position.distance_to(player.global_position) < 52, "Follow camera stays close to the aircraft")
     director.start_wave_director()
     manager.run_time = 0
-    manager._process(1.25)
-    director._process(1.25)
+    advance_simulated(1.25)
     check(is_equal_approx(manager.run_time, 1.25) and is_equal_approx(director.wave_timer, 43.75), "Run and wave clocks use the same elapsed time")
     manager.change_state(manager.RunState.PAUSED)
     manager._process(2)
@@ -86,18 +98,18 @@ func run() -> void:
     check(is_equal_approx(manager.run_time, 1.25) and is_equal_approx(director.wave_timer, 43.75), "Pause freezes elapsed and remaining time")
     manager.change_state(manager.RunState.ACTIVE)
     director.wave_timer = 0.1
-    director._process(0.2)
+    director._process(0.1)
     check(not director.is_wave_active and director.transition_timer == 3, "Wave completion starts a visible three-second intermission")
     manager.change_state(manager.RunState.UPGRADE_CHOICE)
     director._process(4)
     check(director.current_wave == 1 and director.transition_timer == 3, "Upgrade pause freezes the next-wave transition")
     manager.change_state(manager.RunState.ACTIVE)
-    director._process(1)
-    check(director.transition_timer == 2, "Intermission resumes with its remaining time")
-    director._process(2)
+    advance_simulated(1)
+    check(is_equal_approx(director.transition_timer, 2), "Intermission resumes with its remaining time")
+    advance_simulated(2.001)
     check(director.current_wave == 2 and director.is_wave_active, "Intermission advances exactly one wave")
     director.wave_timer = 0.1
-    director._process(0.2)
+    director._process(0.1)
     manager.change_state(manager.RunState.MENU)
     director._process(10)
     check(not director.is_wave_active and director.transition_timer == 0 and director.current_wave == 2, "Returning to menu cancels pending wave progression")
@@ -105,4 +117,4 @@ func run() -> void:
     check(HUD.clock_text(59.99) == "0:59" and HUD.clock_text(60.01) == "1:00", "Elapsed timer changes minutes without skipped seconds")
     paused = false
     print("FLIGHT AND TIMING CHECKS: ", checks - failures.size(), "/", checks)
-    quit(0 if failures.is_empty() else 1)
+    await load("res://tests/runtime_cleanup.gd").finish(self, 0 if failures.is_empty() else 1)

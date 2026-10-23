@@ -8,6 +8,8 @@ uniform vec4 grass_warm : source_color = vec4(0.54, 0.66, 0.30, 1.0);
 uniform float uv_scale = 0.125;
 uniform bool enable_toon_steps = false;
 uniform bool enable_vertex_snapping = false;
+uniform vec4 biome_color : source_color = vec4(1.0);
+uniform float biome_blend = 0.0;
 varying vec3 world_pos;
 varying vec3 world_normal;
 float hash21(vec2 p) {
@@ -38,6 +40,7 @@ void fragment() {
     // Authored olive color clusters own the surface; broad variation stays quiet.
     vec3 texel = texture(grass_texture, world_pos.xz * uv_scale).rgb;
     meadow = mix(texel, meadow, 0.18) * mix(0.94, 1.04, patch);
+    meadow = mix(meadow, biome_color.rgb * mix(0.88, 1.08, patch), biome_blend);
     float slope = 1.0 - max(world_normal.y, 0.0);
     vec3 rock = vec3(0.46, 0.45, 0.36);
     ALBEDO = mix(meadow, rock, smoothstep(0.25, 0.55, slope));

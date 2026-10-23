@@ -81,6 +81,8 @@ class StabilityTestRunner extends Node:
 	func _test_multi_shape_deduplication() -> void:
 		# 2. Multi-shape blast deduplication
 		var test_target = CharacterBody3D.new()
+		# Player ordnance targets hostiles (4), not the default player layer (1).
+		test_target.collision_layer = 4
 		arena.add_child(test_target)
 		var rec = load("res://src/combat/damage_receiver.gd").new()
 		rec.name = "DamageReceiver"
@@ -152,7 +154,8 @@ class StabilityTestRunner extends Node:
 		player.take_damage(20.0, "Test Shell")
 		check(is_equal_approx(player.current_hull, 15.0) and not player.is_dying, "Sublethal Hit: 20 damage at 35 hull leaves 15.0 hull alive (is_dying: false)")
 
-		# Lethal: 25 damage at 15 hull -> clamped to 0.0, begins dying once
+		# Separate attack after the protected burst window: low hull is now lethal.
+		player.mortal_protection.advance(0.21, player.current_hull, player.max_hull)
 		player.take_damage(25.0, "Lethal Rocket")
 		check(player.current_hull == 0.0 and player.is_dying, "Lethal Hit: 25 damage at 15 hull clamps exactly to 0.0 hull and initiates death sequence")
 
@@ -161,7 +164,8 @@ class StabilityTestRunner extends Node:
 		var hud = load("res://src/ui/hud.gd").new()
 		hud.player_helicopter = player
 		arena.add_child(hud)
-		player.current_hull = 35.0
+		player.mortal_protection = preload("res://src/player/mortal_protection.gd").new()
+		player.current_hull = 15.0 # Already below the one-shot protection threshold.
 		player.is_dying = false
 		hud._update_survival_layer()
 

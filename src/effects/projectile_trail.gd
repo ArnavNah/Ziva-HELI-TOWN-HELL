@@ -21,6 +21,9 @@ var particle_mat: StandardMaterial3D
 func _init() -> void:
 	_build_trail_system()
 
+func _ready() -> void:
+	set_process(active)
+
 func _build_trail_system() -> void:
 	# 1. Rocket Motor Exhaust Flare (attached directly behind projectile)
 	var q_mesh = QuadMesh.new()
@@ -71,8 +74,10 @@ func _build_trail_system() -> void:
 func attach_to_projectile(proj: Node3D, profile: RefCounted) -> void:
 	target_projectile = proj
 	active = true
+	set_process(true)
 	is_detaching = false
 	detach_timer = 0.0
+	exhaust_flare.visible = true
 	visible = true
 
 	# Respect Reduce Flashes
@@ -124,6 +129,7 @@ func detach_cleanly() -> void:
 
 func deactivate() -> void:
 	active = false
+	set_process(false)
 	is_detaching = false
 	visible = false
 	target_projectile = null

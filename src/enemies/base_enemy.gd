@@ -133,6 +133,9 @@ var nav_has_los: bool = false # Horizontal road-level clearance
 var nav_has_shot_los: bool = false # 3D muzzle-to-player shot clearance
 var nav_los_timer: float = 0.0
 
+# Queries run synchronously on this enemy; reuse their parameters between probes.
+var _probe_query: PhysicsRayQueryParameters3D
+
 @onready var damage_receiver: DamageReceiver = get_node_or_null("DamageReceiver")
 @onready var visual_mesh: Node3D = get_node_or_null("Visuals")
 
@@ -358,6 +361,18 @@ func set_behavior_state(new_state: BehaviorState) -> void:
 		BehaviorState.DEAD:
 			current_state = EnemyState.DEAD
 
+## Reusing parameters avoids allocating a Resource and exclusion array per ray.
+## Always reset the mask and inside flag: avoidance and weapon LOS differ.
+func _cast_probe(space: PhysicsDirectSpaceState3D, from: Vector3, to: Vector3, mask: int, inside: bool = false) -> Dictionary:
+	if _probe_query == null:
+		_probe_query = PhysicsRayQueryParameters3D.new()
+		_probe_query.exclude = [get_rid()]
+	_probe_query.from = from
+	_probe_query.to = to
+	_probe_query.collision_mask = mask
+	_probe_query.hit_from_inside = inside
+	return space.intersect_ray(_probe_query)
+
 ## Checks 3D line of sight from muzzle to player (Mask 2: Buildings/Environment)
 func check_muzzle_line_of_sight(muzzle_pos: Vector3, target_aim: Variant) -> bool:
 	if not is_inside_tree() or get_world_3d() == null:
@@ -372,9 +387,7 @@ func check_muzzle_line_of_sight(muzzle_pos: Vector3, target_aim: Variant) -> boo
 		target_pos = target_aim.global_position
 	else:
 		return true
-	var q = PhysicsRayQueryParameters3D.create(muzzle_pos, target_pos, 2)
-	q.exclude = [self]
-	var hit = space.intersect_ray(q)
+	var hit = _cast_probe(space, muzzle_pos, target_pos, 2)
 	return hit.is_empty()
 
 ## Called by CombatDirector when an attack slot lease expires or is revoked (Section 7)
@@ -514,24 +527,15 @@ func get_avoidance_steering(forward_dir: Vector3, probe_dist: float = 16.0) -> V
 	var left_perp = Vector3(-horiz_fwd.z, 0.0, horiz_fwd.x)
 
 	# 1. Center probe (Mask 6: Buildings 2 + Hostiles 4)
-	var q_center = PhysicsRayQueryParameters3D.create(origin, origin + horiz_fwd * probe_dist, 6)
-	q_center.exclude = [self]
-	q_center.hit_from_inside = true
-	var hit_center = space.intersect_ray(q_center)
+	var hit_center = _cast_probe(space, origin, origin + horiz_fwd * probe_dist, 6, true)
 
 	# 2. Left whisker (+26 deg)
 	var left_dir = horiz_fwd.rotated(Vector3.UP, deg_to_rad(26.0))
-	var q_left = PhysicsRayQueryParameters3D.create(origin, origin + left_dir * (probe_dist * 0.92), 6)
-	q_left.exclude = [self]
-	q_left.hit_from_inside = true
-	var hit_left = space.intersect_ray(q_left)
+	var hit_left = _cast_probe(space, origin, origin + left_dir * (probe_dist * 0.92), 6, true)
 
 	# 3. Right whisker (-26 deg)
 	var right_dir = horiz_fwd.rotated(Vector3.UP, deg_to_rad(-26.0))
-	var q_right = PhysicsRayQueryParameters3D.create(origin, origin + right_dir * (probe_dist * 0.92), 6)
-	q_right.exclude = [self]
-	q_right.hit_from_inside = true
-	var hit_right = space.intersect_ray(q_right)
+	var hit_right = _cast_probe(space, origin, origin + right_dir * (probe_dist * 0.92), 6, true)
 
 	# 4, 5, 6. Wide and lateral whiskers (Air units only; ground units stay in road corridor)
 	var hit_wleft := {}
@@ -542,30 +546,18 @@ func get_avoidance_steering(forward_dir: Vector3, probe_dist: float = 16.0) -> V
 	if is_air_unit:
 		# 4. Wide-left whisker (+56 deg)
 		var wide_left_dir = horiz_fwd.rotated(Vector3.UP, deg_to_rad(56.0))
-		var q_wleft = PhysicsRayQueryParameters3D.create(origin, origin + wide_left_dir * (probe_dist * 0.70), 2)
-		q_wleft.exclude = [self]
-		q_wleft.hit_from_inside = true
-		hit_wleft = space.intersect_ray(q_wleft)
+		hit_wleft = _cast_probe(space, origin, origin + wide_left_dir * (probe_dist * 0.70), 2, true)
 
 		# 5. Wide-right whisker (-56 deg)
 		var wide_right_dir = horiz_fwd.rotated(Vector3.UP, deg_to_rad(-56.0))
-		var q_wright = PhysicsRayQueryParameters3D.create(origin, origin + wide_right_dir * (probe_dist * 0.70), 2)
-		q_wright.exclude = [self]
-		q_wright.hit_from_inside = true
-		hit_wright = space.intersect_ray(q_wright)
+		hit_wright = _cast_probe(space, origin, origin + wide_right_dir * (probe_dist * 0.70), 2, true)
 
 		# 6. Lateral side whiskers (+88 deg / -88 deg at 4.5m)
 		var lat_left_dir = horiz_fwd.rotated(Vector3.UP, deg_to_rad(88.0))
-		var q_lleft = PhysicsRayQueryParameters3D.create(origin, origin + lat_left_dir * 4.5, 6)
-		q_lleft.exclude = [self]
-		q_lleft.hit_from_inside = true
-		hit_lleft = space.intersect_ray(q_lleft)
+		hit_lleft = _cast_probe(space, origin, origin + lat_left_dir * 4.5, 6, true)
 
 		var lat_right_dir = horiz_fwd.rotated(Vector3.UP, deg_to_rad(-88.0))
-		var q_lright = PhysicsRayQueryParameters3D.create(origin, origin + lat_right_dir * 4.5, 6)
-		q_lright.exclude = [self]
-		q_lright.hit_from_inside = true
-		hit_lright = space.intersect_ray(q_lright)
+		hit_lright = _cast_probe(space, origin, origin + lat_right_dir * 4.5, 6, true)
 
 	# Roadside buildings outside a clear forward corridor are not obstacles.
 	if not is_air_unit and hit_center.is_empty() and hit_left.is_empty() and hit_right.is_empty():
@@ -759,22 +751,16 @@ func get_ground_nav_heading(target_pos: Vector3, delta: float, preferred_dist: f
 			var space = get_world_3d().direct_space_state
 			if space:
 				var ground_target = Vector3(target_pos.x, global_position.y, target_pos.z)
-				var q = PhysicsRayQueryParameters3D.create(
+				nav_has_los = _cast_probe(space,
 					global_position + Vector3(0.0, 1.2, 0.0),
 					ground_target + Vector3(0.0, 1.2, 0.0),
-					2
-				)
-				q.exclude = [self]
-				nav_has_los = space.intersect_ray(q).is_empty()
+					2).is_empty()
 
 				# Also check 3D muzzle-to-player shot clearance separately
-				var q_shot = PhysicsRayQueryParameters3D.create(
+				nav_has_shot_los = _cast_probe(space,
 					global_position + Vector3(0.0, 1.8, 0.0),
 					target_pos + Vector3(0.0, 0.5, 0.0),
-					2
-				)
-				q_shot.exclude = [self]
-				nav_has_shot_los = space.intersect_ray(q_shot).is_empty()
+					2).is_empty()
 
 	# 2. Open Plaza tactical engagement
 	var in_open_fob = global_position.length() < 24.0 and target_pos.length() < 28.0
@@ -1054,33 +1040,23 @@ func steer_air_unit(desired_vel: Vector3, min_alt: float, max_alt: float, delta:
 		cached_roof_height = -1000.0
 		var space = get_world_3d().direct_space_state
 		if space != null:
-			var down_q = PhysicsRayQueryParameters3D.create(global_position, global_position + Vector3(0.0, -25.0, 0.0), 2)
-			down_q.exclude = [self]
-			var down_hit = space.intersect_ray(down_q)
+			var down_hit = _cast_probe(space, global_position, global_position + Vector3(0.0, -25.0, 0.0), 2)
 			if not down_hit.is_empty():
 				cached_roof_height = down_hit.get("position", Vector3.ZERO).y
 
-			var fwd_q = PhysicsRayQueryParameters3D.create(global_position, global_position + horiz_dir * 28.0, 2)
-			fwd_q.exclude = [self]
-			var fwd_hit = space.intersect_ray(fwd_q)
+			var fwd_hit = _cast_probe(space, global_position, global_position + horiz_dir * 28.0, 2)
 			if not fwd_hit.is_empty():
 				var fwd_pos: Vector3 = fwd_hit.get("position", Vector3.ZERO)
-				var top_q = PhysicsRayQueryParameters3D.create(Vector3(fwd_pos.x, 60.0, fwd_pos.z), Vector3(fwd_pos.x, 0.0, fwd_pos.z), 2)
-				top_q.exclude = [self]
-				var top_hit = space.intersect_ray(top_q)
+				var top_hit = _cast_probe(space, Vector3(fwd_pos.x, 60.0, fwd_pos.z), Vector3(fwd_pos.x, 0.0, fwd_pos.z), 2)
 				if not top_hit.is_empty():
 					cached_roof_height = maxf(cached_roof_height, top_hit.get("position", Vector3.ZERO).y)
 				else:
 					cached_roof_height = maxf(cached_roof_height, fwd_pos.y + 6.0)
 
-			var fwd_up_q = PhysicsRayQueryParameters3D.create(global_position, global_position + horiz_dir * 28.0 + Vector3(0.0, 8.0, 0.0), 2)
-			fwd_up_q.exclude = [self]
-			var fwd_up_hit = space.intersect_ray(fwd_up_q)
+			var fwd_up_hit = _cast_probe(space, global_position, global_position + horiz_dir * 28.0 + Vector3(0.0, 8.0, 0.0), 2)
 			if not fwd_up_hit.is_empty():
 				var up_pos: Vector3 = fwd_up_hit.get("position", Vector3.ZERO)
-				var top_up_q = PhysicsRayQueryParameters3D.create(Vector3(up_pos.x, 60.0, up_pos.z), Vector3(up_pos.x, 0.0, up_pos.z), 2)
-				top_up_q.exclude = [self]
-				var top_up_hit = space.intersect_ray(top_up_q)
+				var top_up_hit = _cast_probe(space, Vector3(up_pos.x, 60.0, up_pos.z), Vector3(up_pos.x, 0.0, up_pos.z), 2)
 				if not top_up_hit.is_empty():
 					cached_roof_height = maxf(cached_roof_height, top_up_hit.get("position", Vector3.ZERO).y)
 				else:

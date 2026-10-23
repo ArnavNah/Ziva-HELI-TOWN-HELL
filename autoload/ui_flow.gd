@@ -7,6 +7,7 @@ var loader: CanvasLayer
 var confirmation: ConfirmationDialog
 var hangar_origin: String = "main_menu"
 var _release_frames: int = 0
+var _quit_requested: bool = false
 const HELD_ACTIONS := ["fire_primary", "paint_salvo", "climb", "descend", "evasive_dash", "super_ability", "deploy_flares", "reload", "ui_accept", "pause"]
 
 func _ready() -> void:
@@ -15,7 +16,21 @@ func _ready() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
-		confirm_action("Quit game?", "Your current run will end. Completed run rewards and purchases stay saved.", func(): get_tree().quit())
+		confirm_action("Quit game?", "Your current run will end. Completed run rewards and purchases stay saved.", quit_game)
+
+func quit_game() -> void:
+	if not OS.get_environment("ZIVA_TEST_DATA_DIR").is_empty():
+		print("TEST_QUIT_REQUEST")
+		print_stack()
+	if _quit_requested:
+		return
+	_quit_requested = true
+	busy = true
+	_clear_transients()
+	if is_instance_valid(get_tree().current_scene):
+		get_tree().current_scene.queue_free()
+	await get_node("/root/AudioManager").prepare_shutdown()
+	get_tree().quit()
 
 func _process(_delta: float) -> void:
 	if busy or input_armed or get_tree().paused:
@@ -122,10 +137,13 @@ func menu_ready() -> void:
 	input_armed = true
 
 func _clear_transients() -> void:
+	var scene = get_tree().current_scene
+	if is_instance_valid(scene) and scene.has_method("cancel_preparation"):
+		scene.cancel_preparation()
 	get_node("/root/CombatDirector").stop_wave_director()
 	if has_node("/root/FXManager"):
 		get_node("/root/FXManager").clear_combat_effects()
-	for group in ["combat_projectiles", "enemy_projectiles", "combat_explosions", "combat_sparks", "pickups", "combat_debris", "combat_flashes", "combat_dust"]:
+	for group in ["combat_projectiles", "enemy_projectiles", "combat_explosions", "combat_sparks", "pickups", "xp_drops", "combat_debris", "combat_flashes", "combat_dust"]:
 		for node in get_tree().get_nodes_in_group(group):
 			if is_instance_valid(node):
 				node.queue_free()

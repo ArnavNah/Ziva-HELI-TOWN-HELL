@@ -18,6 +18,7 @@ signal run_reset
 var total_xp_collected: int = 0
 var queued_level_ups: int = 0
 var xp_multiplier: float = 1.0
+var run_generation: int = 0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -29,6 +30,7 @@ func _recalculate_target_xp() -> void:
 	target_xp = maxi(10, int(base_xp_requirement * pow(float(current_level), xp_exponent)))
 
 func reset_run() -> void:
+	run_generation += 1
 	current_level = 1
 	current_xp = 0
 	total_xp_collected = 0

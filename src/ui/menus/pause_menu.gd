@@ -270,7 +270,7 @@ func _on_settings_pressed() -> void:
 					)
 
 func _on_quit_pressed() -> void:
-	get_node("/root/UIFlow").confirm_action("Quit game?", "Current run progress will be lost. Permanent purchases stay saved.", func(): get_tree().quit(), quit_btn)
+	get_node("/root/UIFlow").confirm_action("Quit game?", "Current run progress will be lost. Permanent purchases stay saved.", get_node("/root/UIFlow").quit_game, quit_btn)
 
 func _refresh_debug_labels() -> void:
 	var manager = get_node("/root/ShaderManager")

@@ -30,6 +30,9 @@ var cooldown_timer: float = 4.0
 var depot_service_cooldown: float = 0.0
 
 func _process(delta: float) -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if get_tree().paused or gm == null or gm.current_state != gm.RunState.ACTIVE:
+		return
 	if depot_service_cooldown > 0.0:
 		depot_service_cooldown -= delta
 
@@ -42,6 +45,8 @@ func _process(delta: float) -> void:
 	var player = get_tree().get_first_node_in_group("player") as CharacterBody3D
 	if not player:
 		return
+	if "is_dying" in player and player.is_dying:
+		return
 
 	# Handle depot repair / refill service if near either depot (within 18 units)
 	_process_depot_service(player)
@@ -51,13 +56,13 @@ func _process(delta: float) -> void:
 	match current_state:
 		CargoState.OFFERED:
 			var pick_horiz = Vector2(pickup_pos.x, pickup_pos.z)
-			if p_horiz.distance_to(pick_horiz) <= 22.0:
+			if p_horiz.distance_to(pick_horiz) <= 22.0 and _valid_hover(player, pickup_pos):
 				current_state = CargoState.LOADING
 				load_hold_timer = 0.0
 
 		CargoState.LOADING:
 			var pick_horiz = Vector2(pickup_pos.x, pickup_pos.z)
-			if p_horiz.distance_to(pick_horiz) <= 22.0:
+			if p_horiz.distance_to(pick_horiz) <= 22.0 and _valid_hover(player, pickup_pos):
 				load_hold_timer += delta
 				if load_hold_timer >= 1.0: # Hold for 1 second (Page 15)
 					_attach_cargo_to_player(player)
@@ -70,7 +75,7 @@ func _process(delta: float) -> void:
 		CargoState.CARRYING:
 			delivery_flight_timer += delta
 			var drop_horiz = Vector2(dropoff_pos.x, dropoff_pos.z)
-			if p_horiz.distance_to(drop_horiz) <= 20.0:
+			if p_horiz.distance_to(drop_horiz) <= 20.0 and _valid_hover(player, dropoff_pos):
 				current_state = CargoState.UNLOADING
 				unload_hold_timer = 0.0
 
@@ -80,12 +85,16 @@ func _process(delta: float) -> void:
 
 		CargoState.UNLOADING:
 			var drop_horiz = Vector2(dropoff_pos.x, dropoff_pos.z)
-			if p_horiz.distance_to(drop_horiz) <= 20.0:
+			if p_horiz.distance_to(drop_horiz) <= 20.0 and _valid_hover(player, dropoff_pos):
 				unload_hold_timer += delta
 				if unload_hold_timer >= 0.75: # Hold for 0.75 seconds (Page 15)
 					_complete_delivery(player)
 			else:
 				current_state = CargoState.CARRYING
+
+func _valid_hover(player: CharacterBody3D, site: Vector3) -> bool:
+	var altitude := player.global_position.y - site.y
+	return altitude >= 4.0 and altitude <= 24.0 and player.velocity.length() <= 7.0
 
 func offer_contract(commodity: String, dist: float) -> void:
 	current_contract = CargoSpecsClass.calculate_contract_price(commodity, dist, 1.0)
@@ -96,6 +105,8 @@ func _attach_cargo_to_player(player: CharacterBody3D) -> void:
 	player.cargo_mass_multiplier = 0.91
 
 func _complete_delivery(player: CharacterBody3D) -> void:
+	if current_state != CargoState.UNLOADING:
+		return
 	current_state = CargoState.COMPLETED
 	player.cargo_mass_multiplier = 1.0
 
@@ -114,6 +125,9 @@ func _complete_delivery(player: CharacterBody3D) -> void:
 	if current_contract.get("commodity") == "Ammunition" and player.has_node("Countermeasures"):
 		player.get_node("Countermeasures").replenish_charges(1)
 
+	var result := current_contract.duplicate(true)
+	result["rewards_settled"] = true
+	get_node("/root/EventBus").cargo_delivered.emit(result, speed_won, true)
 	# Reset after cooldown
 	cooldown_timer = contract_cooldown
 	current_state = CargoState.IDLE
@@ -132,7 +146,7 @@ func _process_depot_service(player: CharacterBody3D) -> void:
 	var near_pick = p_horiz.distance_to(Vector2(pickup_pos.x, pickup_pos.z)) <= 18.0
 	var near_drop = p_horiz.distance_to(Vector2(dropoff_pos.x, dropoff_pos.z)) <= 18.0
 
-	if near_pick or near_drop:
+	if (near_pick and _valid_hover(player, pickup_pos)) or (near_drop and _valid_hover(player, dropoff_pos)):
 		depot_service_cooldown = 16.0 # 16s cooldown (Page 15)
 		# Restores 18% hull, 20% fuel, 25% ammo
 		player.repair(player.max_hull * 0.18)
@@ -140,5 +154,5 @@ func _process_depot_service(player: CharacterBody3D) -> void:
 		if player.has_node("Weapons"):
 			var wp = player.get_node("Weapons")
 			var st = wp.weapon_states[wp.current_weapon_idx]
-			var max_a = GameConstants.WEAPONS[wp.current_weapon_idx]["ammo_max"]
+			var max_a = wp.get_max_ammo(wp.current_weapon_idx)
 			st["ammo"] = mini(max_a, st["ammo"] + int(float(max_a) * 0.25))

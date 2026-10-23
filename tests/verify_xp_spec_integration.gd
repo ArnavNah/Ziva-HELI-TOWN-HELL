@@ -12,6 +12,11 @@ func record(label: String, ok: bool, observed: Variant) -> void:
 	results.append({"check": label, "passed": ok, "observed": observed})
 	print("PASS " if ok else "FAIL ", label, " | ", observed)
 
+func wait_for_draft(ui: Node) -> void:
+	var deadline := Time.get_ticks_msec() + 5000
+	while not ui.is_choosing and Time.get_ticks_msec() < deadline:
+		await process_frame
+
 func run() -> void:
 	if OS.get_environment("ZIVA_TEST_DATA_DIR").is_empty():
 		quit(2)
@@ -49,6 +54,8 @@ func run() -> void:
 	record("Production XP drop awards 25 XP exactly once", xp.total_xp_collected == 25, xp.total_xp_collected)
 	drop._trigger_collection()
 	record("Duplicate collection is ignored", xp.total_xp_collected == 25, xp.total_xp_collected)
+	record("Earned draft respects presentation delay", not ui.visible and not paused, ui.presentation_delay_remaining)
+	await wait_for_draft(ui)
 	record("25 XP opens a paused level-two draft", xp.current_level == 2 and ui.visible and paused, {"level": xp.current_level, "visible": ui.visible, "paused": paused})
 	hud.refresh(gm, player)
 	record("HUD level follows authoritative XP manager", hud.level_label.text.begins_with("LVL 2"), {"hud": hud.level_label.text, "xp_level": xp.current_level, "legacy_xp": progression.current_run_xp - legacy_before})
@@ -87,10 +94,15 @@ func run() -> void:
 	xp.add_xp(500)
 	var levels_gained: int = xp.current_level - 1
 	selections = 0
-	while ui.is_choosing and selections < 12:
+	while xp.has_pending_level_ups() and selections < 12:
+		await wait_for_draft(ui)
+		if not ui.is_choosing:
+			break
 		ui.current_draft[0] = safe_card
 		ui.card_buttons[0].pressed.emit()
 		selections += 1
+		if xp.has_pending_level_ups():
+			record("Queued choice gives a combat breather", not paused and not ui.visible and ui.presentation_delay_remaining >= 2.49, ui.presentation_delay_remaining)
 	record("Burst XP awards exactly one card per gained level", selections == levels_gained, {"levels": levels_gained, "selections": selections})
 
 	var damage_before: float = weapons.damage_multipliers[GameConstants.WeaponType.MACHINE_GUN]
@@ -122,4 +134,4 @@ func run() -> void:
 		if not result.passed:
 			failed += 1
 	print("XP_SPEC_INTEGRATION: ", results.size() - failed, "/", results.size(), " passed; ", failed, " gaps")
-	quit(1 if failed > 0 else 0)
+	await load("res://tests/runtime_cleanup.gd").finish(self, 1 if failed > 0 else 0)

@@ -193,12 +193,19 @@ func _draw() -> void:
 			continue
 		var angle := dir.angle()
 		var warn_rad := radius + 18.0 * ui_scale
+		var missile: bool = str(tw.threat_type) == "INCOMING MISSILE"
+		if missile:
+			var horizontal := (viewport_size.x - 90 * ui_scale - center.x) / dir.x if dir.x > 0.001 else ((90 * ui_scale - center.x) / dir.x if dir.x < -0.001 else INF)
+			var vertical := (viewport_size.y - 65 * ui_scale - center.y) / dir.y if dir.y > 0.001 else ((65 * ui_scale - center.y) / dir.y if dir.y < -0.001 else INF)
+			warn_rad = maxf(radius + 18.0 * ui_scale, minf(horizontal, vertical) - 26.0 * ui_scale)
 		var progress: float = clampf(tw.timer / maxf(0.1, tw.duration), 0.0, 1.0)
 		var warn_color := Color("ffcc00") # Amber warning
 		warn_color.a = 0.5 + 0.5 * sin((1.0 - progress) * 12.0) # Pulsing alpha during windup
+		if missile: warn_color.a = 1.0
 		var dark_warn := Color(0.15, 0.12, 0.02, warn_color.a * 0.9)
-		draw_arc(center, warn_rad, angle - 0.22, angle + 0.22, 5, dark_warn, 8.0 * ui_scale)
-		draw_arc(center, warn_rad, angle - 0.20, angle + 0.20, 5, warn_color, 4.0 * ui_scale)
+		if not missile:
+			draw_arc(center, warn_rad, angle - 0.22, angle + 0.22, 5, dark_warn, 8.0 * ui_scale)
+			draw_arc(center, warn_rad, angle - 0.20, angle + 0.20, 5, warn_color, 4.0 * ui_scale)
 
 		# Warning chevron pointing outward toward incoming threat
 		var c_tip := center + dir * (warn_rad + 10.0 * ui_scale)
@@ -209,6 +216,7 @@ func _draw() -> void:
 		var font := PIXEL_FONT.get_pixel_font()
 		var f_size := roundi(11.0 * ui_scale)
 		var label_text: String = "! THREAT: %.1fs" % [tw.timer]
+		if missile: label_text = "! MISSILE"
 		var l_size := font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, f_size)
 		var l_origin := center + dir * (warn_rad + 26.0 * ui_scale) - Vector2(l_size.x * 0.5, -l_size.y * 0.25)
 		draw_string_outline(font, l_origin, label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, f_size, 3, dark_warn)

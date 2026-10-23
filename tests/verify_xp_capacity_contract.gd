@@ -21,4 +21,4 @@ func run() -> void:
 			player.get_node("SubsystemManager").apply_upgrade(card)
 	var after: int = weapons.get_max_ammo(GameConstants.WeaponType.MACHINE_GUN)
 	print("CAPACITY_CONTRACT before=", before, " after=", after, " expected=", roundi(before * 1.30))
-	quit(0 if after == roundi(before * 1.30) else 1)
+	await load("res://tests/runtime_cleanup.gd").finish(self, 0 if after == roundi(before * 1.30) else 1)

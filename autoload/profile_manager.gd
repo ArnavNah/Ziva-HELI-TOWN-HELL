@@ -307,6 +307,8 @@ func apply_loadout(player: Node) -> void:
 	player.max_fuel = stats.fuel
 	player.current_fuel = stats.fuel
 	player.armor_mitigation = minf(0.24, h.airframe * 0.04)
+	player.small_arms_armor = h.armor * 0.5
+	player.radar_range_multiplier = 1.0 + h.targeting * 0.10
 	player.handling_multiplier = 1.0 + h.rotor * 0.10
 	player.thrust_multiplier = 1.0 + h.engine * 0.08
 	player.dash_speed_multiplier = 1.0 + p.vector_thrusters * 0.20
@@ -338,6 +340,7 @@ func apply_loadout(player: Node) -> void:
 		counter.max_charges += h.countermeasures
 		counter.current_charges = counter.max_charges
 		counter.cooldown_duration = maxf(1.0, counter.cooldown_duration - h.countermeasures * 0.5)
+		counter.auto_chaff_enabled = h.countermeasures >= 3
 	var super_node = player.get_node_or_null("DevastationSuper")
 	if super_node:
 		super_node.damage_multiplier = 1.0 + h.weapon_system * 0.06

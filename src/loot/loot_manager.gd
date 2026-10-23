@@ -78,10 +78,11 @@ func spawn_xp_drop(pos: Vector3, xp_amount: int = 10) -> Node3D:
 		drop = XpDropClass.new()
 	drop.xp_amount = xp_amount
 	var target_pos = pos + Vector3(randf_range(-0.5, 0.5), 0.5, randf_range(-0.5, 0.5))
-	drop.position = target_pos
 	if get_parent():
+		drop.position = get_parent().to_local(target_pos) if get_parent() is Node3D else target_pos
 		get_parent().add_child(drop)
 	elif get_tree() and get_tree().root:
+		drop.position = target_pos
 		get_tree().root.add_child(drop)
 	return drop
 
@@ -201,6 +202,8 @@ func spawn_pickup(p_type: int, pos: Vector3, val: float = 0.0) -> Node3D:
 
 	# Assign spawn altitude BEFORE adding to tree so _ready() captures correct idle baseline
 	var target_pos = pos + Vector3(randf_range(-1.5, 1.5), 0.5, randf_range(-1.5, 1.5))
+	if get_parent() is Node3D:
+		target_pos = get_parent().to_local(target_pos)
 	p.position = target_pos
 	if p.has_method("set_spawn_position"):
 		p.set_spawn_position(target_pos)

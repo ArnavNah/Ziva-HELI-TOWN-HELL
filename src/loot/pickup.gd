@@ -39,6 +39,7 @@ var target_player: Node3D = null
 var mesh_instance: MeshInstance3D = null
 var base_mat: StandardMaterial3D = null
 var original_scale: Vector3 = Vector3.ONE
+var run_generation: int = -1
 
 func get_effective_magnet_radius() -> float:
 	match pickup_type:
@@ -79,6 +80,9 @@ func start_immediate_attraction(p_player: Node3D) -> void:
 	_start_attraction(p_player, dist)
 
 func _ready() -> void:
+	var xp = get_node_or_null("/root/XpManager")
+	if xp:
+		run_generation = xp.run_generation
 	add_to_group("pickups")
 	collision_layer = 8
 	collision_mask = 1
@@ -108,6 +112,14 @@ func _setup_mesh_and_material() -> void:
 func _process(delta: float) -> void:
 	if is_collected:
 		return
+	var xp = get_node_or_null("/root/XpManager")
+	if xp and run_generation != xp.run_generation:
+		queue_free()
+		return
+	if is_attracting and not _can_collect(target_player):
+		is_attracting = false
+		target_player = null
+		initial_base_y = position.y
 
 	if not is_attracting:
 		# 1. Idle animation: Floating bob & rotation
@@ -191,6 +203,8 @@ func _process(delta: float) -> void:
 		scale = original_scale * scale_factor
 
 func _start_attraction(player: Node3D, dist: float) -> void:
+	if not _can_collect(player):
+		return
 	is_attracting = true
 	target_player = player
 	initial_attract_dist = maxf(dist, 4.0)
@@ -215,7 +229,7 @@ func _on_body_entered(body: Node3D) -> void:
 	_collect(body)
 
 func _collect(player: Node3D) -> void:
-	if is_collected:
+	if is_collected or not _can_collect(player):
 		return
 	is_collected = true
 
@@ -264,6 +278,19 @@ func _collect(player: Node3D) -> void:
 		tween.chain().tween_callback(queue_free)
 	else:
 		queue_free()
+
+func _can_collect(player: Node3D) -> bool:
+	if not is_inside_tree() or is_queued_for_deletion():
+		return false
+	if not is_instance_valid(player) or not player.is_inside_tree() or player.is_queued_for_deletion():
+		return false
+	if "is_dying" in player and player.is_dying:
+		return false
+	var xp = get_node_or_null("/root/XpManager")
+	if xp and run_generation != xp.run_generation:
+		return false
+	var gm = get_node_or_null("/root/GameManager")
+	return gm != null and gm.current_state in [gm.RunState.ACTIVE, gm.RunState.EXTRACTION, gm.RunState.TUTORIAL] and not get_tree().paused
 
 func _apply_pickup_effect(player: Node3D) -> void:
 	var bonus: float = player.loot_multiplier if "loot_multiplier" in player else 1.0

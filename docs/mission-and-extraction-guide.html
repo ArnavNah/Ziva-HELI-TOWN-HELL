@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZIVA — Missions & extraction</title>
+<style>
+:root{color-scheme:dark;--bg:#101a1b;--panel:#19282a;--ink:#eee9d9;--muted:#aabbb5;--amber:#f5bd63;--teal:#62d6c2;--red:#f17662}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,sans-serif}main{max-width:1160px;margin:auto;padding:48px 24px 72px}h1{font-size:clamp(30px,5vw,50px);line-height:1.12;margin:12px 0 20px}h2{margin-top:40px;font-size:25px}h3{font-size:19px;margin:0 0 8px}p{margin:8px 0 18px}.eyebrow{font-size:12px;letter-spacing:3px;color:var(--amber)}.lead{max-width:800px;color:var(--muted);font-size:19px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.card{background:var(--panel);border:1px solid #405050;border-radius:9px;padding:22px}.card p{color:var(--muted);margin-bottom:0}.tag{font-size:12px;color:var(--teal);letter-spacing:1px}.card.exfil{border-color:var(--amber)}.steps{border-left:3px solid var(--teal);padding:12px 22px;background:#182a29}li{margin:8px 0}figure{margin:0;border:1px solid #405050;border-radius:8px;overflow:hidden;background:var(--panel)}img{width:100%;height:auto;display:block}figcaption{padding:14px 18px;color:var(--muted);font-size:14px}a{color:var(--teal)}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px;border-bottom:1px solid #405050}th{color:var(--amber)}small{color:var(--muted)}details{margin-top:32px;background:var(--panel);padding:20px;border-radius:8px}summary{cursor:pointer;font-weight:600}code{color:#c6e4d8} @media(max-width:700px){.grid{grid-template-columns:1fr}main{padding:28px 18px}td,th{padding:8px;font-size:14px}}
+</style></head><body><main>
+<div class="eyebrow">ZIVA / FIELD OPERATIONS / 23 OCTOBER 2026</div>
+<h1>Missions with a destination.<br>Extraction with a clear flight plan.</h1>
+<p class="lead">World landing zones, recovered personnel, destructible installations and a moving escort transport now connect to the live mission system. The mission panel, radar diamonds and directional marker guide each phase.</p>
+<div class="steps"><strong>How to extract a team</strong><ol>
+<li>Follow the <span style="color:var(--amber)">amber pickup marker</span>.</li>
+<li>Hover within 12 metres horizontally, 4–24 metres above the pad, at less than 7 m/s. Hold steady while the boarding bar fills.</li>
+<li>Follow the <span style="color:var(--teal)">teal delivery marker</span>. Stabilize again to unload and receive the mission reward.</li>
+<li>Collect the physical XP cache. Credits and salvage settle once on successful delivery.</li></ol></div>
+<h2>Four extraction contracts</h2><div class="grid">
+<article class="card"><span class="tag">RESCUE / AVAILABLE FROM WAVE 1</span><h3>Downed crew recovery</h3><p>Find the marked crash pad, recover two crew members, and return them to a secure LZ. Four seconds to board, three to deliver; a 180-second window.</p></article>
+<article class="card"><span class="tag">MEDICAL / AVAILABLE FROM WAVE 1</span><h3>MEDEVAC</h3><p>Recover three wounded personnel and deliver them to medical evacuation. Four seconds to board and three to unload; a 150-second window.</p></article>
+<article class="card"><span class="tag">PRIORITY / AVAILABLE FROM WAVE 2</span><h3>VIP evacuation</h3><p>Collect a single priority officer and reach the marked evacuation site. Three seconds to board, four to transfer; a 130-second window.</p></article>
+<article class="card"><span class="tag">INTELLIGENCE / AVAILABLE FROM WAVE 1</span><h3>Black-box recovery</h3><p>Retrieve the flight recorder from a wreck and deliver it to command. Three-second recovery and handover holds; a 160-second window.</p></article>
+</div>
+<article class="card exfil" style="margin-top:18px"><span class="tag">END SORTIE / UNLOCKED AT WAVE 3</span><h3>Tactical LZ extraction</h3><p>Use <strong>Request Sortie Extraction</strong> in the mission panel. During an active task, the button explicitly offers <strong>Abort Task / Request Exfil</strong>. Fly to the new LZ and hold a steady hover for five seconds. Then press <strong>Confirm End Sortie / Extract</strong> to bank and leave through the normal results flow. Leaving the hover envelope removes readiness. The existing boss extraction choice remains available.</p></article>
+<h2>Real game captures</h2><div class="grid">
+<figure><a href="../artifacts/mission-pass-20261023/medevac-1280.png"><img src="../artifacts/mission-pass-20261023/medevac-1280.png" alt="Medical extraction pad, navigation marker and mission briefing in the city"></a><figcaption>Pickup pad and boarding guidance at 1280 × 720.</figcaption></figure>
+<figure><a href="../artifacts/mission-pass-20261023/medevac-960.png"><img src="../artifacts/mission-pass-20261023/medevac-960.png" alt="Mission HUD at 960 by 540"></a><figcaption>Readable briefing and world markers at 960 × 540.</figcaption></figure>
+<figure><a href="../artifacts/mission-pass-20261023/escort_convoy-1280.png"><img src="../artifacts/mission-pass-20261023/escort_convoy-1280.png" alt="Supply transport with mission marker and escort guidance"></a><figcaption>Moving, damageable supply transport with shared animated wheels.</figcaption></figure>
+<figure><a href="../artifacts/mission-pass-20261023/extraction-confirm-1280.png"><img src="../artifacts/mission-pass-20261023/extraction-confirm-1280.png" alt="Secured exfil pad awaiting explicit end-sortie confirmation"></a><figcaption>Secured LZ and explicit confirmation before ending the sortie.</figcaption></figure>
+</div>
+<h2>Other tactical operations</h2><table><thead><tr><th>Operation</th><th>What completes it</th></tr></thead><tbody>
+<tr><td>SAM battery strike</td><td>Destroy the marked stationary installation within 45 seconds.</td></tr>
+<tr><td>Radar strike</td><td>Destroy the marked radar installation using normal weapons or salvo locks.</td></tr>
+<tr><td>Priority target / bounty leader</td><td>Eliminate the actual marked hostile. Other kills do not complete the hunt.</td></tr>
+<tr><td>Airspace patrol</td><td>Destroy ten aircraft within the marked sector. Ground kills and repeated callbacks do not count.</td></tr>
+<tr><td>Beacon defence</td><td>Stay within the real beacon's defence radius until its hold progress fills.</td></tr>
+<tr><td>Convoy escort</td><td>Accompany the transport along its street route within 65 metres. Nearby ground threats can attack it; transport destruction fails the task.</td></tr>
+<tr><td>Cargo run</td><td>Load and deliver through the existing cargo controller, with visible pickup/delivery sites and a valid hover.</td></tr>
+</tbody></table>
+<details><summary>Implementation and verification</summary>
+<p><strong>78 mission checks passed.</strong> Coverage includes the four extraction contracts, hover requirements, pause behavior, physical XP, once-only rewards, radar destruction, beacon defence, aircraft kill filtering, HVT binding, convoy movement/targeting/failure/completion, cargo delivery and confirmed run extraction.</p>
+<p>The real main scene automatically created the initial rescue mission and its two world sites during a seven-second smoke test. Captures were generated in the real city at both target resolutions; their objective states were staged through the mission API for visual inspection. Extended mixed-combat balance remains a separate playtest.</p>
+<p>The existing XP/effect suite passed <strong>62/62</strong>, and the seven-vehicle roster check passed. Isolated test profiles were used. Some existing headless suites still report shutdown ObjectDB warnings.</p>
+<p>Source: <code>src/missions/mission_manager.gd</code>, <code>mission_specs.gd</code>, <code>mission_site.gd</code>, <code>objective_receiver.gd</code> and <code>src/ui/mission_tracker.gd</code>. Integration updates cover HUD/radar, weapon targeting, cargo and once-only mission reward settlement.</p>
+<p>Tests: <code>tests/test_tactical_missions.gd</code>, <code>tests/verify_live_mission_loop.gd</code> and <code>tests/render_tactical_missions.gd</code>. Logs and captures are under <code>artifacts/mission-pass-20261023/</code> and <code>artifacts/strike-*.log</code>.</p>
+</details>
+</main></body></html>

@@ -12,6 +12,9 @@ parser.add_argument('--rendered', action='store_true')
 parser.add_argument('--parse', action='store_true')
 parser.add_argument('--script')
 parser.add_argument('--profile-source')
+parser.add_argument('--timeout', type=float, default=180, help='Maximum wall time in seconds; increase for combat soak checks')
+parser.add_argument('--verbose', action='store_true', help='Include Godot resource diagnostics')
+parser.add_argument('--manual-render', action='store_true', help='Only draw frames explicitly requested by a benchmark script')
 args = parser.parse_args()
 out = ROOT / 'artifacts' / 'menu-repair-tests'
 out.mkdir(parents=True, exist_ok=True)
@@ -26,10 +29,14 @@ if args.profile_source:
 import shutil
 godot_bin = shutil.which('godot') or (r'C:\Users\Prime 3\Desktop\Godot.exe' if os.path.exists(r'C:\Users\Prime 3\Desktop\Godot.exe') else r'D:\Godot\Godot.exe')
 command = [godot_bin, '--path', str(ROOT), '--script', script]
+if args.verbose:
+    command.append('--verbose')
 if not args.rendered:
     command.append('--headless')
 else:
     command.extend(['--resolution', '1280x720', '--position', '-32000,-32000'])
+if args.manual_render:
+    command.append('--disable-render-loop')
 label = 'parse' if args.parse else ('rendered' if args.rendered else 'headless')
 if args.script:
     label = Path(args.script).stem + ('-rendered' if args.rendered else '')
@@ -41,7 +48,7 @@ if startup:
 with log.open('w', encoding='utf-8') as stream:
     process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=stream, stderr=subprocess.STDOUT,
                                startupinfo=startup, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
-    deadline = time.monotonic() + 180
+    deadline = time.monotonic() + args.timeout
     while process.poll() is None:
         if 'SCRIPT ERROR:' in log.read_text(encoding='utf-8', errors='replace'):
             process.kill()
@@ -50,7 +57,7 @@ with log.open('w', encoding='utf-8') as stream:
         if time.monotonic() > deadline:
             process.kill()
             process.wait()
-            stream.write('\nERROR: Menu acceptance exceeded 180 seconds.\n')
+            stream.write(f'\nERROR: Menu acceptance exceeded {args.timeout:g} seconds.\n')
             break
         time.sleep(0.1)
     code = process.returncode

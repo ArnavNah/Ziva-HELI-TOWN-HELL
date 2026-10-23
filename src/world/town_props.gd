@@ -45,6 +45,6 @@ static func instance(kind: String, point: Vector3) -> MeshInstance3D:
 	prop.name = "Town_" + kind
 	prop.mesh = mesh(kind)
 	prop.position = point
-	prop.visibility_range_end = 145.0
-	prop.visibility_range_end_margin = 15.0
+	prop.visibility_range_end = 260.0
+	prop.visibility_range_end_margin = 35.0
 	return prop

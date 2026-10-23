@@ -3,7 +3,7 @@ extends Node3D
 const Materials = preload("res://src/world/stylized_materials.gd")
 const WATER = preload("res://src/shaders/field_water.gdshader")
 
-func generate(seed_value: int, width: int, depth: int, spacing: float, clearings: Array[Vector3] = [], building_footprints: Dictionary = {}, terrain_lots: Array[Vector3] = [], city_generator: Node = null) -> void:
+func generate(seed_value: int, width: int, depth: int, spacing: float, clearings: Array[Vector3] = [], building_footprints: Dictionary = {}, terrain_lots: Array[Vector3] = [], city_generator: Node = null, attempt: int = -1) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value + 3917
 	var trunks: Array[Transform3D] = []
@@ -20,9 +20,14 @@ func generate(seed_value: int, width: int, depth: int, spacing: float, clearings
 	for x in range(-int(width * 0.5), int(width * 0.5)):
 		for z in range(-int(depth * 0.5), int(depth * 0.5)):
 			cell_idx += 1
-			if has_node("/root/UIFlow") and get_node("/root/UIFlow").busy:
+			if city_generator and attempt >= 0:
+				if not await city_generator._check_frame_budget(attempt):
+					return
+			elif has_node("/root/UIFlow") and get_node("/root/UIFlow").busy:
 				if Time.get_ticks_usec() - dressing_yield_timer >= 5000:
 					await get_tree().process_frame
+					if not is_inside_tree() or is_queued_for_deletion():
+						return
 					dressing_yield_timer = Time.get_ticks_usec()
 			if city_generator and cell_idx % 8 == 0:
 				city_generator.generation_ratio = 0.80 + 0.18 * (float(cell_idx) / float(total_cells))
@@ -94,7 +99,9 @@ func generate(seed_value: int, width: int, depth: int, spacing: float, clearings
 	trunk.height = 3.2
 	trunk.radial_segments = 5
 	trunk.material = Materials.town_atlas(false, 9, true)
-	_batch("Trunks", trunk, trunks)
+	await _batch("Trunks", trunk, trunks, city_generator, attempt)
+	if city_generator and not city_generator.generation_is_current(attempt):
+		return
 
 	var crown := CylinderMesh.new()
 	crown.top_radius = 0.0
@@ -102,7 +109,9 @@ func generate(seed_value: int, width: int, depth: int, spacing: float, clearings
 	crown.height = 6.0
 	crown.radial_segments = 6
 	crown.material = Materials.town_atlas(false, 8, true, 0.025)
-	_batch("PineCrowns", _pine_mesh(crown.material), crowns)
+	await _batch("PineCrowns", _pine_mesh(crown.material), crowns, city_generator, attempt)
+	if city_generator and not city_generator.generation_is_current(attempt):
+		return
 
 	var leaf := SphereMesh.new()
 	leaf.radius = 2.3
@@ -110,7 +119,9 @@ func generate(seed_value: int, width: int, depth: int, spacing: float, clearings
 	leaf.radial_segments = 7
 	leaf.rings = 3
 	leaf.material = Materials.town_atlas(false, 8, true, 0.02)
-	_batch("BroadleafCrowns", _clustered_crown(leaf), broadleaf)
+	await _batch("BroadleafCrowns", _clustered_crown(leaf), broadleaf, city_generator, attempt)
+	if city_generator and not city_generator.generation_is_current(attempt):
+		return
 
 	var rock := SphereMesh.new()
 	rock.radius = 0.85
@@ -118,7 +129,9 @@ func generate(seed_value: int, width: int, depth: int, spacing: float, clearings
 	rock.radial_segments = 5
 	rock.rings = 2
 	rock.material = Materials.town_atlas(false, 10, true)
-	_batch("Stones", _faceted(rock), stones)
+	await _batch("Stones", _faceted(rock), stones, city_generator, attempt)
+	if city_generator and not city_generator.generation_is_current(attempt):
+		return
 
 	var tuft := CylinderMesh.new()
 	tuft.top_radius = 0.0
@@ -126,7 +139,9 @@ func generate(seed_value: int, width: int, depth: int, spacing: float, clearings
 	tuft.height = 1.4
 	tuft.radial_segments = 3
 	tuft.material = Materials.town_atlas(false, 12, true, 0.06)
-	_batch("GrassTufts", tuft, grass)
+	await _batch("GrassTufts", tuft, grass, city_generator, attempt)
+	if city_generator and not city_generator.generation_is_current(attempt):
+		return
 
 	var flower := SphereMesh.new()
 	flower.radius = 0.32
@@ -134,14 +149,16 @@ func generate(seed_value: int, width: int, depth: int, spacing: float, clearings
 	flower.radial_segments = 5
 	flower.rings = 2
 	flower.material = Materials.surface(Color("efcd75"))
-	_batch("Wildflowers", flower, flowers)
+	await _batch("Wildflowers", flower, flowers, city_generator, attempt)
+	if city_generator and not city_generator.generation_is_current(attempt):
+		return
 
 	# Low-poly street lamp model
 	if not street_lamps.is_empty():
 		var lamp_mesh := BoxMesh.new()
 		lamp_mesh.size = Vector3(0.2, 4.2, 0.2)
 		lamp_mesh.material = Materials.town_atlas(false, 5, true)
-		_batch("StreetLamps", lamp_mesh, street_lamps)
+		await _batch("StreetLamps", lamp_mesh, street_lamps, city_generator, attempt)
 
 func _pine_mesh(material: Material) -> ArrayMesh:
 	var st := SurfaceTool.new()
@@ -252,7 +269,7 @@ func _pond(center: Vector3, radius: float) -> void:
 	water.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(water)
 
-func _batch(label: String, mesh: Mesh, transforms: Array[Transform3D]) -> void:
+func _batch(label: String, mesh: Mesh, transforms: Array[Transform3D], city_generator: Node = null, attempt: int = -1) -> void:
 	var group := Node3D.new()
 	group.name = label
 	add_child(group)
@@ -263,6 +280,9 @@ func _batch(label: String, mesh: Mesh, transforms: Array[Transform3D]) -> void:
 			sectors[cell] = []
 		sectors[cell].append(instance_transform)
 	for cell in sectors:
+		if city_generator and attempt >= 0:
+			if not await city_generator._check_frame_budget(attempt):
+				return
 		var center := Vector3((cell.x + 0.5) * 76, 0, (cell.y + 0.5) * 76)
 		var instance := MultiMeshInstance3D.new()
 		instance.name = "Sector_%d_%d" % [cell.x, cell.y]

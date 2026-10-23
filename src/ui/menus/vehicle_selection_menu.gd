@@ -78,6 +78,7 @@ var card_names: Array[Label] = []
 var card_tags: Array[Label] = []
 
 var deploy_btn: Button
+var biome_selector: OptionButton
 var back_btn: Button
 var armory_btn: Button
 var prev_btn: Button
@@ -97,7 +98,7 @@ func _ready() -> void:
 	_on_visibility_changed()
 
 func _on_visibility_changed() -> void:
-	if not visible:
+	if not is_inside_tree() or not is_visible_in_tree():
 		is_dragging = false
 		if stage_viewport:
 			stage_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
@@ -107,14 +108,14 @@ func _on_visibility_changed() -> void:
 		_setup_3d_stage()
 
 	if stage_viewport:
-		stage_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		stage_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 	is_deploying = false
 	is_dragging = false
 	target_fov = 32.0
 	if stage_camera:
 		stage_camera.fov = 32.0
-	if deploy_btn:
+	if deploy_btn and deploy_btn.is_inside_tree():
 		deploy_btn.disabled = false
 		deploy_btn.grab_focus()
 
@@ -174,7 +175,12 @@ func select_aircraft(idx: int) -> void:
 	if aircraft_status:
 		aircraft_status.text = effective.status
 	if aircraft_doctrine:
-		aircraft_doctrine.text = effective.doctrine
+		aircraft_doctrine.tooltip_text = effective.doctrine
+		aircraft_doctrine.text = {
+			"apache": "Balanced speed, armor and range. Built for sustained frontline sorties.",
+			"nighthawk": "Fast, agile reconnaissance. Lighter armor rewards precise flying.",
+			"warlock": "Heavy armor and larger fuel reserves. Slower turns, longer survival."
+		}.get(aircraft_id, effective.doctrine)
 
 	# Update Truthful Performance Metrics
 	# Ceilings: Speed 60 m/s, Hull 220 HP, Fuel 220 L, Agility 2.0x, Damage 30%
@@ -350,7 +356,7 @@ func _setup_3d_stage() -> void:
 	viewport.name = "StageViewport"
 	viewport.own_world_3d = true
 	viewport.msaa_3d = Viewport.MSAA_DISABLED
-	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if visible else SubViewport.UPDATE_DISABLED
+	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE if is_visible_in_tree() else SubViewport.UPDATE_DISABLED
 	viewport.size = Vector2i(1280, 720)
 	stage_container.add_child(viewport)
 	stage_viewport = viewport
@@ -376,8 +382,8 @@ func _setup_3d_stage() -> void:
 	stage_camera = Camera3D.new()
 	stage_camera.name = "StageCamera"
 	viewport.add_child(stage_camera)
-	stage_camera.position = Vector3(-0.75, 1.45, 6.7)
-	stage_camera.look_at(Vector3(-0.75, 0.85, 0.0))
+	stage_camera.position = Vector3(-0.75, 2.2, 8.9)
+	stage_camera.look_at(Vector3(-0.75, 1.0, 0.0))
 	stage_camera.fov = 31.0
 	stage_camera.current = true
 
@@ -881,9 +887,16 @@ func _build_hangar_environment(viewport: SubViewport) -> void:
 
 
 func _process(delta: float) -> void:
-	if not visible:
+	if not is_visible_in_tree():
 		return
 
+	# Redraw the isolated preview only while it changes, rather than rendering
+	# the static hangar continuously (including while an ancestor is hidden).
+	var changing := is_dragging or absf(rot_velocity) > 0.0005
+	changing = changing or (_selection_tween != null and _selection_tween.is_running())
+	changing = changing or (stage_camera != null and absf(stage_camera.fov - target_fov) > 0.05)
+	if changing and stage_viewport:
+		stage_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	# Turntable inertial rotation
 	if not is_dragging and abs(rot_velocity) > 0.0005 and turntable_root:
 		turntable_root.rotate_y(rot_velocity * delta)
@@ -898,634 +911,309 @@ func _process(delta: float) -> void:
 # ------------------------------------------------------------------------------
 func _build_ui_layout() -> void:
 	var pixel_font = preload("res://src/effects/floating_text.gd").get_pixel_font()
-
-	# 1. 3D Showcase Viewport Container (Background layer, ignores mouse so parent receives drag)
+	var background := ColorRect.new()
+	background.name = "HangarBackdrop"
+	background.color = Color("070d13")
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(background)
 	stage_container = SubViewportContainer.new()
 	stage_container.name = "StageContainer"
 	stage_container.stretch = true
-	stage_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	stage_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(stage_container)
+	var layout := Control.new()
+	layout.name = "UIOverlay"
+	layout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(layout)
 
-	# 2. UI Overlay Container (Pass-through for empty areas)
-	var ui_overlay = Control.new()
-	ui_overlay.name = "UIOverlay"
-	ui_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	ui_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(ui_overlay)
+	var header := VBoxContainer.new()
+	header.name = "HeaderBox"
+	header.position = Vector2(24, 25)
+	header.size = Vector2(744, 70)
+	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_theme_constant_override("separation", 12)
+	layout.add_child(header)
+	header.add_child(_menu_label("SELECT AIRCRAFT", 24, Color("f0f3ed")))
+	header.add_child(_menu_label("TACTICAL AIR COMMAND / SORTIE PREPARATION", 10, Color("83a1ac")))
 
-	# ------------------------------------------------------------------
-	# A. TOP-LEFT HEADER BLOCK
-	# ------------------------------------------------------------------
-	var header_box = VBoxContainer.new()
-	header_box.name = "HeaderBox"
-	header_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header_box.add_theme_constant_override("separation", 8)
-	ui_overlay.add_child(header_box)
-	header_box.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	header_box.offset_left = 32
-	header_box.offset_top = 24
+	var wallet := PanelContainer.new()
+	wallet.name = "TopRightStatus"
+	wallet.position = Vector2(792, 24)
+	wallet.size = Vector2(464, 70)
+	wallet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wallet.add_theme_stylebox_override("panel", _create_rounded_panel(Color("0e1821"), Color("293b48"), 1, 5))
+	layout.add_child(wallet)
+	var wallet_margin := _menu_margin(16, 12)
+	wallet.add_child(wallet_margin)
+	var wallet_grid := HBoxContainer.new()
+	wallet_grid.add_theme_constant_override("separation", 18)
+	wallet_margin.add_child(wallet_grid)
+	for item in [["CREDITS", "wallet"], ["SALVAGE", "salvage"], ["HIGH SCORE", "record"]]:
+		var column := VBoxContainer.new()
+		column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		column.add_theme_constant_override("separation", 8)
+		wallet_grid.add_child(column)
+		column.add_child(_menu_label(item[0], 8, Color("8da5b2")))
+		var value := _menu_label("0", 11, Color("ffd451") if item[1] == "wallet" else Color("e7f2ef"))
+		column.add_child(value)
+		match item[1]:
+			"wallet": wallet_label = value
+			"salvage": salvage_label = value
+			"record": record_label = value
 
-	var title_row = HBoxContainer.new()
-	title_row.add_theme_constant_override("separation", 10)
-	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	header_box.add_child(title_row)
+	var preview_frame := PanelContainer.new()
+	preview_frame.name = "PreviewFrame"
+	preview_frame.position = Vector2(24, 116)
+	preview_frame.size = Vector2(744, 464)
+	preview_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	preview_frame.add_theme_stylebox_override("panel", _create_rounded_panel(Color.TRANSPARENT, Color("293b48"), 1, 5))
+	layout.add_child(preview_frame)
+	var preview_caption := _menu_label("AIRFRAME PREVIEW", 9, Color("9ab6be"))
+	preview_caption.position = Vector2(44, 136)
+	layout.add_child(preview_caption)
+	var hint := _menu_label("DRAG TO ROTATE   /   SCROLL TO ZOOM", 9, Color("a5bbc2"))
+	hint.position = Vector2(44, 551)
+	layout.add_child(hint)
 
-	# Yellow vertical bar indicator
-	var yellow_bar = ColorRect.new()
-	yellow_bar.color = Color("f7be28")
-	yellow_bar.custom_minimum_size = Vector2(4, 30)
-	yellow_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_row.add_child(yellow_bar)
-
-	var title_text_vbox = VBoxContainer.new()
-	title_text_vbox.add_theme_constant_override("separation", 2)
-	title_text_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_row.add_child(title_text_vbox)
-
-	var cmd_title = Label.new()
-	cmd_title.text = "SELECT AIRCRAFT"
-	cmd_title.add_theme_font_override("font", pixel_font)
-	cmd_title.add_theme_font_size_override("font_size", 16)
-	cmd_title.add_theme_color_override("font_color", Color.WHITE)
-	cmd_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_text_vbox.add_child(cmd_title)
-
-	var cmd_sub = Label.new()
-	cmd_sub.text = "TACTICAL AIR COMMAND // SORTIE PREPARATION"
-	cmd_sub.add_theme_font_override("font", pixel_font)
-	cmd_sub.add_theme_font_size_override("font_size", 8)
-	cmd_sub.add_theme_color_override("font_color", Color("7a98a3"))
-	cmd_sub.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_text_vbox.add_child(cmd_sub)
-
-	# Helper prompt row
-	var hint_row = HBoxContainer.new()
-	hint_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hint_row.add_theme_constant_override("separation", 6)
-	header_box.add_child(hint_row)
-
-	var mouse_badge = PanelContainer.new()
-	mouse_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	mouse_badge.custom_minimum_size = Vector2(46, 18)
-	mouse_badge.add_theme_stylebox_override("panel", _create_rounded_panel(Color("0f1821"), Color("243644"), 1, 3))
-	var mouse_badge_lbl = Label.new()
-	mouse_badge_lbl.text = "MOUSE"
-	mouse_badge_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	mouse_badge_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	mouse_badge_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	mouse_badge_lbl.add_theme_font_override("font", pixel_font)
-	mouse_badge_lbl.add_theme_font_size_override("font_size", 6)
-	mouse_badge_lbl.add_theme_color_override("font_color", Color("8fa8b8"))
-	mouse_badge.add_child(mouse_badge_lbl)
-	hint_row.add_child(mouse_badge)
-
-	var rot_hint = Label.new()
-	rot_hint.text = "DRAG TO ROTATE  |  SCROLL TO ZOOM"
-	rot_hint.add_theme_font_override("font", pixel_font)
-	rot_hint.add_theme_font_size_override("font_size", 7)
-	rot_hint.add_theme_color_override("font_color", Color("5c7886"))
-	rot_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hint_row.add_child(rot_hint)
-
-	# ------------------------------------------------------------------
-	# B. TOP-RIGHT WALLET & RECORD STATUS PILL
-	# ------------------------------------------------------------------
-	var status_panel = PanelContainer.new()
-	status_panel.name = "TopRightStatus"
-	status_panel.add_theme_stylebox_override("panel", _create_rounded_panel(Color("0a1218", 0.92), Color("1f323f"), 1, 14))
-	status_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ui_overlay.add_child(status_panel)
-
-	status_panel.anchor_left = 1.0
-	status_panel.anchor_right = 1.0
-	status_panel.anchor_top = 0.0
-	status_panel.offset_left = -390
-	status_panel.offset_right = -32
-	status_panel.offset_top = 22
-	status_panel.offset_bottom = 54
-
-	var status_margin = MarginContainer.new()
-	status_margin.add_theme_constant_override("margin_left", 14)
-	status_margin.add_theme_constant_override("margin_right", 14)
-	status_margin.add_theme_constant_override("margin_top", 4)
-	status_margin.add_theme_constant_override("margin_bottom", 4)
-	status_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_panel.add_child(status_margin)
-
-	var status_hbox = HBoxContainer.new()
-	status_hbox.add_theme_constant_override("separation", 10)
-	status_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	status_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_margin.add_child(status_hbox)
-
-	var cr_tag = Label.new()
-	cr_tag.text = "CREDITS"
-	cr_tag.add_theme_font_override("font", pixel_font)
-	cr_tag.add_theme_font_size_override("font_size", 7)
-	cr_tag.add_theme_color_override("font_color", Color("6d8592"))
-	cr_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_hbox.add_child(cr_tag)
-
-	wallet_label = Label.new()
-	wallet_label.text = "150 CR"
-	wallet_label.add_theme_font_override("font", pixel_font)
-	wallet_label.add_theme_font_size_override("font_size", 8)
-	wallet_label.add_theme_color_override("font_color", Color("ffd700"))
-	wallet_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_hbox.add_child(wallet_label)
-
-	var sep1 = Label.new()
-	sep1.text = "|"
-	sep1.add_theme_font_override("font", pixel_font)
-	sep1.add_theme_font_size_override("font_size", 8)
-	sep1.add_theme_color_override("font_color", Color("223642"))
-	sep1.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_hbox.add_child(sep1)
-
-	var sal_tag = Label.new()
-	sal_tag.text = "SALVAGE"
-	sal_tag.add_theme_font_override("font", pixel_font)
-	sal_tag.add_theme_font_size_override("font_size", 7)
-	sal_tag.add_theme_color_override("font_color", Color("6d8592"))
-	sal_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_hbox.add_child(sal_tag)
-
-	salvage_label = Label.new()
-	salvage_label.text = "0"
-	salvage_label.add_theme_font_override("font", pixel_font)
-	salvage_label.add_theme_font_size_override("font_size", 8)
-	salvage_label.add_theme_color_override("font_color", Color("56c9b8"))
-	salvage_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_hbox.add_child(salvage_label)
-
-	var sep2 = Label.new()
-	sep2.text = "|"
-	sep2.add_theme_font_override("font", pixel_font)
-	sep2.add_theme_font_size_override("font_size", 8)
-	sep2.add_theme_color_override("font_color", Color("223642"))
-	sep2.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_hbox.add_child(sep2)
-
-	var rec_tag = Label.new()
-	rec_tag.text = "RECORD"
-	rec_tag.add_theme_font_override("font", pixel_font)
-	rec_tag.add_theme_font_size_override("font_size", 7)
-	rec_tag.add_theme_color_override("font_color", Color("6d8592"))
-	rec_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_hbox.add_child(rec_tag)
-
-	record_label = Label.new()
-	record_label.text = "0 PTS"
-	record_label.add_theme_font_override("font", pixel_font)
-	record_label.add_theme_font_size_override("font_size", 8)
-	record_label.add_theme_color_override("font_color", Color.WHITE)
-	record_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	status_hbox.add_child(record_label)
-
-	_update_wallet_display()
-
-	# ------------------------------------------------------------------
-	# C. RIGHT DOSSIER CARD (Floating Tactical Specification Panel)
-	# ------------------------------------------------------------------
-	var right_card = PanelContainer.new()
-	right_card.name = "RightDossierCard"
-	right_card.add_theme_stylebox_override("panel", _create_rounded_panel(Color("0b1219", 0.94), Color("1c2d3a"), 1, 8))
-	ui_overlay.add_child(right_card)
-
-	right_card.anchor_left = 1.0
-	right_card.anchor_right = 1.0
-	right_card.anchor_top = 0.0
-	right_card.anchor_bottom = 1.0
-	right_card.offset_left = -430
-	right_card.offset_right = -24
-	right_card.offset_top = 66
-	right_card.offset_bottom = -72
-
-	var card_margin = MarginContainer.new()
-	card_margin.add_theme_constant_override("margin_left", 16)
-	card_margin.add_theme_constant_override("margin_right", 16)
-	card_margin.add_theme_constant_override("margin_top", 14)
-	card_margin.add_theme_constant_override("margin_bottom", 14)
-	right_card.add_child(card_margin)
-
-	var card_vbox = VBoxContainer.new()
-	card_vbox.add_theme_constant_override("separation", 11)
-	card_margin.add_child(card_vbox)
-
-	# 1. Identity & Description
-	var id_box = VBoxContainer.new()
-	id_box.add_theme_constant_override("separation", 4)
-	card_vbox.add_child(id_box)
-
-	aircraft_title = Label.new()
-	aircraft_title.text = "AH-64 APACHE"
-	aircraft_title.add_theme_font_override("font", pixel_font)
-	aircraft_title.add_theme_font_size_override("font_size", 16)
-	aircraft_title.add_theme_color_override("font_color", Color.WHITE)
-	id_box.add_child(aircraft_title)
-
-	aircraft_role = Label.new()
-	aircraft_role.text = "ALL-WEATHER ASSAULT GUNSHIP"
-	aircraft_role.add_theme_font_override("font", pixel_font)
-	aircraft_role.add_theme_font_size_override("font_size", 8)
-	aircraft_role.add_theme_color_override("font_color", Color("f7be28"))
-	id_box.add_child(aircraft_role)
-
-	aircraft_status = Label.new()
-	aircraft_status.visible = false # Kept for backward compatibility
-	id_box.add_child(aircraft_status)
-
-	aircraft_doctrine = Label.new()
-	aircraft_doctrine.text = "Combat ready. A balanced attack helicopter engineered for armored breakthrough, precision strikes, and sustained fire support."
-	aircraft_doctrine.add_theme_font_override("font", pixel_font)
-	aircraft_doctrine.add_theme_font_size_override("font_size", 7)
-	aircraft_doctrine.add_theme_color_override("font_color", Color("9ab0b8"))
+	var dossier := PanelContainer.new()
+	dossier.name = "RightDossierCard"
+	dossier.position = Vector2(792, 116)
+	dossier.size = Vector2(464, 512)
+	dossier.add_theme_stylebox_override("panel", _create_rounded_panel(Color("0d1720"), Color("293e4c"), 1, 5))
+	layout.add_child(dossier)
+	var padding := _menu_margin(20, 18)
+	dossier.add_child(padding)
+	var details := VBoxContainer.new()
+	details.add_theme_constant_override("separation", 12)
+	padding.add_child(details)
+	var identity := VBoxContainer.new()
+	identity.add_theme_constant_override("separation", 10)
+	details.add_child(identity)
+	aircraft_title = _menu_label("AH-64 APACHE", 20, Color.WHITE)
+	identity.add_child(aircraft_title)
+	aircraft_role = _menu_label("", 9, Color("ffd451"))
+	identity.add_child(aircraft_role)
+	aircraft_status = _menu_label("", 9, Color("62c5b7"))
+	aircraft_status.hide()
+	identity.add_child(aircraft_status)
+	aircraft_doctrine = _menu_label("", 10, Color("a6bac4"))
 	aircraft_doctrine.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	aircraft_doctrine.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	id_box.add_child(aircraft_doctrine)
-
-	var div1 = HSeparator.new()
-	div1.add_theme_stylebox_override("separator", _create_line_style(Color("192834")))
-	card_vbox.add_child(div1)
-
-	# 2. Performance Matrix Section (Title above, then Bar + Value on same row strictly aligned)
-	var matrix_vbox = VBoxContainer.new()
-	matrix_vbox.add_theme_constant_override("separation", 6)
-	card_vbox.add_child(matrix_vbox)
-
-	var speed_res = _create_stat_row(matrix_vbox, pixel_font, "CRUISE SPEED", Color("26c6da"))
-	speed_label = speed_res.label
-	speed_bar = speed_res.bar
-
-	var hull_res = _create_stat_row(matrix_vbox, pixel_font, "HULL DURABILITY", Color("e5533d"))
-	hull_label = hull_res.label
-	hull_bar = hull_res.bar
-
-	var fuel_res = _create_stat_row(matrix_vbox, pixel_font, "FUEL CAPACITY", Color("2979ff"))
-	fuel_label = fuel_res.label
-	fuel_bar = fuel_res.bar
-
-	var hand_res = _create_stat_row(matrix_vbox, pixel_font, "TURN AGILITY", Color("00e676"))
-	handling_label = hand_res.label
-	handling_bar = hand_res.bar
-
-	var dmg_res = _create_stat_row(matrix_vbox, pixel_font, "WEAPON DAMAGE", Color("546e7a"))
-	damage_label = dmg_res.label
-	damage_bar = dmg_res.bar
-
-	var div2 = HSeparator.new()
-	div2.add_theme_stylebox_override("separator", _create_line_style(Color("192834")))
-	card_vbox.add_child(div2)
-
-	# 3. Tactical Loadout Section (Strict 2-Column Grid Alignment)
-	var loadout_vbox = VBoxContainer.new()
-	loadout_vbox.add_theme_constant_override("separation", 6)
-	card_vbox.add_child(loadout_vbox)
-
-	var loadout_header = Label.new()
-	loadout_header.text = "TACTICAL LOADOUT"
-	loadout_header.add_theme_font_override("font", pixel_font)
-	loadout_header.add_theme_font_size_override("font_size", 8)
-	loadout_header.add_theme_color_override("font_color", Color("617d8b"))
-	loadout_vbox.add_child(loadout_header)
-
-	var loadout_grid = GridContainer.new()
-	loadout_grid.columns = 2
-	loadout_grid.add_theme_constant_override("h_separation", 10)
-	loadout_grid.add_theme_constant_override("v_separation", 5)
-	loadout_vbox.add_child(loadout_grid)
-
-	primary_val = _add_grid_loadout_row(loadout_grid, pixel_font, "PRIMARY", "20mm Dual Cannon (Standard)", Color("eaf0f2"))
-	secondary_val = _add_grid_loadout_row(loadout_grid, pixel_font, "ORDNANCE", "AGM-114 Hellfire  /  Hydra-70 FFAR", Color("eaf0f2"))
-	special_val = _add_grid_loadout_row(loadout_grid, pixel_font, "SPECIAL", "Painted Target Salvo (up to 6 locks)", Color("56c9b8"))
-	super_val = _add_grid_loadout_row(loadout_grid, pixel_font, "SUPER", "Devastation Carpet Bomb   [V / G]", Color("ffd700"), Color("f7be28"))
-
-	# Flexible spacer pushes action button to bottom of card
-	var spacer = Control.new()
+	aircraft_doctrine.custom_minimum_size.y = 32
+	identity.add_child(aircraft_doctrine)
+	details.add_child(HSeparator.new())
+	var stats := VBoxContainer.new()
+	stats.name = "PerformanceRows"
+	stats.add_theme_constant_override("separation", 10)
+	details.add_child(stats)
+	var rows := [
+		["CRUISE SPEED", Color("38c6d4")], ["HULL", Color("e67e6a")],
+		["FUEL", Color("659bde")], ["TURN AGILITY", Color("52cda3")],
+		["WEAPON DAMAGE", Color("dfc674")]
+	]
+	var controls: Array[Dictionary] = []
+	for row in rows:
+		controls.append(_create_stat_row(stats, pixel_font, row[0], row[1]))
+	speed_label = controls[0].label
+	speed_bar = controls[0].bar
+	hull_label = controls[1].label
+	hull_bar = controls[1].bar
+	fuel_label = controls[2].label
+	fuel_bar = controls[2].bar
+	handling_label = controls[3].label
+	handling_bar = controls[3].bar
+	damage_label = controls[4].label
+	damage_bar = controls[4].bar
+	details.add_child(HSeparator.new())
+	var loadout := GridContainer.new()
+	loadout.name = "LoadoutGrid"
+	loadout.columns = 2
+	loadout.add_theme_constant_override("h_separation", 14)
+	loadout.add_theme_constant_override("v_separation", 9)
+	details.add_child(loadout)
+	primary_val = _add_grid_loadout_row(loadout, pixel_font, "PRIMARY", "", Color("e6eeed"))
+	secondary_val = _add_grid_loadout_row(loadout, pixel_font, "ORDNANCE", "", Color("e6eeed"))
+	special_val = _add_grid_loadout_row(loadout, pixel_font, "SPECIAL", "", Color("68cbbb"))
+	super_val = _add_grid_loadout_row(loadout, pixel_font, "SUPER", "", Color("ffd451"))
+	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	card_vbox.add_child(spacer)
-
-	# 4. Primary Launch Action Button (Large solid yellow)
-	deploy_btn = Button.new()
+	details.add_child(spacer)
+	biome_selector = OptionButton.new()
+	biome_selector.name = "SortieBiomeSelector"
+	biome_selector.add_item("TOWN / Heavy Gunship")
+	biome_selector.add_item("DESERT CANYON / Mega Crawler")
+	biome_selector.add_item("HARBOR NIGHT / Airborne Titan")
+	biome_selector.add_theme_font_size_override("font_size", 13)
+	biome_selector.custom_minimum_size.y = 34
+	var biome_ids := ["town", "desert", "harbor"]
+	biome_selector.select(maxi(0, biome_ids.find(get_node("/root/GameManager").selected_biome)))
+	biome_selector.item_selected.connect(func(index: int): get_node("/root/GameManager").selected_biome = biome_ids[index])
+	details.add_child(biome_selector)
+	deploy_btn = _menu_button("LAUNCH SORTIE   [F]", 14, Color("f5c747"), Color("121b20"))
 	deploy_btn.name = "DeployBtn"
-	deploy_btn.text = ""
-	deploy_btn.custom_minimum_size.y = 44
-	deploy_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-
-	var deploy_normal = _create_rounded_panel(Color("f7be28"), Color("ffe240"), 1, 4)
-	var deploy_hover = _create_rounded_panel(Color("ffd240"), Color.WHITE, 1, 4)
-	var deploy_pressed = _create_rounded_panel(Color("e5aa1f"), Color("cca020"), 1, 4)
-	deploy_btn.add_theme_stylebox_override("normal", deploy_normal)
-	deploy_btn.add_theme_stylebox_override("hover", deploy_hover)
-	deploy_btn.add_theme_stylebox_override("pressed", deploy_pressed)
-	deploy_btn.add_theme_stylebox_override("focus", deploy_hover)
+	deploy_btn.custom_minimum_size.y = 48
 	deploy_btn.pressed.connect(_on_deploy_pressed)
-	card_vbox.add_child(deploy_btn)
+	details.add_child(deploy_btn)
 
-	var d_hbox = HBoxContainer.new()
-	d_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	d_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	d_hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	d_hbox.add_theme_constant_override("separation", 10)
-	deploy_btn.add_child(d_hbox)
-
-	var d_badge = PanelContainer.new()
-	d_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	d_badge.custom_minimum_size = Vector2(24, 24)
-	d_badge.add_theme_stylebox_override("panel", _create_rounded_panel(Color("090e13"), Color("cca020"), 1, 3))
-	var d_badge_lbl = Label.new()
-	d_badge_lbl.text = "F"
-	d_badge_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	d_badge_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	d_badge_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	d_badge_lbl.add_theme_font_override("font", pixel_font)
-	d_badge_lbl.add_theme_font_size_override("font_size", 9)
-	d_badge_lbl.add_theme_color_override("font_color", Color("ffd700"))
-	d_badge.add_child(d_badge_lbl)
-	d_hbox.add_child(d_badge)
-
-	var d_text = Label.new()
-	d_text.text = "LAUNCH SORTIE"
-	d_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	d_text.add_theme_font_override("font", pixel_font)
-	d_text.add_theme_font_size_override("font_size", 11)
-	d_text.add_theme_color_override("font_color", Color("090e13"))
-	d_hbox.add_child(d_text)
-
-	# ------------------------------------------------------------------
-	# D. BOTTOM ROW: CAROUSEL CARDS + UTILITY BUTTONS
-	# ------------------------------------------------------------------
-	var bottom_row = HBoxContainer.new()
-	bottom_row.name = "BottomRow"
-	bottom_row.add_theme_constant_override("separation", 8)
-	ui_overlay.add_child(bottom_row)
-
-	bottom_row.anchor_left = 0.0
-	bottom_row.anchor_right = 1.0
-	bottom_row.anchor_top = 1.0
-	bottom_row.anchor_bottom = 1.0
-	bottom_row.offset_left = 32
-	bottom_row.offset_right = -32
-	bottom_row.offset_top = -70
-	bottom_row.offset_bottom = -14
-
-	# Previous arrow button
-	prev_btn = Button.new()
-	prev_btn.text = "<"
-	prev_btn.custom_minimum_size = Vector2(28, 52)
-	prev_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-	prev_btn.add_theme_font_override("font", pixel_font)
-	prev_btn.add_theme_font_size_override("font_size", 10)
-	prev_btn.add_theme_color_override("font_color", Color("8fa4ad"))
-	prev_btn.add_theme_stylebox_override("normal", _create_rounded_panel(Color("0a1218", 0.90), Color("1c2d39"), 1, 4))
-	prev_btn.add_theme_stylebox_override("hover", _create_rounded_panel(Color("162430", 0.95), Color("ffd700"), 1, 4))
+	var carousel := HBoxContainer.new()
+	carousel.name = "BottomRow"
+	carousel.position = Vector2(24, 600)
+	carousel.size = Vector2(744, 96)
+	carousel.add_theme_constant_override("separation", 8)
+	layout.add_child(carousel)
+	prev_btn = _menu_button("<", 12)
+	prev_btn.custom_minimum_size.x = 32
 	prev_btn.pressed.connect(_on_prev_pressed)
-	bottom_row.add_child(prev_btn)
-
-	# 3 Aircraft Selector Cards
+	carousel.add_child(prev_btn)
 	card_buttons.clear()
 	card_names.clear()
 	card_tags.clear()
-
-	var card_specs := [
-		{"name": "AH-64 APACHE", "tag": "BALANCED ASSAULT", "thumb": "res://assets/ui/thumb_apache.png"},
-		{"name": "RAH-66 NIGHTHAWK", "tag": "+15% SPEED // AGILE", "thumb": "res://assets/ui/thumb_nighthawk.png"},
-		{"name": "MI-28 WARLOCK", "tag": "+30% HULL // FORTIFIED", "thumb": "res://assets/ui/thumb_warlock.png"}
+	var cards := [
+		["AH-64 APACHE", "BALANCED", "res://assets/ui/thumb_apache.png"],
+		["RAH-66 NIGHTHAWK", "FAST / STEALTH", "res://assets/ui/thumb_nighthawk.png"],
+		["MI-28 WARLOCK", "HEAVY / ARMORED", "res://assets/ui/thumb_warlock.png"]
 	]
-
-	for i in range(card_specs.size()):
-		var c_spec = card_specs[i]
-		var card = Button.new()
+	for i in range(cards.size()):
+		var card := _menu_button("", 9)
 		card.name = "Card_" + str(i)
-		card.custom_minimum_size = Vector2(245, 52)
-		card.mouse_filter = Control.MOUSE_FILTER_STOP
-		card.add_theme_stylebox_override("normal", _create_rounded_panel(Color("091016", 0.85), Color("1b2c38"), 1, 6))
-
-		var card_inner = HBoxContainer.new()
-		card_inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		card_inner.add_theme_constant_override("separation", 6)
-		card_inner.alignment = BoxContainer.ALIGNMENT_CENTER
-		card_inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		card.add_child(card_inner)
-
-		# Thumbnail preview image
-		var thumb_rect = TextureRect.new()
-		thumb_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		thumb_rect.custom_minimum_size = Vector2(52, 34)
-		thumb_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		thumb_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		if ResourceLoader.exists(c_spec.thumb):
-			thumb_rect.texture = load(c_spec.thumb)
-		card_inner.add_child(thumb_rect)
-
-		# Text vbox
-		var c_text_box = VBoxContainer.new()
-		c_text_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		c_text_box.add_theme_constant_override("separation", 2)
-		c_text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		c_text_box.alignment = BoxContainer.ALIGNMENT_CENTER
-		card_inner.add_child(c_text_box)
-
-		var c_name = Label.new()
-		c_name.text = c_spec.name
-		c_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		c_name.add_theme_font_override("font", pixel_font)
-		c_name.add_theme_font_size_override("font_size", 8)
-		c_name.add_theme_color_override("font_color", Color("e0e8ec"))
-		c_text_box.add_child(c_name)
-		card_names.append(c_name)
-
-		var c_tag = Label.new()
-		c_tag.text = c_spec.tag
-		c_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		c_tag.add_theme_font_override("font", pixel_font)
-		c_tag.add_theme_font_size_override("font_size", 7)
-		c_tag.add_theme_color_override("font_color", Color("617d8b"))
-		c_text_box.add_child(c_tag)
-		card_tags.append(c_tag)
-
-		var idx = i
-		card.pressed.connect(func(): select_aircraft(idx))
-		card.focus_entered.connect(func(): select_aircraft(idx))
-		bottom_row.add_child(card)
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		carousel.add_child(card)
+		var inner := MarginContainer.new()
+		inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		for side in ["left", "right"]:
+			inner.add_theme_constant_override("margin_" + side, 8)
+		card.add_child(inner)
+		var row := HBoxContainer.new()
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_theme_constant_override("separation", 8)
+		inner.add_child(row)
+		var thumbnail := TextureRect.new()
+		thumbnail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		thumbnail.custom_minimum_size = Vector2(42, 38)
+		thumbnail.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		thumbnail.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		if ResourceLoader.exists(cards[i][2]):
+			thumbnail.texture = load(cards[i][2])
+		row.add_child(thumbnail)
+		var text := VBoxContainer.new()
+		text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		text.alignment = BoxContainer.ALIGNMENT_CENTER
+		text.add_theme_constant_override("separation", 10)
+		row.add_child(text)
+		var name_label := _menu_label(cards[i][0], 9, Color("e4eef0"))
+		name_label.clip_text = true
+		text.add_child(name_label)
+		card_names.append(name_label)
+		var tag := _menu_label(cards[i][1], 8, Color("8ba9b4"))
+		text.add_child(tag)
+		card_tags.append(tag)
+		card.pressed.connect(select_aircraft.bind(i))
+		card.focus_entered.connect(select_aircraft.bind(i))
 		card_buttons.append(card)
-
-	# Next arrow button
-	next_btn = Button.new()
-	next_btn.text = ">"
-	next_btn.custom_minimum_size = Vector2(28, 52)
-	next_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-	next_btn.add_theme_font_override("font", pixel_font)
-	next_btn.add_theme_font_size_override("font_size", 10)
-	next_btn.add_theme_color_override("font_color", Color("8fa4ad"))
-	next_btn.add_theme_stylebox_override("normal", _create_rounded_panel(Color("0a1218", 0.90), Color("1c2d39"), 1, 4))
-	next_btn.add_theme_stylebox_override("hover", _create_rounded_panel(Color("162430", 0.95), Color("ffd700"), 1, 4))
+	next_btn = _menu_button(">", 12)
+	next_btn.custom_minimum_size.x = 32
 	next_btn.pressed.connect(_on_next_pressed)
-	bottom_row.add_child(next_btn)
-
-	# Spacing before bottom-right buttons
-	var b_spacer = Control.new()
-	b_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bottom_row.add_child(b_spacer)
-
-	# Bottom-Right Utility Buttons
-	back_btn = Button.new()
+	carousel.add_child(next_btn)
+	var utilities := HBoxContainer.new()
+	utilities.name = "UtilityButtons"
+	utilities.position = Vector2(792, 648)
+	utilities.size = Vector2(464, 48)
+	utilities.add_theme_constant_override("separation", 12)
+	layout.add_child(utilities)
+	back_btn = _menu_button("BACK [ESC]", 10)
 	back_btn.name = "BackBtn"
-	back_btn.text = ""
-	back_btn.custom_minimum_size = Vector2(118, 42)
-	back_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-	back_btn.add_theme_stylebox_override("normal", _create_rounded_panel(Color("091117", 0.90), Color("1c2e3b"), 1, 4))
-	back_btn.add_theme_stylebox_override("hover", _create_rounded_panel(Color("14222c", 0.95), Color("56c9b8"), 1, 4))
+	back_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	back_btn.pressed.connect(_on_back_pressed)
-	bottom_row.add_child(back_btn)
-
-	var b_hbox = HBoxContainer.new()
-	b_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	b_hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	b_hbox.add_theme_constant_override("separation", 8)
-	back_btn.add_child(b_hbox)
-
-	var b_badge = PanelContainer.new()
-	b_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b_badge.custom_minimum_size = Vector2(28, 20)
-	b_badge.add_theme_stylebox_override("panel", _create_rounded_panel(Color("141b22"), Color("253846"), 1, 3))
-	var b_badge_lbl = Label.new()
-	b_badge_lbl.text = "ESC"
-	b_badge_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b_badge_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	b_badge_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	b_badge_lbl.add_theme_font_override("font", pixel_font)
-	b_badge_lbl.add_theme_font_size_override("font_size", 7)
-	b_badge_lbl.add_theme_color_override("font_color", Color("8fa4ad"))
-	b_badge.add_child(b_badge_lbl)
-	b_hbox.add_child(b_badge)
-
-	var b_text = Label.new()
-	b_text.text = "BACK"
-	b_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	b_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	b_text.add_theme_font_override("font", pixel_font)
-	b_text.add_theme_font_size_override("font_size", 8)
-	b_text.add_theme_color_override("font_color", Color("b0c0c8"))
-	b_hbox.add_child(b_text)
-
-	armory_btn = Button.new()
+	utilities.add_child(back_btn)
+	armory_btn = _menu_button("UPGRADE HANGAR [H]", 10)
 	armory_btn.name = "ArmoryBtn"
-	armory_btn.text = ""
-	armory_btn.custom_minimum_size = Vector2(178, 42)
-	armory_btn.mouse_filter = Control.MOUSE_FILTER_STOP
-	armory_btn.add_theme_stylebox_override("normal", _create_rounded_panel(Color("091117", 0.90), Color("263a48"), 1, 4))
-	armory_btn.add_theme_stylebox_override("hover", _create_rounded_panel(Color("16242e", 0.95), Color("ffd700"), 1, 4))
+	armory_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	armory_btn.pressed.connect(_on_armory_pressed)
-	bottom_row.add_child(armory_btn)
-
-	var a_hbox = HBoxContainer.new()
-	a_hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	a_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	a_hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	a_hbox.add_theme_constant_override("separation", 8)
-	armory_btn.add_child(a_hbox)
-
-	var a_badge = PanelContainer.new()
-	a_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	a_badge.custom_minimum_size = Vector2(20, 20)
-	a_badge.add_theme_stylebox_override("panel", _create_rounded_panel(Color("141b22"), Color("3d4b30"), 1, 3))
-	var a_badge_lbl = Label.new()
-	a_badge_lbl.text = "H"
-	a_badge_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	a_badge_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	a_badge_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	a_badge_lbl.add_theme_font_override("font", pixel_font)
-	a_badge_lbl.add_theme_font_size_override("font_size", 7)
-	a_badge_lbl.add_theme_color_override("font_color", Color("ffd700"))
-	a_badge.add_child(a_badge_lbl)
-	a_hbox.add_child(a_badge)
-
-	var a_text = Label.new()
-	a_text.text = "UPGRADE HANGAR"
-	a_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	a_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	a_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	a_text.add_theme_font_override("font", pixel_font)
-	a_text.add_theme_font_size_override("font_size", 8)
-	a_text.add_theme_color_override("font_color", Color("ffd700"))
-	a_hbox.add_child(a_text)
-
-	# Setup Focus Navigation
+	utilities.add_child(armory_btn)
+	_update_wallet_display()
 	_setup_focus_navigation()
+	resized.connect(_fit_aircraft_layout)
+	_fit_aircraft_layout()
 
-# Grid row with guaranteed column alignment for tactical loadout
-func _add_grid_loadout_row(parent: GridContainer, font: Font, label_text: String, default_val: String, val_color: Color, tag_color: Color = Color("617d8b")) -> Label:
-	var tag_lbl = Label.new()
-	tag_lbl.text = label_text
-	tag_lbl.custom_minimum_size.x = 88
-	tag_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	tag_lbl.add_theme_font_override("font", font)
-	tag_lbl.add_theme_font_size_override("font_size", 7)
-	tag_lbl.add_theme_color_override("font_color", tag_color)
-	parent.add_child(tag_lbl)
+func _fit_aircraft_layout() -> void:
+	var layout := get_node_or_null("UIOverlay") as Control
+	if not layout:
+		return
+	var fit := minf(size.x / 1280.0, size.y / 720.0)
+	layout.size = Vector2(1280, 720)
+	layout.scale = Vector2.ONE * fit
+	layout.position = (size - Vector2(1280, 720) * fit) * 0.5
+	stage_container.position = layout.position + Vector2(24, 116) * fit
+	stage_container.size = Vector2(744, 464) * fit
+	if stage_viewport:
+		stage_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE if is_visible_in_tree() else SubViewport.UPDATE_DISABLED
 
-	var val_lbl = Label.new()
-	val_lbl.text = default_val
-	val_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	val_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	val_lbl.add_theme_font_override("font", font)
-	val_lbl.add_theme_font_size_override("font_size", 7)
-	val_lbl.add_theme_color_override("font_color", val_color)
-	parent.add_child(val_lbl)
+func _menu_label(text: String, font_size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_override("font", preload("res://src/effects/floating_text.gd").get_pixel_font())
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	return label
 
-	return val_lbl
+func _menu_margin(horizontal: int, vertical: int) -> MarginContainer:
+	var margin := MarginContainer.new()
+	for side in ["left", "right"]:
+		margin.add_theme_constant_override("margin_" + side, horizontal)
+	for side in ["top", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, vertical)
+	return margin
 
-# Stat Row: Label on top line, then ProgressBar + Value strictly aligned on row below
-func _create_stat_row(parent: VBoxContainer, font: Font, label_text: String, fill_color: Color) -> Dictionary:
-	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 2)
-	parent.add_child(vbox)
+func _menu_button(text: String, font_size: int, fill: Color = Color("10202a"), ink: Color = Color("dce9eb")) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.add_theme_font_override("font", preload("res://src/effects/floating_text.gd").get_pixel_font())
+	button.add_theme_font_size_override("font_size", font_size)
+	button.add_theme_color_override("font_color", ink)
+	button.add_theme_color_override("font_hover_color", ink)
+	button.add_theme_color_override("font_focus_color", ink)
+	button.add_theme_stylebox_override("normal", _create_rounded_panel(fill, Color("344b58"), 1, 5))
+	button.add_theme_stylebox_override("hover", _create_rounded_panel(fill.lightened(0.12), Color("84b8bf"), 1, 5))
+	button.add_theme_stylebox_override("pressed", _create_rounded_panel(fill.darkened(0.12), Color("ffd451"), 1, 5))
+	button.add_theme_stylebox_override("focus", _create_rounded_panel(Color.TRANSPARENT, Color("ffd451"), 2, 5))
+	return button
 
-	var title_lbl = Label.new()
-	title_lbl.text = label_text
-	title_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_lbl.add_theme_font_override("font", font)
-	title_lbl.add_theme_font_size_override("font_size", 7)
-	title_lbl.add_theme_color_override("font_color", Color("7a98a3"))
-	vbox.add_child(title_lbl)
+func _add_grid_loadout_row(parent: GridContainer, _font: Font, label_text: String, default_val: String, val_color: Color, tag_color: Color = Color("8da6b2")) -> Label:
+	var tag := _menu_label(label_text, 9, tag_color)
+	tag.custom_minimum_size.x = 80
+	parent.add_child(tag)
+	var value := _menu_label(default_val, 9, val_color)
+	value.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	parent.add_child(value)
+	return value
 
-	var bar_row = HBoxContainer.new()
-	bar_row.add_theme_constant_override("separation", 10)
-	vbox.add_child(bar_row)
-
-	var bar = ProgressBar.new()
-	bar.custom_minimum_size.y = 8
-	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+func _create_stat_row(parent: VBoxContainer, _font: Font, label_text: String, fill_color: Color) -> Dictionary:
+	var section := VBoxContainer.new()
+	section.add_theme_constant_override("separation", 6)
+	parent.add_child(section)
+	var row := HBoxContainer.new()
+	section.add_child(row)
+	var title := _menu_label(label_text, 9, Color("9ab4be"))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(title)
+	var value := _menu_label("---", 10, Color("eef4ed"))
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.add_child(value)
+	var bar := ProgressBar.new()
+	bar.custom_minimum_size.y = 5
 	bar.show_percentage = false
-	bar.max_value = 100.0
-	bar.value = 50.0
-
-	var bg_style = StyleBoxFlat.new()
-	bg_style.bg_color = Color("091016")
-	bg_style.set_corner_radius_all(3)
-	bar.add_theme_stylebox_override("background", bg_style)
-
-	var fill_style = StyleBoxFlat.new()
-	fill_style.bg_color = fill_color
-	fill_style.set_corner_radius_all(3)
-	bar.add_theme_stylebox_override("fill", fill_style)
-	bar_row.add_child(bar)
-
-	var val_lbl = Label.new()
-	val_lbl.text = "---"
-	val_lbl.custom_minimum_size.x = 94
-	val_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	val_lbl.add_theme_font_override("font", font)
-	val_lbl.add_theme_font_size_override("font_size", 7)
-	val_lbl.add_theme_color_override("font_color", Color("eaf0f2"))
-	bar_row.add_child(val_lbl)
-
-	return {"label": val_lbl, "bar": bar}
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color("1c2b35")
+	bar.add_theme_stylebox_override("background", background)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = fill_color
+	bar.add_theme_stylebox_override("fill", fill)
+	section.add_child(bar)
+	return {"label": value, "bar": bar}
 
 func _setup_focus_navigation() -> void:
 	for i in range(card_buttons.size()):
@@ -1538,7 +1226,7 @@ func _setup_focus_navigation() -> void:
 			btn.focus_neighbor_right = card_buttons[i + 1].get_path()
 		else:
 			btn.focus_neighbor_right = next_btn.get_path()
-		btn.focus_neighbor_bottom = deploy_btn.get_path()
+		btn.focus_neighbor_bottom = biome_selector.get_path()
 
 	prev_btn.focus_neighbor_right = card_buttons[0].get_path()
 	prev_btn.focus_neighbor_bottom = deploy_btn.get_path()
@@ -1552,7 +1240,9 @@ func _setup_focus_navigation() -> void:
 	armory_btn.focus_neighbor_left = back_btn.get_path()
 	armory_btn.focus_neighbor_top = deploy_btn.get_path()
 
-	deploy_btn.focus_neighbor_top = card_buttons[current_aircraft_idx].get_path()
+	biome_selector.focus_neighbor_top = card_buttons[current_aircraft_idx].get_path()
+	biome_selector.focus_neighbor_bottom = deploy_btn.get_path()
+	deploy_btn.focus_neighbor_top = biome_selector.get_path()
 	deploy_btn.focus_neighbor_bottom = back_btn.get_path()
 
 # Direct GUI input on main VehicleSelectionMenu for rotating and zooming 3D showroom
@@ -1582,7 +1272,7 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 func _input(event: InputEvent) -> void:
-	if not visible:
+	if not is_visible_in_tree():
 		return
 	if is_dragging and event is InputEventMouseMotion:
 		_handle_mouse_drag_motion(event.relative.x)

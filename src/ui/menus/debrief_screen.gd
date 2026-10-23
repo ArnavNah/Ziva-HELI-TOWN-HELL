@@ -11,6 +11,10 @@ var quit_button: Button
 var backdrop: ColorRect
 var result_layout: Control
 var save_status_label: Label
+var run_score_label: Label
+var high_score_label: Label
+var run_stats_label: Label
+var record_badge_label: Label
 var last_summary: Dictionary = {}
 var reveal_tween: Tween
 var _leaving: bool = false
@@ -78,6 +82,12 @@ func _build_ui() -> void:
 	outcome_label.add_theme_color_override("font_shadow_color", Color("09080b"))
 	outcome_label.add_theme_constant_override("shadow_offset_x", 4)
 	outcome_label.add_theme_constant_override("shadow_offset_y", 6)
+	_result_label("RunScoreCaption", "SORTIE SCORE", Vector2(180, 306), Vector2(440, 24), 14, Color("b4c7ce"))
+	_result_label("HighScoreCaption", "HIGH SCORE", Vector2(660, 306), Vector2(440, 24), 14, Color("b4c7ce"))
+	run_score_label = _result_label("RunScore", "0", Vector2(180, 342), Vector2(440, 54), 40, Color("fff0d0"))
+	high_score_label = _result_label("HighScore", "0", Vector2(660, 342), Vector2(440, 54), 40, GOLD)
+	record_badge_label = _result_label("NewHighScore", "", Vector2(190, 411), Vector2(900, 24), 14, GOLD)
+	run_stats_label = _result_label("RunStats", "", Vector2(90, 445), Vector2(1100, 24), 12, Color("bdcbd0"))
 
 	var actions := HBoxContainer.new()
 	actions.name = "Actions"
@@ -125,6 +135,22 @@ func _build_ui() -> void:
 	resized.connect(_fit_layout)
 	_fit_layout()
 
+func _result_label(node_name: String, text_value: String, at: Vector2, dimensions: Vector2, font_size: int, ink: Color) -> Label:
+	var label := Label.new()
+	label.name = node_name
+	label.text = text_value
+	label.position = at
+	label.size = dimensions
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", ink)
+	label.add_theme_color_override("font_shadow_color", Color("09080b"))
+	label.add_theme_constant_override("shadow_offset_y", 2)
+	result_layout.add_child(label)
+	return label
+
 func _button_style(fill: Color, edge: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = fill
@@ -168,9 +194,17 @@ func show_debrief(summary: Dictionary) -> void:
 	var seconds: int = int(summary.get("survival_time", 0.0)) % 60
 
 	var pm = get_node_or_null("/root/ProfileManager")
-	var run_score: int = summary.get("score", 0)
-	var career_high: int = int(summary.get("high_score", pm.high_score if pm else run_score))
+	var gm = get_node_or_null("/root/GameManager")
+	var run_score: int = maxi(0, int(summary.get("score", gm.score if gm else 0)))
+	var career_high: int = maxi(run_score, int(summary.get("high_score", 0)))
+	career_high = maxi(career_high, pm.high_score if pm else 0)
+	career_high = maxi(career_high, int(summary.get("previous_high_score", 0)))
 	var is_new_high: bool = summary.get("is_new_high_score", run_score > int(summary.get("previous_high_score", career_high)))
+	run_score_label.text = str(run_score)
+	high_score_label.text = str(career_high)
+	record_badge_label.text = "NEW HIGH SCORE" if is_new_high and run_score > 0 else ""
+	record_badge_label.visible = not record_badge_label.text.is_empty()
+	run_stats_label.text = "TIME %02d:%02d    KILLS %d    COINS %d    WAVE %d" % [minutes, seconds, summary.get("kills", 0), summary.get("coins_collected", 0), summary.get("wave_reached", 1)]
 
 	# Keep the settled run report available for export without showing a results panel.
 	var text = "========================================================\n"

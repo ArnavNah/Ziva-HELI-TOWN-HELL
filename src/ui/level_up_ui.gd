@@ -24,6 +24,39 @@ var is_choosing: bool = false
 var active_tween: Tween = null
 var displayed_level: int = 1
 var resume_state: int = -1
+const PRESENTATION_DELAY := 0.35
+const COMBAT_BREATHER := 2.5
+var presentation_delay_remaining: float = -1.0
+
+func _can_present() -> bool:
+	if not is_inside_tree() or get_tree().paused:
+		return false
+	var player = _get_player()
+	if not is_instance_valid(player) or player.is_queued_for_deletion():
+		return false
+	if ("is_dying" in player and player.is_dying) or ("is_dashing" in player and player.is_dashing):
+		return false
+	var gm = get_node_or_null("/root/GameManager")
+	return gm != null and gm.current_state in [gm.RunState.ACTIVE, gm.RunState.EXTRACTION, gm.RunState.TUTORIAL]
+
+func _process(delta: float) -> void:
+	if is_choosing:
+		var player = _get_player()
+		if not is_instance_valid(player) or ("is_dying" in player and player.is_dying):
+			_reset_overlay()
+		return
+	if presentation_delay_remaining < 0.0 or is_choosing or not _can_present():
+		return
+	presentation_delay_remaining = maxf(0.0, presentation_delay_remaining - delta)
+	if presentation_delay_remaining <= 0.0:
+		presentation_delay_remaining = -1.0
+		var xp = get_node_or_null("/root/XpManager")
+		if xp and xp.has_pending_level_ups():
+			open_draft(xp.current_level - xp.queued_level_ups + 1)
+
+func _queue_presentation(delay: float) -> void:
+	if presentation_delay_remaining < 0.0:
+		presentation_delay_remaining = delay
 
 # Child UI Nodes
 var backdrop: ColorRect
@@ -51,6 +84,7 @@ func _connect_xp_manager() -> void:
 		bus.run_state_changed.connect(_on_run_state_changed)
 
 func _reset_overlay() -> void:
+	presentation_delay_remaining = -1.0
 	is_choosing = false
 	visible = false
 	current_draft.clear()
@@ -78,7 +112,7 @@ func _present_pending() -> void:
 	if xp and xp.has_pending_level_ups() and not is_choosing:
 		_on_level_up(xp.current_level - xp.queued_level_ups + 1)
 
-func _on_level_up(new_level: int) -> void:
+func _on_level_up(_new_level: int) -> void:
 	var gm = get_node_or_null("/root/GameManager")
 	if gm and gm.current_state in [gm.RunState.MENU, gm.RunState.LOADING, gm.RunState.RESULTS, gm.RunState.BOSS_DECISION, gm.RunState.PAUSED]:
 		return # Keep the earned choice queued until gameplay resumes.
@@ -87,9 +121,11 @@ func _on_level_up(new_level: int) -> void:
 		_update_subtitle()
 		return
 	
-	open_draft(new_level)
+	_queue_presentation(PRESENTATION_DELAY)
 
 func open_draft(level: int = 1) -> void:
+	if not _can_present():
+		return
 	var player = _get_player()
 	var luck: float = 0.0
 	if player and player.has_node("SubsystemManager"):
@@ -245,12 +281,15 @@ func _format_card_button(btn: Button, card: RefCounted, shortcut_idx: int) -> vo
 func _on_card_clicked(idx: int) -> void:
 	if not is_choosing or idx < 0 or idx >= current_draft.size():
 		return
+	var player = _get_player()
+	if not is_instance_valid(player) or ("is_dying" in player and player.is_dying):
+		_reset_overlay()
+		return
 
 	var chosen_card = current_draft[idx]
 	is_choosing = false
 
 	# 1. Apply upgrade payload to player subsystem manager
-	var player = _get_player()
 	var sm = player.get_node_or_null("SubsystemManager") if player else null
 	if not sm or not sm.apply_upgrade(chosen_card):
 		is_choosing = true
@@ -267,19 +306,16 @@ func _on_card_clicked(idx: int) -> void:
 	if xp_mgr:
 		xp_mgr.consume_pending_level_up()
 	if xp_mgr and xp_mgr.has_pending_level_ups():
-		# Immediately transition to next draft pick
-		open_draft(xp_mgr.current_level - xp_mgr.queued_level_ups + 1)
-	else:
-		# Unpause and dismiss modal
-		visible = false
-		var gm = get_node_or_null("/root/GameManager")
-		if gm and resume_state >= 0 and gm.current_state == gm.RunState.UPGRADE_CHOICE:
-			gm.change_state(resume_state)
-		elif not gm or gm.current_state not in [gm.RunState.PAUSED, gm.RunState.BOSS_DECISION, gm.RunState.RESULTS, gm.RunState.LOADING]:
-			get_tree().paused = false
-		resume_state = -1
-		if has_node("/root/UIFlow"):
-			get_node("/root/UIFlow").block_held_input()
+		_queue_presentation(COMBAT_BREATHER)
+	visible = false
+	var gm = get_node_or_null("/root/GameManager")
+	if gm and resume_state >= 0 and gm.current_state == gm.RunState.UPGRADE_CHOICE:
+		gm.change_state(resume_state)
+	elif not gm or gm.current_state not in [gm.RunState.PAUSED, gm.RunState.BOSS_DECISION, gm.RunState.RESULTS, gm.RunState.LOADING]:
+		get_tree().paused = false
+	resume_state = -1
+	if has_node("/root/UIFlow"):
+		get_node("/root/UIFlow").block_held_input()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible or not is_choosing:

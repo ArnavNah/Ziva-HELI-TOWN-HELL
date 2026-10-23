@@ -28,6 +28,7 @@ var lock_warning_banner: Label
 var border_warning_banner: VBoxContainer
 var reticle_widget: Control
 var is_turret_in_arc: bool = true
+var is_turret_blocked: bool = false
 var barrel_screen_pos: Vector2 = Vector2.ZERO
 var has_barrel_pos: bool = false
 var targeting_overlay: Control
@@ -46,6 +47,10 @@ var hit_flash_intensity: float = 0.0
 var blood_pulse_speed: float = 3.8
 var debug_telemetry: Control = null
 var damage_indicator: Control
+var missile_scan_timer := 0.0
+var missile_alarm_timer := 0.0
+var incoming_missiles := 0
+var missile_urgent := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -54,6 +59,7 @@ func _ready() -> void:
 	damage_indicator = preload("res://src/ui/damage_indicator.gd").new()
 	damage_indicator.player = player_helicopter
 	add_child(damage_indicator)
+	add_child(preload("res://src/ui/boss_tracker.gd").new())
 	_apply_label_outlines()
 	debug_telemetry = preload("res://src/ui/debug_telemetry_overlay.gd").new()
 	add_child(debug_telemetry)
@@ -111,6 +117,8 @@ func _setup_tactical_overlays() -> void:
 	lock_warning_banner.add_theme_font_size_override("font_size", 12)
 	lock_warning_banner.add_theme_font_override("font", preload("res://src/effects/floating_text.gd").get_pixel_font())
 	lock_warning_banner.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2, 1.0))
+	lock_warning_banner.add_theme_color_override("font_outline_color", Color("10191f"))
+	lock_warning_banner.add_theme_constant_override("outline_size", 4)
 	lock_warning_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lock_warning_banner.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	lock_warning_banner.offset_top = 92.0
@@ -207,7 +215,7 @@ func _on_reticle_draw() -> void:
 		has_target_lock = is_instance_valid(p.turret.current_target_node)
 
 	var col = Color(0.2, 1.0, 0.4, 0.85)
-	if not is_turret_in_arc:
+	if not is_turret_in_arc or is_turret_blocked:
 		col = Color(1.0, 0.65, 0.15, 0.90) # Out of arc amber
 	elif has_target_lock:
 		col = Color(1.0, 0.35, 0.2, 0.95) # Locked target red/orange
@@ -236,7 +244,7 @@ func _on_reticle_draw() -> void:
 		reticle_widget.draw_line(center + Vector2(3, -3), center + Vector2(-3, 3), col, 1.5)
 
 	# When out of arc, draw an indicator dot at the real barrel aim position relative to reticle
-	if not is_turret_in_arc and has_barrel_pos:
+	if has_barrel_pos:
 		var rel_barrel = barrel_screen_pos - reticle_widget.position
 		reticle_widget.draw_circle(rel_barrel, 4.0, Color(1.0, 0.35, 0.2, 0.95))
 		reticle_widget.draw_line(center, rel_barrel, Color(1.0, 0.65, 0.2, 0.45), 1.2)
@@ -291,11 +299,14 @@ func _update_blood_vignette(delta: float) -> void:
 	var is_active = (blood_intensity > 0.002 or hit_flash_intensity > 0.002)
 	blood_overlay.visible = is_active
 	if is_active:
-		blood_material.set_shader_parameter("blood_intensity", blood_intensity)
-		blood_material.set_shader_parameter("pulse_speed", blood_pulse_speed)
-		blood_material.set_shader_parameter("hit_flash", hit_flash_intensity)
+		var reduced: bool = has_node("/root/AudioManager") and get_node("/root/AudioManager").reduce_flashes
+		blood_material.set_shader_parameter("blood_intensity", blood_intensity * (0.20 if reduced else 0.38))
+		blood_material.set_shader_parameter("pulse_speed", 1.0 if reduced else blood_pulse_speed)
+		blood_material.set_shader_parameter("hit_flash", 0.0 if reduced else hit_flash_intensity * 0.25)
 
 func _update_reticle() -> void:
+	has_barrel_pos = false
+	is_turret_blocked = false
 	if reticle_widget:
 		var mouse_pos = get_viewport().get_mouse_position()
 		reticle_widget.position = mouse_pos - Vector2(16, 16)
@@ -303,6 +314,7 @@ func _update_reticle() -> void:
 		var p = get_tree().get_first_node_in_group("player")
 		if p and is_instance_valid(p) and "turret" in p and p.turret:
 			is_turret_in_arc = p.turret.is_aim_in_arc if "is_aim_in_arc" in p.turret else true
+			is_turret_blocked = p.turret.is_aim_blocked
 			var cam = get_viewport().get_camera_3d()
 			if cam:
 				var muzzle_tf = p.turret.get_current_muzzle_transform()
@@ -315,6 +327,30 @@ func _update_reticle() -> void:
 		reticle_widget.queue_redraw()
 
 func _update_missile_warnings(delta: float) -> void:
+	if get_tree().paused:
+		return
+	var gm := get_node_or_null("/root/GameManager")
+	if gm and gm.current_state not in [gm.RunState.ACTIVE, gm.RunState.EXTRACTION, gm.RunState.TUTORIAL]:
+		if lock_warning_banner: lock_warning_banner.hide()
+		return
+	missile_scan_timer -= delta
+	missile_alarm_timer = maxf(0.0, missile_alarm_timer - delta)
+	if missile_scan_timer <= 0.0 and is_instance_valid(player_helicopter):
+		missile_scan_timer = 0.10
+		incoming_missiles = 0
+		missile_urgent = false
+		for missile in get_tree().get_nodes_in_group("combat_projectiles"):
+			if missile.is_queued_for_deletion() or not missile.is_homing or missile.target_node != player_helicopter:
+				continue
+			incoming_missiles += 1
+			var distance: float = missile.global_position.distance_to(player_helicopter.global_position)
+			var closing: float = maxf(1.0, (missile.velocity - player_helicopter.velocity).dot((player_helicopter.global_position - missile.global_position).normalized()))
+			missile_urgent = missile_urgent or distance <= 25.0 or distance / closing <= 1.0
+			damage_indicator._on_threat_warning(missile.global_position, "INCOMING MISSILE", 0.25)
+		if incoming_missiles > 0 and missile_alarm_timer <= 0.0:
+			missile_alarm_timer = 0.30 if missile_urgent else 0.85
+			if has_node("/root/AudioManager"):
+				get_node("/root/AudioManager").play_sfx("lock_beep", 1.35 if missile_urgent else 1.0)
 	alert_flash_timer += delta * 6.0
 	var is_under_sam_lock = false
 	var sam_sites = get_tree().get_nodes_in_group("sam_sites")
@@ -324,8 +360,10 @@ func _update_missile_warnings(delta: float) -> void:
 			break
 
 	if lock_warning_banner:
-		if is_under_sam_lock:
-			lock_warning_banner.visible = fmod(alert_flash_timer, 2.0) < 1.3
+		var mortal_alarm: bool = is_instance_valid(player_helicopter) and player_helicopter.mortal_alarm_timer > 0.0
+		lock_warning_banner.text = "EMERGENCY / HULL CRITICAL / EVADE" if mortal_alarm else ("MISSILE INBOUND / DEPLOY FLARES" if incoming_missiles > 0 else "RADAR LOCK / BREAK LINE OF SIGHT")
+		if is_under_sam_lock or incoming_missiles > 0 or mortal_alarm:
+			lock_warning_banner.visible = mortal_alarm or incoming_missiles > 0 or fmod(alert_flash_timer, 2.0) < 1.3
 		else:
 			lock_warning_banner.visible = false
 
@@ -511,6 +549,7 @@ func _update_task_layer() -> void:
 		mission_mgr = get_parent().get_parent().get_node_or_null("MissionManager")
 	
 	if mission_label:
+		mission_label.visible = mission_mgr == null or not mission_mgr.has_node("MissionTracker")
 		if mission_mgr and mission_mgr.get("is_mission_active"):
 			var m_data = mission_mgr.get("active_mission_data")
 			var m_name = m_data.get("name", "TACTICAL OBJECTIVE")

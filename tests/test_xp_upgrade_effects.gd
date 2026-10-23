@@ -35,7 +35,7 @@ func run() -> void:
 	xp.current_level = 10 # Eligible level fixture for exercising the full deck.
 	for card in Deck.get_master_deck():
 		check(sm.apply_upgrade(card), "Actual catalog card applies: " + card.card_id)
-	check(sm.applied_cards.size() == 36, "All 36 cards have valid controller contracts")
+	check(sm.applied_cards.size() == 38, "All 38 cards, including two evolutions, have valid controller contracts")
 	var eligible = Deck.get_eligible_cards(player)
 	var legendary_filtered := true
 	for card in eligible:
@@ -66,13 +66,15 @@ func run() -> void:
 	var shots = get_nodes_in_group("combat_projectiles")
 	check(shots.size() == int(GameConstants.WEAPONS[rocket].projectile_count) + 4, "Rocket cards add four actual projectiles per trigger")
 	var rocket_shot = shots[0]
-	check(is_equal_approx(rocket_shot.blast_radius, float(GameConstants.WEAPONS[rocket].blast_radius) * 2.40), "Rocket blast-radius bonuses reach spawned projectiles")
+	# Original 140% expansion plus the Inferno evolution's additional 25%.
+	check(is_equal_approx(rocket_shot.blast_radius, float(GameConstants.WEAPONS[rocket].blast_radius) * 2.65), "Rocket blast-radius bonuses and Inferno evolution reach spawned projectiles")
 	check(rocket_shot.damage_data.cluster_count == 3 and rocket_shot.damage_data.lingering_fire, "Spawned rockets carry clusters and lingering-fire payloads")
 	for shot in shots:
 		shot.free()
 	weapons._launch_weapon_projectiles(cannon, weapons.weapon_states[cannon])
 	shots = get_nodes_in_group("combat_projectiles")
 	check(shots.size() == int(GameConstants.WEAPONS[cannon].projectile_count) + 3, "Cannon cards add three actual projectile streams")
+	check(is_equal_approx(shots[0].blast_radius, 3.0), "Devastator evolution gives actual cannon projectiles an explosive radius")
 	check(shots[0].damage_data.burn_chance > 0.0 and shots[0].damage_data.shock_chance > 0.0 and shots[0].damage_data.armored_bonus > 0.0, "Cannon projectiles carry burn, shock, and armor-piercing effects")
 	for shot in shots:
 		shot.free()
@@ -128,6 +130,7 @@ func run() -> void:
 	# Real pickup and kill events must share the same XP authority.
 	xp.reset_run()
 	var loot = load("res://src/loot/loot_manager.gd").new()
+	root.get_node("GameManager").change_state(GameManager.RunState.ACTIVE)
 	arena.add_child(loot)
 	var enemy := Hostile.new()
 	arena.add_child(enemy)
@@ -136,7 +139,7 @@ func run() -> void:
 	check(xp.total_xp_collected == 0 and player.get_node("RunProgression").current_run_xp == 0, "Enemy kill does not award XP before physical collection")
 	var drops = get_nodes_in_group("xp_drops")
 	check(drops.size() == 1 and drops[0].xp_amount == 3, "Enemy kill emits one physical XP drop")
-	drops[0]._trigger_collection()
+	drops[0]._on_body_entered(player)
 	check(xp.total_xp_collected == 3 and player.get_node("RunProgression").current_run_xp == 3, "Collected drop updates XP authority and compatibility ledger once")
 	var fresh_player = load("res://scenes/player/player.tscn").instantiate()
 	arena.add_child(fresh_player)
@@ -148,6 +151,10 @@ func run() -> void:
 	await process_frame
 	root.get_node("GameManager").start_new_run("apache")
 	xp.add_xp(25)
+	# The production overlay waits for its presentation delay before pausing combat.
+	for frame in range(90):
+		if ui.is_choosing: break
+		await process_frame
 	var key := InputEventKey.new()
 	key.keycode = KEY_1
 	key.pressed = true

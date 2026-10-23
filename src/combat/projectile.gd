@@ -41,6 +41,8 @@ var homing_target: Node3D:
 func _ready() -> void:
 	add_to_group("combat_projectiles")
 	if raycast:
+		# The swept query is explicitly updated below; avoid an automatic second query.
+		raycast.enabled = false
 		raycast.collision_mask = collision_mask
 	if velocity.is_zero_approx():
 		velocity = -global_transform.basis.z * speed
@@ -201,7 +203,10 @@ func _explode(center: Vector3) -> void:
 	sphere.radius = blast_radius
 	query.shape = sphere
 	query.transform = Transform3D(Basis(), center)
-	query.collision_mask = 5 # Enemies (4) + Player (1)
+	# Splash obeys the same faction/world targeting contract as the projectile.
+	# Player ordnance (6) cannot damage its own helicopter; enemy ordnance (3)
+	# cannot wipe out the enemy cohort that fired it. Buildings remain destructible.
+	query.collision_mask = collision_mask
 	
 	var results = space_state.intersect_shape(query, 32)
 	var processed_receivers: Array = []
@@ -282,6 +287,7 @@ func _spawn_mod_effects(center: Vector3) -> void:
 			var angle := float(i) * TAU / float(damage_data.cluster_count)
 			projectile.velocity = Vector3(cos(angle), 0.6, sin(angle)) * 16.0
 			projectile.lifetime = 0.22
+			projectile.collision_mask = collision_mask
 			get_tree().root.add_child(projectile)
 			var cluster_damage: DamageData = null
 			if damage_data != null:

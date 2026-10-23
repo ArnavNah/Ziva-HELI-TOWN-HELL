@@ -13,7 +13,6 @@ extends Node3D
 @export var min_pitch_deg: float = -75.0  # Aiming down
 @export var max_pitch_deg: float = 25.0   # Aiming up
 @export var tracking_speed: float = 26.0   # Rad/s tracking smoothing
-@export var auto_aim_cursor_radius: float = 18.0
 
 const SCREEN_ASSIST_RADIUS_PX: float = 65.0
 const SCREEN_RETENTION_RADIUS_PX: float = 90.0
@@ -31,11 +30,11 @@ var current_target_score: float = 0.0
 var is_aim_in_arc: bool = true
 var actual_aim_direction: Vector3 = Vector3.FORWARD
 var actual_impact_point: Vector3 = Vector3.ZERO
+var is_aim_blocked: bool = false
 
 var current_muzzle_toggle: bool = false
 var enemy_query_timer: float = 0.0
 var cached_enemies: Array = []
-var settle_timer: float = 0.0
 
 func _ready() -> void:
 	pass
@@ -84,10 +83,10 @@ func update_aim(camera: Camera3D, mouse_pos: Vector2, parent_heli: Node3D, delta
 
 	# 2. Update enemy cache periodically
 	enemy_query_timer -= delta
-	settle_timer = maxf(0.0, settle_timer - delta)
 	if enemy_query_timer <= 0.0:
 		enemy_query_timer = 0.08
 		cached_enemies = get_tree().get_nodes_in_group("enemies")
+		cached_enemies.append_array(get_tree().get_nodes_in_group("hostile_mission_targets"))
 
 	# 3. Direct Mouse Intent Priority & Screen-Space Proximity Selection
 	var heli_pos = parent_heli.global_position if parent_heli else Vector3.ZERO
@@ -116,10 +115,7 @@ func update_aim(camera: Camera3D, mouse_pos: Vector2, parent_heli: Node3D, delta
 
 			var max_dist_px = SCREEN_RETENTION_RADIUS_PX if (e == current_target_node) else SCREEN_ASSIST_RADIUS_PX
 			if screen_dist > max_dist_px:
-				# Also check world-space proximity as fallback for top-down views
-				var world_d = Vector2(e_pos.x - ground_target.x, e_pos.z - ground_target.z).length()
-				if world_d > auto_aim_cursor_radius:
-					continue
+				continue
 
 			# Line-of-sight check against world buildings (layer 2)
 			if space and not _has_line_of_sight(space, camera.global_position, e_pos, parent_heli):
@@ -142,7 +138,6 @@ func update_aim(camera: Camera3D, mouse_pos: Vector2, parent_heli: Node3D, delta
 		current_target_node = best_candidate
 		current_target_score = best_score
 		target_world_pos = _get_target_aim_point(best_candidate)
-		settle_timer = 0.20
 	else:
 		# Free aim: mouse moved away or target died/escaped
 		current_target_node = null
@@ -177,7 +172,7 @@ func update_aim(camera: Camera3D, mouse_pos: Vector2, parent_heli: Node3D, delta
 	_update_actual_impact_point(space, parent_heli)
 
 func _is_enemy_valid(e: Variant, heli_pos: Vector3) -> bool:
-	if not is_instance_valid(e) or not (e is Node3D) or not (e as Node).is_inside_tree():
+	if not is_instance_valid(e) or not (e is Node3D) or not (e as Node).is_inside_tree() or e.is_queued_for_deletion():
 		return false
 	if e.has_node("DamageReceiver"):
 		var rec = e.get_node("DamageReceiver")
@@ -192,7 +187,7 @@ func _resolve_enemy_node(collider: Object) -> Node3D:
 		return null
 	var n: Node = collider as Node
 	while n and n != get_tree().root:
-		if n.is_in_group("enemies"):
+		if n.is_in_group("enemies") or n.is_in_group("hostile_mission_targets"):
 			return n as Node3D
 		n = n.get_parent()
 	return null
@@ -213,9 +208,11 @@ func _get_target_aim_point(e: Node3D) -> Vector3:
 	return e.global_position + Vector3(0.0, 0.75, 0.0)
 
 func _update_actual_impact_point(space: PhysicsDirectSpaceState3D, parent_heli: Node3D) -> void:
-	var muzzle_pos = pitch_pivot.global_position if pitch_pivot else global_position
+	# Peek at the next firing barrel without advancing the alternating-shot state.
+	var muzzle_pos = get_next_muzzle_transform().origin
 	var aim_dist = (target_world_pos - muzzle_pos).length()
 	aim_dist = clampf(aim_dist, 10.0, 160.0)
+	is_aim_blocked = false
 
 	if space:
 		var q = PhysicsRayQueryParameters3D.create(muzzle_pos, muzzle_pos + actual_aim_direction * aim_dist, 6)
@@ -224,6 +221,8 @@ func _update_actual_impact_point(space: PhysicsDirectSpaceState3D, parent_heli: 
 		var hit = space.intersect_ray(q)
 		if not hit.is_empty():
 			actual_impact_point = hit.get("position", muzzle_pos + actual_aim_direction * aim_dist)
+			var collider = hit.get("collider")
+			is_aim_blocked = collider is CollisionObject3D and (collider.collision_layer & 2) != 0 and actual_impact_point.distance_to(target_world_pos) > 2.0
 			return
 
 	actual_impact_point = muzzle_pos + actual_aim_direction * aim_dist
@@ -237,6 +236,13 @@ func get_current_muzzle_transform() -> Transform3D:
 	return pitch_pivot.global_transform if pitch_pivot else global_transform
 
 ## Authoritative shot getter: alternates barrels for actual projectile firing
+func get_next_muzzle_transform() -> Transform3D:
+	if current_muzzle_toggle and muzzle_right:
+		return muzzle_right.global_transform
+	if not current_muzzle_toggle and muzzle_left:
+		return muzzle_left.global_transform
+	return get_current_muzzle_transform()
+
 func get_active_muzzle_transform() -> Transform3D:
 	current_muzzle_toggle = !current_muzzle_toggle
 	return get_current_muzzle_transform()

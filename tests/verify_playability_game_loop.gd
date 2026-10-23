@@ -132,7 +132,7 @@ func run() -> void:
 
 	# B) Target acquisition of enemy
 	var spawner = game.get_node("EnemySpawner")
-	var enemy1 = spawner.spawn_enemy_type("scout_buggy", Vector3(0, 0.6, -45.0))
+	var enemy1 = spawner.spawn_enemy_type("scout_buggy", Vector3(0, 0.6, -45.0), true)
 	await physics_frame
 	await physics_frame
 
@@ -177,13 +177,14 @@ func run() -> void:
 	var start_xp = progression.current_run_xp
 
 	# Spawn aerial drop at y=25.5
-	var air_pickup = loot_mgr.spawn_pickup(loot_mgr.PickupClass.PickupType.XP_GEM, Vector3(0, 25.5, -20.0), 5.0)
+	var air_pickup = loot_mgr.spawn_xp_drop(Vector3(0, 25.5, -20.0), 5)
 	await process_frame
 	await process_frame
 	verify(air_pickup.global_position.y > 20.0, "Air drop preserves elevation and does not snap to y=0 (y=%.2f)" % air_pickup.global_position.y)
 
 	# Move helicopter close to collect
 	player.global_position = Vector3(0, 25.0, -20.0)
+	air_pickup.start_attraction(player)
 	for i in 60:
 		await physics_frame
 		await process_frame
@@ -208,9 +209,9 @@ func run() -> void:
 	print("\n==================================================================")
 	print("PLAYABILITY VERIFICATION COMPLETE: %d/%d CHECKS PASSED" % [checks - failures.size(), checks])
 	if failures.is_empty():
-		print(">>> ALL 5 AUDIT PROMPTS SUCCESSFULLY SATISFIED <<<")
+		print(">>> SHORT GAME LOOP SMOKE CHECKS PASSED; SEE SOAK AND EDGE-CASE TESTS <<<")
 	else:
 		print(">>> FAILURES DETECTED: %s" % str(failures))
 	print("==================================================================")
 
-	quit(0 if failures.is_empty() else 1)
+	await load("res://tests/runtime_cleanup.gd").finish(self, 0 if failures.is_empty() else 1)

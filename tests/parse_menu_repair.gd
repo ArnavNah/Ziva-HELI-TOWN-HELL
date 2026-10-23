@@ -10,4 +10,4 @@ func run() -> void:
 				if not script or not script.can_instantiate():
 					failures += 1
 	print("PARSE_FAILURES=", failures)
-	quit(1 if failures else 0)
+	await load("res://tests/runtime_cleanup.gd").finish(self, 1 if failures else 0)

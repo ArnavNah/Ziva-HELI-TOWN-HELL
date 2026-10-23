@@ -24,11 +24,15 @@ var is_invulnerable: bool = false
 var debug_invulnerable: bool = false
 var drag_multiplier: float = 1.0 # Aerodynamic drag modifier (Ghost Rotor perk)
 var spawn_grace_timer: float = 0.0
+var mortal_protection = preload("res://src/player/mortal_protection.gd").new()
+var mortal_alarm_timer := 0.0
+var small_arms_armor := 0.0
+var radar_range_multiplier := 1.0
 var damage_history: Array[Dictionary] = []
 const MAX_DAMAGE_HISTORY: int = 50
 
 func has_protection() -> bool:
-	return debug_invulnerable or is_dying or (shield_timer > 0.0 and shield_capacity <= 0.0) or spawn_grace_timer > 0.0 or (is_dashing and dash_timer > 0.0)
+	return debug_invulnerable or is_dying or mortal_protection.grace_left > 0.0 or (shield_timer > 0.0 and shield_capacity <= 0.0) or spawn_grace_timer > 0.0 or (is_dashing and dash_timer > 0.0)
 
 func update_invulnerability_state() -> void:
 	is_invulnerable = has_protection()
@@ -39,6 +43,7 @@ func get_protection_reasons() -> Array[String]:
 	if is_dying: reasons.append("dying")
 	if shield_timer > 0.0: reasons.append("shield")
 	if spawn_grace_timer > 0.0: reasons.append("spawn_grace")
+	if mortal_protection.grace_left > 0.0: reasons.append("mortal_grace")
 	if is_dashing and dash_timer > 0.0: reasons.append("dash")
 	return reasons
 
@@ -550,6 +555,8 @@ func _physics_process(delta: float) -> void:
 	_process_flight_physics(delta)
 
 func _process_buff_timers(delta: float) -> void:
+	mortal_protection.advance(delta, current_hull, max_hull)
+	mortal_alarm_timer = maxf(0.0, mortal_alarm_timer - delta)
 	if spawn_grace_timer > 0.0:
 		spawn_grace_timer = maxf(0.0, spawn_grace_timer - delta)
 
@@ -1183,8 +1190,22 @@ func take_damage(amount_or_data: Variant, source: String = "Enemy", hit_origin: 
 		update_invulnerability_state()
 	if effective_damage <= 0.0:
 		return
+	# Flat plating applies only to identified non-explosive enemy small arms.
+	if amount_or_data is RefCounted and "blast_radius" in amount_or_data and "weapon_type" in amount_or_data:
+		if amount <= 18.0 and amount_or_data.blast_radius <= 0.0 and amount_or_data.weapon_type == GameConstants.WeaponType.MACHINE_GUN:
+			effective_damage = maxf(effective_damage * 0.10, effective_damage - small_arms_armor)
 
 	var prev_hull: float = current_hull
+	if source not in ["Building Crash", "Ground Impact", "Ground Crash", "Fuel Starvation"]:
+		var was_armed: bool = mortal_protection.armed
+		effective_damage = mortal_protection.limit_damage(effective_damage, current_hull, max_hull)
+		if was_armed and not mortal_protection.armed:
+			mortal_alarm_timer = 2.0
+			update_invulnerability_state()
+			if has_node("/root/AudioManager"):
+				get_node("/root/AudioManager").play_sfx("alarm")
+	if effective_damage <= 0.0:
+		return
 	current_hull = maxf(0.0, current_hull - effective_damage)
 	var accepted_damage: float = prev_hull - current_hull
 	

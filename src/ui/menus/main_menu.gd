@@ -153,7 +153,7 @@ func _on_manual_pressed() -> void:
 		manual_dialog.popup_centered(Vector2i(900, 540))
 
 func _on_exit_pressed() -> void:
-	get_node("/root/UIFlow").confirm_action("Quit game?", "Your completed rewards and purchases are saved.", func(): get_tree().quit(), exit_btn)
+	get_node("/root/UIFlow").confirm_action("Quit game?", "Your completed rewards and purchases are saved.", get_node("/root/UIFlow").quit_game, exit_btn)
 
 func _sync_overlay_focus() -> void:
 	var v_menu = get_node_or_null("VehicleSelectionMenu")

@@ -24,10 +24,12 @@ const BGM_BPM: float = 128.0
 
 # Procedural BGM Players & Dynamic State
 var music_mode: String = "calm" # "calm", "combat", "boss", "silent"
+var recorded_music_layers := false
 var bgm_player_calm: AudioStreamPlayer
 var bgm_player_combat: AudioStreamPlayer
 var bgm_player_boss: AudioStreamPlayer
 var super_active_timer: float = 0.0
+var _shutting_down: bool = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -43,6 +45,20 @@ func _process(delta: float) -> void:
 			player.volume_db = -80.0 if master_volume * sfx_volume <= 0.001 else clampf(linear_to_db(master_volume * sfx_volume) + float(player.get_meta("volume_offset", 0.0)), -80.0, 6.0)
 
 func _exit_tree() -> void:
+	_stop_audio_players()
+	sound_cache.clear()
+
+func prepare_shutdown() -> void:
+	_shutting_down = true
+	set_process(false)
+	_stop_audio_players()
+	# Playback retirement is asynchronous on the audio mixer. Give it a mix
+	# interval before destroying the stream cache and terminating the process.
+	if is_inside_tree():
+		await get_tree().create_timer(0.15, true).timeout
+	sound_cache.clear()
+
+func _stop_audio_players() -> void:
 	if is_instance_valid(bgm_player_calm):
 		bgm_player_calm.stop()
 		bgm_player_calm.stream = null
@@ -56,7 +72,6 @@ func _exit_tree() -> void:
 		if is_instance_valid(p):
 			p.stop()
 			p.stream = null
-	sound_cache.clear()
 
 func _setup_audio_pool() -> void:
 	for i in range(POOL_SIZE):
@@ -118,6 +133,10 @@ func _update_bgm_crossfade(delta: float) -> void:
 	var target_calm: float = base_db if music_mode == "calm" else -80.0
 	var target_combat: float = base_db if music_mode == "combat" else -80.0
 	var target_boss: float = base_db if music_mode == "boss" else -80.0
+	if recorded_music_layers:
+		# Recorded files are stems with a shared tempo and loop length, not three full mixes.
+		target_calm = base_db - (8.0 if music_mode in ["combat", "boss"] else 0.0) if music_mode != "silent" else -80.0
+		target_combat = base_db - (6.0 if music_mode == "boss" else 0.0) if music_mode in ["combat", "boss"] else -80.0
 
 	var lerp_speed: float = clampf(delta * 4.0, 0.0, 1.0)
 	bgm_player_calm.volume_db = lerpf(bgm_player_calm.volume_db, target_calm, lerp_speed)
@@ -125,6 +144,13 @@ func _update_bgm_crossfade(delta: float) -> void:
 	bgm_player_boss.volume_db = lerpf(bgm_player_boss.volume_db, target_boss, lerp_speed)
 
 	# Devastation Super pitch excitation
+	if recorded_music_layers:
+		# Keep supplied stems phase aligned through overdrive and recovery.
+		super_active_timer = maxf(0.0, super_active_timer - delta)
+		bgm_player_calm.pitch_scale = 1.0
+		bgm_player_combat.pitch_scale = 1.0
+		bgm_player_boss.pitch_scale = 1.0
+		return
 	if super_active_timer > 0.0:
 		super_active_timer -= delta
 		bgm_player_combat.pitch_scale = lerpf(bgm_player_combat.pitch_scale, 1.08, clampf(delta * 6.0, 0.0, 1.0))
@@ -167,6 +193,34 @@ func _generate_procedural_sounds() -> void:
 	sound_cache["bgm_calm"] = _create_calm_stream()
 	sound_cache["bgm_combat"] = _create_combat_stream()
 	sound_cache["bgm_boss"] = _create_boss_stream()
+	_load_sample_overrides()
+
+func _load_sample_overrides(base_path: String = "res://assets/audio") -> void:
+	recorded_music_layers = false
+	var stems: Array[AudioStreamWAV] = []
+	# Optional licensed samples replace the corresponding synthesized fallback.
+	# Load WAV directly as well, so a newly supplied file works before editor import.
+	for key in sound_cache.keys():
+		var folder := "music" if str(key).begins_with("bgm_") else "sfx"
+		var path := "%s/%s/%s.wav" % [base_path, folder, key]
+		if key == "helicopter_rotor":
+			path = base_path + "/sfx/helicopter_rotor_loop.wav"
+		if FileAccess.file_exists(path):
+			var sample := AudioStreamWAV.load_from_file(ProjectSettings.globalize_path(path))
+			if sample:
+				if folder == "music" or key == "helicopter_rotor":
+					sample.loop_mode = AudioStreamWAV.LOOP_FORWARD
+					sample.loop_begin = 0
+					sample.loop_end = int(sample.get_length() * sample.mix_rate)
+				sound_cache[key] = sample
+				if folder == "music": stems.append(sample)
+	if stems.size() == 3:
+		recorded_music_layers = true
+		for stem in stems:
+			if stem.mix_rate != stems[0].mix_rate or absf(stem.get_length() - stems[0].get_length()) > 1.0 / float(stems[0].mix_rate):
+				recorded_music_layers = false
+		if not recorded_music_layers:
+			push_warning("Music stems must have matching sample rates and exact loop lengths; using crossfade playback.")
 
 func _connect_event_bus() -> void:
 	var bus: Node = null
@@ -209,7 +263,7 @@ func get_helicopter_rotor_stream() -> AudioStreamWAV:
 	sound_cache["helicopter_rotor"] = s
 	return s
 func play_sfx(sfx_name: String, pitch_scale: float = 1.0, volume_offset_db: float = 0.0) -> void:
-	if sfx_volume <= 0.0 or master_volume <= 0.0:
+	if _shutting_down or sfx_volume <= 0.0 or master_volume <= 0.0:
 		return
 	if not sound_cache.has(sfx_name):
 		return

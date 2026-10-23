@@ -229,7 +229,7 @@ func _get_variant_counts() -> Dictionary:
 				counts[v_id] = counts.get(v_id, 0) + 1
 	return counts
 
-func spawn_director_card(card: SpawnCard, stream: String) -> Array[Node3D]:
+func spawn_director_card(card: SpawnCard, stream: String, launch_source: Node3D = null) -> Array[Node3D]:
 	var spawned: Array[Node3D] = []
 	if not is_inside_tree() or get_tree() == null:
 		return spawned
@@ -240,6 +240,12 @@ func spawn_director_card(card: SpawnCard, stream: String) -> Array[Node3D]:
 	var cd = get_node_or_null("/root/CombatDirector")
 	if cd == null:
 		return spawned
+	if launch_source != null:
+		# Visible launches are restricted to an actual living carrier, not a public spawn bypass.
+		if not is_instance_valid(launch_source) or not launch_source.is_in_group("bosses") or not launch_source.has_method("escort_launch_position") or not card.is_air:
+			return spawned
+		if not launch_source.has_node("DamageReceiver") or launch_source.get_node("DamageReceiver").is_dead:
+			return spawned
 	var token: int = cd.reserve_spawn_card(card, stream)
 	if token == 0:
 		return spawned
@@ -248,7 +254,16 @@ func spawn_director_card(card: SpawnCard, stream: String) -> Array[Node3D]:
 	encounter_angle = encounter_rng.randf() * TAU
 
 	for i in range(card.group_size):
-		var spawn_pos = find_valid_spawn_position(family, center_pos, card.variant_id)
+		var spawn_pos: Vector3 = launch_source.escort_launch_position(i) if launch_source else find_valid_spawn_position(family, center_pos, card.variant_id)
+		if launch_source and spawn_pos != Vector3.INF:
+			var clearance := PhysicsShapeQueryParameters3D.new()
+			var sphere := SphereShape3D.new()
+			sphere.radius = 3.8
+			clearance.shape = sphere
+			clearance.transform.origin = spawn_pos
+			clearance.collision_mask = 6
+			if not get_tree().root.get_world_3d().direct_space_state.intersect_shape(clearance, 1).is_empty():
+				spawn_pos = Vector3.INF
 		if spawn_pos == Vector3.INF:
 			# Failed placement: refund remaining unspawned units in group
 			var remaining = card.group_size - spawned.size()
@@ -271,6 +286,8 @@ func spawn_director_card(card: SpawnCard, stream: String) -> Array[Node3D]:
 			get_tree().root.add_child(enemy_node)
 
 		enemy_node.global_position = spawn_pos
+		if launch_source and enemy_node is PhysicsBody3D:
+			enemy_node.add_collision_exception_with(launch_source)
 
 		if has_node("/root/ShaderManager"):
 			get_node("/root/ShaderManager").apply_selective_outline(enemy_node, 0.009)
@@ -407,6 +424,8 @@ func spawn_enemy_type(variant_key: String, custom_pos: Vector3 = Vector3.INF, al
 	return enemy_node
 
 func spawn_bounds_radius(variant_key: String) -> float:
+	if variant_key == "boss_ground_fortress": return 14.0
+	if variant_key == "boss_air_titan": return 19.0
 	# Includes hull, gun overhang and rotor/wing span, rather than only the root point.
 	if variant_key in ["scout_drone", "kamikaze_drone", "shield_drone", "repair_drone"]:
 		return 3.0
@@ -517,8 +536,12 @@ func find_valid_spawn_position(family: String, center_pos: Vector3, variant_key:
 					box_size = Vector3(3.4, 2.4, 6.4)
 				elif variant_key == "raptor_raider":
 					box_size = Vector3(3.8, 2.2, 5.8)
+				elif variant_key == "boss_ground_fortress":
+					box_size = Vector3(11, 8, 18)
 				_cached_box_shape.size = box_size
 				_cached_shape_query.transform = Transform3D(Basis.IDENTITY, Vector3(cand_x, surface_y + 1.5, cand_z))
+				if variant_key == "boss_ground_fortress":
+					_cached_shape_query.transform.origin.y = surface_y + 4.5
 				var hits = space.intersect_shape(_cached_shape_query, 1)
 				if not hits.is_empty():
 					continue
@@ -546,6 +569,7 @@ func find_valid_spawn_position(family: String, center_pos: Vector3, variant_key:
 				var shape_query = PhysicsShapeQueryParameters3D.new()
 				var sphere = SphereShape3D.new()
 				sphere.radius = 3.8
+				if variant_key == "boss_air_titan": sphere.radius = 16.0
 				shape_query.shape = sphere
 				shape_query.transform = Transform3D(Basis.IDENTITY, Vector3(cand_x, cand_y, cand_z))
 				shape_query.collision_mask = 6

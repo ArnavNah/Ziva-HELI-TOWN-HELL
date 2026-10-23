@@ -264,36 +264,12 @@ func _gather_meshes(node: Node, out_list: Array[MeshInstance3D]) -> void:
 
 
 
-func _attach_outline_to_mesh(mesh_inst: MeshInstance3D, width: float, color: Color) -> void:
-
+func _attach_outline_to_mesh(mesh_inst: MeshInstance3D, _width: float, _color: Color) -> void:
 	if not mesh_inst or not mesh_inst.mesh:
-
 		return
-
-	var outline_mat := _get_shared_outline_mat()
-
-	var had_override := mesh_inst.material_override != null
-
-	for surface in range(1 if had_override else mesh_inst.mesh.get_surface_count()):
-
-		var base_mat := mesh_inst.get_active_material(surface)
-
-		if base_mat:
-
-			if base_mat.next_pass == outline_mat:
-
-				continue
-
-			base_mat.next_pass = outline_mat
-
-		elif had_override:
-
-			mesh_inst.material_override = outline_mat
-
-		else:
-
-			mesh_inst.set_surface_override_material(surface, outline_mat)
-
+	# Scope outlines to this instance: cached base materials may also be used
+	# by unrelated world geometry. Never mutate their shared next_pass.
+	mesh_inst.material_overlay = _get_shared_outline_mat()
 
 
 func register_world_material(material: ShaderMaterial) -> void:

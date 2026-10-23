@@ -13,6 +13,9 @@ var is_night: bool = false
 var lightning_timer: float = 0.0
 var _transition_tween: Tween
 var grade_material: ShaderMaterial
+var biome := "town"
+var biome_clock := 0.0
+var sandstorm_active := false
 const GRADE_SHADER = preload("res://src/shaders/battlefield_grade.gdshader")
 
 # --- Presets for each weather state ----------------------------------------
@@ -26,7 +29,8 @@ const PRESET_DAY := {
 	"ambient_color": Color(0.72, 0.82, 0.90),
 	"fog_density": 0.0004,
 	"fog_depth_begin": 150.0,
-	"fog_depth_end": 330.0,
+	# Conceal the 260m town visibility boundary, including 76m foliage sectors.
+	"fog_depth_end": 200.0,
 	"fog_color": Color(0.68, 0.84, 0.98),
 	"fog_light_energy": 0.25,
 	"fog_height_density": 0.001,
@@ -89,6 +93,8 @@ func _ready() -> void:
 	_build_color_grade()
 	_setup_rain_particles()
 	_apply_preset(PRESET_DAY, 0.0)
+	biome = preload("res://src/world/sortie_biome.gd").selected()
+	_apply_biome_weather()
 	if is_inside_tree() and has_node("/root/EventBus"):
 		get_node("/root/EventBus").wave_started.connect(_on_wave_started)
 
@@ -116,6 +122,9 @@ func _setup_rain_particles() -> void:
 	add_child(rain_particles)
 
 func _on_wave_started(_wave: int, theme: String, _duration: float) -> void:
+	if biome != "town":
+		_apply_biome_weather()
+		return
 	match theme:
 		"Storm Surge":
 			set_storm_mode(true)
@@ -226,6 +235,21 @@ func _get_sky_material() -> ProceduralSkyMaterial:
 # --- Lightning Strikes During Storm ----------------------------------------
 
 func _process(delta: float) -> void:
+	var gm = get_node_or_null("/root/GameManager")
+	if gm and gm.current_state != gm.RunState.ACTIVE: return
+	var player = get_tree().get_first_node_in_group("player")
+	if grade_material:
+		var emergency: float = clampf(player.mortal_alarm_timer / 2.0, 0.0, 0.65) if is_instance_valid(player) and "mortal_alarm_timer" in player else 0.0
+		grade_material.set_shader_parameter("emergency_desaturation", emergency)
+	biome_clock += delta
+	if biome == "desert":
+		var storm_now := fmod(biome_clock, 75.0) >= 45.0
+		if storm_now != sandstorm_active:
+			sandstorm_active = storm_now
+			_apply_biome_weather()
+	if biome == "harbor":
+		for light in get_tree().get_nodes_in_group("harbor_searchlights"):
+			light.rotation.y = sin(biome_clock * 0.35 + light.global_position.z) * 0.65
 	if is_storming:
 		if rain_particles and is_instance_valid(rain_particles):
 			var cam = get_viewport().get_camera_3d() if get_viewport() else null
@@ -236,6 +260,25 @@ func _process(delta: float) -> void:
 			if lightning_timer <= 0.0:
 				lightning_timer = randf_range(4.0, 9.0)
 				_flash_lightning()
+
+func _apply_biome_weather() -> void:
+	if biome == "harbor":
+		is_night = true
+		is_storming = false
+		if rain_particles: rain_particles.emitting = false
+		_apply_preset(PRESET_NIGHT, 1.0)
+	elif biome == "desert":
+		is_storming = false
+		is_night = false
+		if rain_particles: rain_particles.emitting = false
+		var preset: Dictionary = PRESET_DAY.duplicate()
+		preset.fog_color = Color("c8ae80")
+		preset.sky_horizon = Color("d9c79c")
+		preset.sun_color = Color("ffe8b6")
+		preset.fog_density = 0.012 if sandstorm_active else 0.001
+		preset.fog_depth_begin = 28.0 if sandstorm_active else 100.0
+		preset.fog_depth_end = 115.0 if sandstorm_active else 300.0
+		_apply_preset(preset, 3.0)
 
 func _flash_lightning() -> void:
 	if not dir_light:

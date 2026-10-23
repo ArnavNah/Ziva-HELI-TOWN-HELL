@@ -5,6 +5,7 @@ uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_n
 uniform float saturation : hint_range(0.0, 1.5) = 0.96;
 uniform float shadow_lift : hint_range(0.0, 0.15) = 0.018;
 uniform float warmth : hint_range(-0.1, 0.1) = 0.008;
+uniform float emergency_desaturation = 0.0;
 
 // Light Post-Processing Parameters
 uniform float vignette_intensity : hint_range(0.0, 1.0) = 0.08;
@@ -26,7 +27,7 @@ void fragment() {
 
     // 2. Tactical Color Grading & Luma Lift
     float luma = dot(scene, vec3(0.2126, 0.7152, 0.0722));
-    vec3 graded = mix(vec3(luma), scene, saturation);
+    vec3 graded = mix(vec3(luma), scene, saturation * (1.0 - emergency_desaturation));
     float shadows = 1.0 - smoothstep(0.05, 0.48, luma);
     float highlights = smoothstep(0.35, 0.90, luma);
 

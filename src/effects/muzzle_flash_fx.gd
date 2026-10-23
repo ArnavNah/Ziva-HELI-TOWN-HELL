@@ -26,6 +26,9 @@ var mat_front: ShaderMaterial
 func _init() -> void:
 	_build_geometry()
 
+func _ready() -> void:
+	set_process(active)
+
 func _build_geometry() -> void:
 	# Shared QuadMesh: 1.0m x 1.0m
 	var q_mesh = QuadMesh.new()
@@ -70,6 +73,7 @@ func activate(
 	scale_mult: float = 1.0
 ) -> void:
 	active = true
+	set_process(true)
 	elapsed = 0.0
 	visible = true
 
@@ -158,6 +162,7 @@ func _process(delta: float) -> void:
 
 func deactivate() -> void:
 	active = false
+	set_process(false)
 	visible = false
 	has_source = false
 	source_node = null
