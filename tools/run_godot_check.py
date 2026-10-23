@@ -5,7 +5,8 @@ import sys
 root = pathlib.Path(__file__).resolve().parents[1]
 script = sys.argv[1] if len(sys.argv) > 1 else "tests/verify_polish.gd"
 import shutil
-godot_bin = shutil.which("godot") or r"D:\Godot\Godot.exe"
+import os
+godot_bin = shutil.which("godot") or (r"C:\Users\Prime 3\Desktop\Godot.exe" if os.path.exists(r"C:\Users\Prime 3\Desktop\Godot.exe") else r"D:\Godot\Godot.exe")
 command = [godot_bin, "--path", str(root), "--script", "res://" + script]
 if "--headless" in sys.argv:
     command.append("--headless")

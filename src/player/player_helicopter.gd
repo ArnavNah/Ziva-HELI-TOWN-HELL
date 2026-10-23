@@ -721,7 +721,7 @@ func _process_flight_physics(delta: float) -> void:
 	target_fwd_vel = target_horiz_vel.dot(forward_dir)
 	target_str_vel = target_horiz_vel.dot(right_dir)
 	var control_authority = engine_factor * cargo_mass_multiplier * thrust_multiplier
-	var drag_rate = (4.0 + planar_speed / maxf(max_speed, 0.1) * 4.8) * drag_multiplier
+	var drag_rate = (6.2 + planar_speed / maxf(max_speed, 0.1) * 4.8) * drag_multiplier
 	var forward_rate = 4.2 * control_authority if absf(thrust_input) > 0.001 else drag_rate
 	if thrust_input < 0.0 and v_fwd > 1.8:
 		forward_rate = 7.8 * control_authority

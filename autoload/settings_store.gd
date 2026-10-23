@@ -2,7 +2,7 @@ extends Node
 signal changed(key: String)
 signal save_failed(message: String)
 const Storage = preload("res://src/ui/menus/game_storage.gd")
-const DEFAULTS := {"master": 1.0, "sfx": 1.0, "music": 0.8, "shake": 2, "flashes": false, "telemetry": true, "fps": 0, "vsync": true, "window": 0}
+const DEFAULTS := {"master": 1.0, "sfx": 1.0, "music": 0.8, "shake": 2, "flashes": false, "telemetry": true, "fps": 60, "vsync": false, "window": 0}
 var values: Dictionary = DEFAULTS.duplicate()
 var last_error: String = ""
 var save_path: String

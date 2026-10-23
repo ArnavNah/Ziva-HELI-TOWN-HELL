@@ -102,6 +102,8 @@ func _infer_profile_id() -> String:
 			return "enemy_rocket"
 		return "enemy_bullet"
 
+static var _profile_materials: Dictionary = {}
+
 func _apply_visual_profile() -> void:
 	if not has_node("/root/FXManager"):
 		return
@@ -110,15 +112,18 @@ func _apply_visual_profile() -> void:
 	if not profile:
 		return
 
-	# Apply tracer coloration if MeshInstance3D exists
+	# Apply tracer coloration if MeshInstance3D exists (using shared material cache to avoid GC churn)
 	var mesh_inst = get_node_or_null("MeshInstance3D") as MeshInstance3D
 	if mesh_inst:
-		var mat = StandardMaterial3D.new()
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.albedo_color = profile.tracer_color
-		mat.emission_enabled = true
-		mat.emission = profile.tracer_color
-		mat.emission_energy_multiplier = 3.5
+		var mat: StandardMaterial3D = _profile_materials.get(profile_id, null)
+		if not mat:
+			mat = StandardMaterial3D.new()
+			mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			mat.albedo_color = profile.tracer_color
+			mat.emission_enabled = true
+			mat.emission = profile.tracer_color
+			mat.emission_energy_multiplier = 3.5
+			_profile_materials[profile_id] = mat
 		mesh_inst.material_override = mat
 
 	if profile.has_trail:

@@ -63,8 +63,8 @@ var run_xp: int = 0
 var active_run_progression: Node = null
 
 # Frame Pacing & Display Settings (Proper 60 FPS Target)
-var target_fps: int = 0
-var vsync_enabled: bool = true
+var target_fps: int = 60
+var vsync_enabled: bool = false
 var show_fps_telemetry: bool = true
 
 func _ready() -> void:

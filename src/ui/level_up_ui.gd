@@ -63,6 +63,8 @@ func _reset_overlay() -> void:
 	resume_state = -1
 
 func _on_run_state_changed(state: int, _previous: int) -> void:
+	if not is_inside_tree():
+		return
 	var gm = get_node("/root/GameManager")
 	if state in [gm.RunState.MENU, gm.RunState.LOADING, gm.RunState.RESULTS]:
 		_reset_overlay()
@@ -70,6 +72,8 @@ func _on_run_state_changed(state: int, _previous: int) -> void:
 		_present_pending.call_deferred()
 
 func _present_pending() -> void:
+	if not is_inside_tree():
+		return
 	var xp = get_node_or_null("/root/XpManager")
 	if xp and xp.has_pending_level_ups() and not is_choosing:
 		_on_level_up(xp.current_level - xp.queued_level_ups + 1)

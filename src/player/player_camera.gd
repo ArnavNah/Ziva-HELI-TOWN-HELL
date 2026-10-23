@@ -99,14 +99,14 @@ func update_camera(delta: float) -> void:
 	current_cam_dist = lerpf(current_cam_dist, target_dist, 1.0 - exp(-6.5 * delta))
 	current_cam_height = lerpf(current_cam_height, target_height, 1.0 - exp(-6.5 * delta))
 
-	# 2. Responsive Angular Follow (Maintains sustained-turn yaw lag below 5.0 degrees)
+	# 2. Responsive Angular Follow (Maintains sustained-turn yaw lag below 2.5 degrees)
 	var desired_yaw: float = atan2(target_forward.x, target_forward.z)
-	var yaw_damping: float = 1.0 - exp(-30.0 * delta)
+	var yaw_damping: float = 1.0 - exp(-36.0 * delta)
 	current_cam_yaw = lerp_angle(current_cam_yaw, desired_yaw, yaw_damping)
 
 	# 3. Dual-Rate Responsive Position Tracking (Tight street-canyon tracking + cushioned vertical spring)
-	var horiz_damping: float = 1.0 - exp(-13.0 * delta)
-	var vert_damping: float = 1.0 - exp(-13.0 * delta)
+	var horiz_damping: float = 1.0 - exp(-24.0 * delta)
+	var vert_damping: float = 1.0 - exp(-24.0 * delta)
 	smoothed_target_pos.x = lerpf(smoothed_target_pos.x, target_pos.x, horiz_damping)
 	smoothed_target_pos.z = lerpf(smoothed_target_pos.z, target_pos.z, horiz_damping)
 	smoothed_target_pos.y = lerpf(smoothed_target_pos.y, target_pos.y, vert_damping)
@@ -159,7 +159,7 @@ func update_camera(delta: float) -> void:
 	# 6. Lazy Dynamic Look-Ahead Tracking
 	var forward_look: Vector3 = cam_dir * target_lookahead + Vector3(vel_x * 0.035, 0.0, vel_z * 0.035)
 	var raw_look_target: Vector3 = smoothed_target_pos + forward_look + Vector3(0, -2.0, 0)
-	lazy_look_point = lazy_look_point.lerp(raw_look_target, 1.0 - exp(-9.0 * delta))
+	lazy_look_point = lazy_look_point.lerp(raw_look_target, 1.0 - exp(-22.0 * delta))
 	current_look_target = lazy_look_point
 
 	# 7. Cool Dynamic Banking / Roll Tilt Follow
