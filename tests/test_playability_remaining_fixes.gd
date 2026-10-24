@@ -59,7 +59,7 @@ func run() -> void:
 	root.add_child(enemy_b)
 	enemy_b.add_to_group("enemies")
 	turret.enemy_query_timer = 0.0
-	var screen_b := camera.unproject_position(enemy_b.global_position)
+	var screen_b: Vector2 = camera.unproject_position(enemy_b.global_position)
 	turret.update_aim(camera, screen_b, player, 0.01667)
 	check(turret.current_target_node == enemy_b, "moving from enemy A to B switches the target immediately")
 	enemy_b.queue_free()
