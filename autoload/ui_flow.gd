@@ -19,9 +19,6 @@ func _notification(what: int) -> void:
 		confirm_action("Quit game?", "Your current run will end. Completed run rewards and purchases stay saved.", quit_game)
 
 func quit_game() -> void:
-	if not OS.get_environment("ZIVA_TEST_DATA_DIR").is_empty():
-		print("TEST_QUIT_REQUEST")
-		print_stack()
 	if _quit_requested:
 		return
 	_quit_requested = true

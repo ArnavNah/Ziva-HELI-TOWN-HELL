@@ -85,17 +85,15 @@ func _update_shield_bubble() -> void:
 						rec.shield_health = maxf(rec.shield_health, shield_bonus)
 
 	# Clean up allies that moved away or died
-	var to_remove: Array[Node] = []
+	var remaining_shielded: Array[Node] = []
 	for a in shielded_allies:
-		if not is_instance_valid(a) or not current_valid_allies.has(a):
-			to_remove.append(a)
-			if is_instance_valid(a):
-				var rec = a.get_node_or_null("DamageReceiver")
-				if rec != null:
-					rec.shield_health = 0.0
-
-	for r in to_remove:
-		shielded_allies.erase(r)
+		if is_instance_valid(a) and current_valid_allies.has(a):
+			remaining_shielded.append(a)
+		elif is_instance_valid(a):
+			var rec = a.get_node_or_null("DamageReceiver")
+			if rec != null:
+				rec.shield_health = 0.0
+	shielded_allies = remaining_shielded
 
 func _finalize_death() -> void:
 	# Clear shield buffs on all allies when killed

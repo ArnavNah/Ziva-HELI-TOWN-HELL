@@ -517,7 +517,7 @@ func get_avoidance_steering(forward_dir: Vector3, probe_dist: float = 16.0) -> V
 	horiz_fwd = horiz_fwd.normalized()
 	if avoidance_timer > 0 and horiz_fwd.dot(cached_probe_direction) > 0.94:
 		return cached_avoidance
-	avoidance_timer = 0.06
+	avoidance_timer = 0.12 + randf_range(0.0, 0.03)
 	cached_probe_direction = horiz_fwd
 
 	var origin = global_position + Vector3(0.0, 1.2, 0.0)
@@ -1036,7 +1036,7 @@ func steer_air_unit(desired_vel: Vector3, min_alt: float, max_alt: float, delta:
 
 	# 3D Probes: Forward elevated/downward whisker & true rooftop clearance (Mask 2)
 	if roof_probe_timer <= 0 and is_inside_tree() and get_world_3d() != null:
-		roof_probe_timer = 0.08
+		roof_probe_timer = 0.20 + randf_range(0.0, 0.04)
 		cached_roof_height = -1000.0
 		var space = get_world_3d().direct_space_state
 		if space != null:

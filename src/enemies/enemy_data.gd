@@ -21,22 +21,6 @@ const ACTIVE_GROUND_VARIANTS: Array[String] = [
 ]
 
 const VARIANTS: Dictionary = {
-	"rocket_buggy": {
-		"name": "Rocket Buggy", "family": "ground", "base_hull": 42.0,
-		"gate_wave": 2, "max_cap": 4, "speed": 12.0,
-		"affinity": GameConstants.TargetAffinity.LIGHT, "score": 110, "xp": 3, "is_heavy": false,
-		"role": ROLE_MOBILE_SHOOTER, "min_range": 28.0, "max_range": 48.0, "retreat_dist": 18.0, "weapon_reach": 75.0,
-		"windup_time": 0.40, "aim_commit_ratio": 0.65, "fire_cooldown": 3.0, "burst_count": 2, "burst_delay": 0.20,
-		"proj_speed": 72.0, "lead_accuracy": 0.85, "spread_rad": 0.02, "requires_heavy_slot": false, "requires_air_slot": false
-	},
-	"flame_tank": {
-		"name": "Incendiary Tank", "family": "ground", "base_hull": 115.0,
-		"gate_wave": 5, "max_cap": 2, "speed": 7.5,
-		"affinity": GameConstants.TargetAffinity.ARMORED, "score": 230, "xp": 7, "is_heavy": true,
-		"role": ROLE_GROUND_HEAVY, "min_range": 16.0, "max_range": 28.0, "retreat_dist": 10.0, "weapon_reach": 34.0,
-		"windup_time": 0.30, "aim_commit_ratio": 0.70, "fire_cooldown": 3.2, "burst_count": 5, "burst_delay": 0.08,
-		"proj_speed": 85.0, "lead_accuracy": 0.82, "spread_rad": 0.06, "requires_heavy_slot": false, "requires_air_slot": false
-	},
 	"rail_crawler": {
 		"name": "Rail Crawler", "family": "ground", "base_hull": 90.0,
 		"gate_wave": 6, "max_cap": 2, "speed": 5.5,
@@ -85,14 +69,6 @@ const VARIANTS: Dictionary = {
 		"windup_time": 0.35, "aim_commit_ratio": 0.70, "fire_cooldown": 2.8, "burst_count": 4, "burst_delay": 0.15,
 		"proj_speed": 150.0, "lead_accuracy": 0.88, "spread_rad": 0.025, "requires_heavy_slot": false, "requires_air_slot": true
 	},
-	"mortar_crawler": {
-		"name": "Mortar Crawler", "family": "ground", "base_hull": 85.0,
-		"gate_wave": 4, "max_cap": 3, "speed": 5.0,
-		"affinity": GameConstants.TargetAffinity.ARMORED, "score": 190, "xp": 6, "is_heavy": true,
-		"role": ROLE_RANGED_SPECIALIST, "min_range": 55.0, "max_range": 85.0, "retreat_dist": 38.0, "weapon_reach": 115.0,
-		"windup_time": 0.85, "aim_commit_ratio": 0.60, "fire_cooldown": 4.5, "burst_count": 1, "burst_delay": 0.0,
-		"proj_speed": 65.0, "lead_accuracy": 0.90, "spread_rad": 0.02, "requires_heavy_slot": true, "requires_air_slot": false
-	},
 	"assault_apc": {
 		"name": "Assault APC", "family": "ground", "base_hull": 75.0,
 		"gate_wave": 3, "max_cap": 4, "speed": 9.5,
@@ -100,22 +76,6 @@ const VARIANTS: Dictionary = {
 		"role": ROLE_MOBILE_SHOOTER, "min_range": 28.0, "max_range": 45.0, "retreat_dist": 18.0, "weapon_reach": 70.0,
 		"windup_time": 0.35, "aim_commit_ratio": 0.70, "fire_cooldown": 2.2, "burst_count": 3, "burst_delay": 0.12,
 		"proj_speed": 160.0, "lead_accuracy": 0.88, "spread_rad": 0.02, "requires_heavy_slot": false, "requires_air_slot": false
-	},
-	"sam_launcher": {
-		"name": "SAM Launcher", "family": "ground", "base_hull": 105.0,
-		"gate_wave": 5, "max_cap": 3, "speed": 6.0,
-		"affinity": GameConstants.TargetAffinity.ARMORED, "score": 260, "xp": 8, "is_heavy": true,
-		"role": ROLE_RANGED_SPECIALIST, "min_range": 55.0, "max_range": 85.0, "retreat_dist": 38.0, "weapon_reach": 120.0,
-		"windup_time": 1.0, "aim_commit_ratio": 0.60, "fire_cooldown": 5.0, "burst_count": 1, "burst_delay": 0.0,
-		"proj_speed": 68.0, "lead_accuracy": 0.90, "spread_rad": 0.0, "requires_heavy_slot": true, "requires_air_slot": false
-	},
-	"technical_truck": {
-		"name": "Raider Technical", "family": "ground", "base_hull": 32.0,
-		"gate_wave": 1, "max_cap": 6, "speed": 12.0,
-		"affinity": GameConstants.TargetAffinity.LIGHT, "score": 75, "xp": 2, "is_heavy": false,
-		"role": ROLE_MOBILE_SHOOTER, "min_range": 25.0, "max_range": 42.0, "retreat_dist": 15.0, "weapon_reach": 60.0,
-		"windup_time": 0.25, "aim_commit_ratio": 0.75, "fire_cooldown": 1.8, "burst_count": 3, "burst_delay": 0.10,
-		"proj_speed": 140.0, "lead_accuracy": 0.82, "spread_rad": 0.035, "requires_heavy_slot": false, "requires_air_slot": false
 	},
 	"stealth_vtol": {
 		"name": "Stealth VTOL", "family": "air", "base_hull": 48.0,
@@ -147,36 +107,6 @@ const VARIANTS: Dictionary = {
 		"role": ROLE_CLOSE_PURSUER, "min_range": 18.0, "max_range": 30.0, "retreat_dist": 12.0, "weapon_reach": 45.0,
 		"windup_time": 0.25, "aim_commit_ratio": 0.70, "fire_cooldown": 2.0, "burst_count": 2, "burst_delay": 0.12,
 		"proj_speed": 150.0, "lead_accuracy": 0.85, "spread_rad": 0.03, "requires_heavy_slot": false, "requires_air_slot": false
-	},
-	"flak_tank": {
-		"name": "Flak Tank",
-		"family": "ground",
-		"base_hull": 100.0,
-		"gate_wave": 3,
-		"max_cap": 6,
-		"speed": 8.0,
-		"affinity": GameConstants.TargetAffinity.ARMORED,
-		"score": 150,
-		"xp": 5,
-		"is_heavy": false,
-		"role": ROLE_GROUND_HEAVY, "min_range": 35.0, "max_range": 65.0, "retreat_dist": 24.0, "weapon_reach": 85.0,
-		"windup_time": 0.50, "aim_commit_ratio": 0.65, "fire_cooldown": 2.5, "burst_count": 3, "burst_delay": 0.14,
-		"proj_speed": 140.0, "lead_accuracy": 0.88, "spread_rad": 0.03, "requires_heavy_slot": false, "requires_air_slot": false
-	},
-	"missile_carrier": {
-		"name": "Missile Carrier",
-		"family": "ground",
-		"base_hull": 120.0,
-		"gate_wave": 5,
-		"max_cap": 2,
-		"speed": 6.5,
-		"affinity": GameConstants.TargetAffinity.ARMORED,
-		"score": 250,
-		"xp": 8,
-		"is_heavy": true,
-		"role": ROLE_RANGED_SPECIALIST, "min_range": 50.0, "max_range": 80.0, "retreat_dist": 35.0, "weapon_reach": 120.0,
-		"windup_time": 0.90, "aim_commit_ratio": 0.60, "fire_cooldown": 5.0, "burst_count": 1, "burst_delay": 0.0,
-		"proj_speed": 45.0, "lead_accuracy": 0.85, "spread_rad": 0.0, "requires_heavy_slot": true, "requires_air_slot": false
 	},
 	"attack_gunship": {
 		"name": "Attack Gunship",
@@ -267,21 +197,6 @@ const VARIANTS: Dictionary = {
 		"role": ROLE_ATTACK_AIRCRAFT, "min_range": 30.0, "max_range": 65.0, "retreat_dist": 20.0, "weapon_reach": 85.0,
 		"windup_time": 0.30, "aim_commit_ratio": 0.65, "fire_cooldown": 3.0, "burst_count": 6, "burst_delay": 0.07,
 		"proj_speed": 280.0, "lead_accuracy": 0.92, "spread_rad": 0.02, "requires_heavy_slot": false, "requires_air_slot": true
-	},
-	"infantry_squad": {
-		"name": "Infantry Squad",
-		"family": "ground",
-		"base_hull": 20.0,
-		"gate_wave": 1,
-		"max_cap": 8,
-		"speed": 5.0,
-		"affinity": GameConstants.TargetAffinity.LIGHT,
-		"score": 60,
-		"xp": 2,
-		"is_heavy": false,
-		"role": ROLE_MOBILE_SHOOTER, "min_range": 20.0, "max_range": 35.0, "retreat_dist": 14.0, "weapon_reach": 55.0,
-		"windup_time": 0.25, "aim_commit_ratio": 0.70, "fire_cooldown": 2.2, "burst_count": 3, "burst_delay": 0.10,
-		"proj_speed": 160.0, "lead_accuracy": 0.80, "spread_rad": 0.045, "requires_heavy_slot": false, "requires_air_slot": false
 	},
 	"siege_tank": {
 		"name": "Siege Tank",

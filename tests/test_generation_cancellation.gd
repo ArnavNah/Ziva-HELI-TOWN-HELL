@@ -53,6 +53,8 @@ func run() -> void:
 	var deadline := Time.get_ticks_msec() + 30000
 	while flow.busy and Time.get_ticks_msec() < deadline:
 		await process_frame
+	if flow.busy or current_scene.name != "MainGame":
+		print("FINAL_DEPLOY_STATE busy=", flow.busy, " scene=", current_scene.name if current_scene else "<none>", " loader_phase=", flow.loader.phase if is_instance_valid(flow.loader) else -1, " prepared=", current_scene.is_prepared if current_scene and "is_prepared" in current_scene else false)
 	check(not flow.busy and current_scene.name == "MainGame" and current_scene.is_prepared and current_scene.session_started, "normal deployment succeeds after repeated cancellations")
 	flow.return_to_menu()
 	for i in 20:

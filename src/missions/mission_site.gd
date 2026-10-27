@@ -9,6 +9,8 @@ var indicator: Node3D
 var progress_mesh: MeshInstance3D
 var dish: Node3D
 var caption_label: Label3D
+var beacon: Node3D
+var beacon_core: MeshInstance3D
 var progress := 0.0
 var payload: Node3D
 var material_cache: Dictionary = {}
@@ -140,25 +142,55 @@ func _build() -> void:
 		var segment = box(indicator, Vector3(1.6, 0.1, 0.26), Vector3(cos(angle) * 8, 0.24, sin(angle) * 8), marker_color)
 		segment.rotation.y = -angle + PI * 0.5
 	progress_mesh = box(indicator, Vector3(5, 0.14, 0.4), Vector3(0, 0.4, 7), marker_color)
+	# Keep the objective legible above roofs, trees, and the helicopter silhouette.
+	# The pad/target remains at its real physical position below this beacon.
+	beacon = Node3D.new()
+	beacon.name = "ObjectiveBeacon"
+	add_child(beacon)
+	var beam_mesh := BoxMesh.new()
+	beam_mesh.size = Vector3(0.28, 9.0, 0.28)
+	var beam := MeshInstance3D.new()
+	beam.mesh = beam_mesh
+	beam.position.y = 6.0
+	var beam_material := StandardMaterial3D.new()
+	beam_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	beam_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	beam_material.albedo_color = Color(marker_color.r, marker_color.g, marker_color.b, 0.62)
+	beam.material_override = beam_material
+	beacon.add_child(beam)
+	var diamond_mesh := SphereMesh.new()
+	diamond_mesh.radius = 0.9
+	diamond_mesh.height = 1.8
+	diamond_mesh.radial_segments = 4
+	diamond_mesh.rings = 2
+	beacon_core = MeshInstance3D.new()
+	beacon_core.mesh = diamond_mesh
+	beacon_core.position.y = 11.2
+	beacon_core.material_override = material(marker_color, true)
+	beacon.add_child(beacon_core)
 	caption_label = Label3D.new()
 	caption_label.text = caption
 	caption_label.font_size = 48
-	caption_label.pixel_size = 0.018
-	caption_label.outline_size = 9
+	caption_label.pixel_size = 0.032
+	caption_label.outline_size = 14
 	caption_label.modulate = marker_color
-	caption_label.position.y = 8
+	caption_label.position.y = 14
 	caption_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	caption_label.no_depth_test = false
+	caption_label.no_depth_test = true
 	add_child(caption_label)
 
 func set_active_marker(active: bool) -> void:
 	marker_active = active
 	if indicator: indicator.visible = active
-	if caption_label: caption_label.modulate.a = 1.0 if active else 0.4
+	if beacon: beacon.visible = active
+	if caption_label: caption_label.visible = active
 
 func set_collected() -> void:
 	if payload: payload.visible = false
 	if caption_label: caption_label.text = "RECOVERED"
+
+func get_navigation_anchor() -> Vector3:
+	return global_position + Vector3.UP * 11.2
 
 func set_progress(value: float) -> void:
 	progress = clampf(value, 0.0, 1.0)
@@ -166,3 +198,6 @@ func set_progress(value: float) -> void:
 
 func _process(delta: float) -> void:
 	if dish: dish.rotation.y += delta * 0.3
+	if marker_active and beacon_core:
+		var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.004)
+		beacon_core.scale = Vector3.ONE * pulse

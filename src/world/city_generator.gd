@@ -30,6 +30,7 @@ var spawned_blocks: Array[Node3D] = []
 var meadow_lots: Array[Vector3] = []
 var terrain_lots: Array[Vector3] = []
 var building_footprints: Dictionary = {}
+var _pending_building_aprons: Array[Dictionary] = []
 var district_rng := RandomNumberGenerator.new()
 signal generation_complete
 signal generation_settled(completed: bool)
@@ -120,6 +121,16 @@ func generate_district(district_name: String, seed_val: int) -> void:
 			if not await _check_frame_budget(attempt):
 				return
 
+	# Batch all collected building sidewalk aprons into a single unified mesh
+	if not _pending_building_aprons.is_empty():
+		var apron_builder := DetailMesh.new()
+		apron_builder.use_material(DetailMesh.Tile.PAVING)
+		for apron in _pending_building_aprons:
+			apron_builder.box(apron.size, apron.pos, Color(0.71, 0.67, 0.55), false, true)
+		_pending_building_aprons.clear()
+		var apron_mesh: ArrayMesh = apron_builder.build(Materials.sidewalk())
+		_add_road_detail("BuildingAprons", apron_mesh)
+
 	generation_metrics["blocks_ms"] = float(Time.get_ticks_usec() - phase_started) / 1000.0
 	phase_started = Time.get_ticks_usec()
 	generation_ratio = 0.80
@@ -147,6 +158,7 @@ func _clear_existing() -> void:
 	meadow_lots.clear()
 	terrain_lots.clear()
 	building_footprints.clear()
+	_pending_building_aprons.clear()
 
 func _spawn_road_network(half_x: int, half_z: int, attempt: int) -> void:
 	var total_w = float(half_x * 2) * block_size + block_size
@@ -155,45 +167,33 @@ func _spawn_road_network(half_x: int, half_z: int, attempt: int) -> void:
 	# Dark charcoal slate asphalt with authentic pixel texture
 	var road_mat = Materials.road()
 
-	# 1. Asphalt Road Surfaces
-	# Avenues running along Z (parallel to forward flight) at X = 0, ±38, ±76...
-	for ix in range(-half_x, half_x + 1):
-		var ave_x = float(ix) * block_size
-		var is_central = (ix == 0)
-		var w = main_avenue_width if is_central else secondary_street_width
-
-		var ave_mesh = MeshInstance3D.new()
-		var m = BoxMesh.new()
-		m.size = Vector3(w, 0.04, total_d)
-		m.material = road_mat
-		ave_mesh.mesh = m
-		ave_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		ave_mesh.position = Vector3(ave_x, 0.02, 0)
-		add_child(ave_mesh)
-		spawned_blocks.append(ave_mesh)
-
-	# Cross Streets running along X at Z = 0, ±38, ±76...
-	for iz in range(-half_z, half_z + 1):
-		var str_z = float(iz) * block_size
-		var is_central = (iz == 0)
-		var w = main_avenue_width if is_central else secondary_street_width
-
-		var str_mesh = MeshInstance3D.new()
-		var m2 = BoxMesh.new()
-		m2.size = Vector3(total_w, 0.04, w)
-		m2.material = road_mat
-		str_mesh.mesh = m2
-		str_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		str_mesh.position = Vector3(0, 0.025, str_z)
-		add_child(str_mesh)
-		spawned_blocks.append(str_mesh)
-
 	# Cache only complete, immutable road chunks; each row bounds mesh upload work.
 	var road_key := var_to_str([1, half_x, half_z, block_size, main_avenue_width, secondary_street_width])
 	var cached: Dictionary = road_mesh_cache.get(road_key, {})
+	var surface_mesh: Mesh = cached.get("surfaces", null)
 	var marking_chunks: Array = cached.get("markings", []).duplicate()
 	var sidewalk_chunks: Array = cached.get("sidewalks", []).duplicate()
 	generation_metrics["road_cache_hit"] = not cached.is_empty()
+
+	# 1. Asphalt Road Surfaces Merged into 1 ArrayMesh!
+	if surface_mesh == null:
+		var roads := DetailMesh.new()
+		roads.use_material(DetailMesh.Tile.ASPHALT)
+		for ix in range(-half_x, half_x + 1):
+			var ave_x = float(ix) * block_size
+			var is_central = (ix == 0)
+			var w = main_avenue_width if is_central else secondary_street_width
+			roads.box(Vector3(w, 0.04, total_d), Vector3(ave_x, 0.02, 0), Color.WHITE, false, true)
+
+		for iz in range(-half_z, half_z + 1):
+			var str_z = float(iz) * block_size
+			var is_central = (iz == 0)
+			var w = main_avenue_width if is_central else secondary_street_width
+			roads.box(Vector3(total_w, 0.04, w), Vector3(0, 0.025, str_z), Color.WHITE, false, true)
+
+		surface_mesh = roads.build(road_mat)
+
+	_add_road_detail("RoadSurfaces", surface_mesh)
 	# 2. Road Markings (Zebra Crosswalks, Stop Lines, Dashed Centerlines) Merged into 1 ArrayMesh!
 	var white_line_col := Color(0.78, 0.80, 0.78)
 	var yellow_line_col := Color(0.85, 0.70, 0.25)
@@ -351,7 +351,7 @@ func _spawn_road_network(half_x: int, half_z: int, attempt: int) -> void:
 	if generation_is_current(attempt):
 		if road_mesh_cache.size() >= 4 and not road_mesh_cache.has(road_key):
 			road_mesh_cache.erase(road_mesh_cache.keys()[0])
-		road_mesh_cache[road_key] = {"markings": marking_chunks, "sidewalks": sidewalk_chunks}
+		road_mesh_cache[road_key] = {"markings": marking_chunks, "sidewalks": sidewalk_chunks, "surfaces": surface_mesh}
 
 func _add_road_detail(label: String, mesh: Mesh) -> void:
 	var instance := MeshInstance3D.new()
@@ -519,19 +519,11 @@ func _spawn_building(origin: Vector3, h: float, w: float, d: float, hp: float, a
 	w = clampf(w, 8.0, block_size - secondary_street_width - 4.0)
 	d = clampf(d, 8.0, block_size - secondary_street_width - 4.0)
 
-	# Clean architectural stone sidewalk apron framing the building
-	var lot = MeshInstance3D.new()
-	var lm = BoxMesh.new()
-	lm.size = Vector3(w + 1.6, 0.08, d + 1.6)
-	lm.material = Materials.sidewalk()
-	lot.mesh = lm
-	lot.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	lot.visibility_range_end = 260.0
-	lot.visibility_range_end_margin = 35.0
-	lot.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-	lot.position = origin + Vector3(0, 0.04, 0)
-	add_child(lot)
-	spawned_blocks.append(lot)
+	# Clean architectural stone sidewalk apron framing the building (collected for batching)
+	_pending_building_aprons.append({
+		"pos": origin + Vector3(0, 0.04, 0),
+		"size": Vector3(w + 1.6, 0.08, d + 1.6)
+	})
 
 	var bld = DestructibleBuildingScene.instantiate()
 	bld.position = origin
@@ -598,9 +590,10 @@ func _spawn_sports_court(origin: Vector3) -> Node3D:
 
 	var mi = MeshInstance3D.new()
 	mi.mesh = details.build()
-	mi.visibility_range_end = 260.0
+	mi.visibility_range_end = 160.0
 	mi.visibility_range_end_margin = 35.0
-	mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	court_root.add_child(mi)
 	return court_root
 
@@ -638,9 +631,10 @@ func _spawn_fountain_plaza(origin: Vector3) -> Node3D:
 
 	var mi = MeshInstance3D.new()
 	mi.mesh = details.build()
-	mi.visibility_range_end = 260.0
+	mi.visibility_range_end = 160.0
 	mi.visibility_range_end_margin = 35.0
-	mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	plaza.add_child(mi)
 	return plaza
 
@@ -676,9 +670,10 @@ func _spawn_construction_site(origin: Vector3) -> Node3D:
 
 	var mi = MeshInstance3D.new()
 	mi.mesh = details.build()
-	mi.visibility_range_end = 260.0
+	mi.visibility_range_end = 160.0
 	mi.visibility_range_end_margin = 35.0
-	mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	site.add_child(mi)
 	return site
 
@@ -701,9 +696,10 @@ func _spawn_staging_yard(origin: Vector3, yard_type: String) -> Node3D:
 		lawn.material = Materials.terrain()
 		green.mesh = lawn
 		green.position.y = 0.04
-		green.visibility_range_end = 260.0
+		green.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		green.visibility_range_end = 160.0
 		green.visibility_range_end_margin = 35.0
-		green.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		green.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 		yard.add_child(green)
 		for side in [-1.0, 1.0]:
 			var berm := MeshInstance3D.new()
@@ -716,9 +712,10 @@ func _spawn_staging_yard(origin: Vector3, yard_type: String) -> Node3D:
 			berm.mesh = rock
 			berm.position = Vector3(side * 5.0, 0.3, side * 4.0)
 			berm.scale = Vector3(1.6, 0.55, 1.0)
-			berm.visibility_range_end = 260.0
+			berm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			berm.visibility_range_end = 160.0
 			berm.visibility_range_end_margin = 35.0
-			berm.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+			berm.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 			yard.add_child(berm)
 		return yard
 
@@ -732,9 +729,10 @@ func _spawn_staging_yard(origin: Vector3, yard_type: String) -> Node3D:
 	m.material = Materials.sidewalk()
 	pad_mesh.mesh = m
 	pad_mesh.position = Vector3(0, 0.04, 0)
-	pad_mesh.visibility_range_end = 260.0
+	pad_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	pad_mesh.visibility_range_end = 160.0
 	pad_mesh.visibility_range_end_margin = 35.0
-	pad_mesh.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	pad_mesh.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	yard.add_child(pad_mesh)
 
 	var barrier_mat = StandardMaterial3D.new()
@@ -747,17 +745,19 @@ func _spawn_staging_yard(origin: Vector3, yard_type: String) -> Node3D:
 	bm.material = Materials.town_atlas(false, 1, true)
 	b1.mesh = bm
 	b1.position = Vector3(0, 0.45, -7.5)
-	b1.visibility_range_end = 260.0
+	b1.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	b1.visibility_range_end = 160.0
 	b1.visibility_range_end_margin = 35.0
-	b1.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	b1.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	yard.add_child(b1)
 
 	var b2 = MeshInstance3D.new()
 	b2.mesh = bm
 	b2.position = Vector3(0, 0.45, 7.5)
-	b2.visibility_range_end = 260.0
+	b2.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	b2.visibility_range_end = 160.0
 	b2.visibility_range_end_margin = 35.0
-	b2.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	b2.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	yard.add_child(b2)
 
 	var crate := Props.instance("crate", Vector3(-5.0, 0.08, 0))
@@ -784,9 +784,10 @@ func _spawn_volatile_tank(pos: Vector3) -> void:
 	m_inst.mesh = Props.mesh("barrel")
 	m_inst.scale = Vector3(2.66, 2.16, 2.66)
 	m_inst.position.y = -2.0
-	m_inst.visibility_range_end = 260.0
+	m_inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	m_inst.visibility_range_end = 160.0
 	m_inst.visibility_range_end_margin = 35.0
-	m_inst.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	m_inst.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	tank.add_child(m_inst)
 
 	var rec = DamageReceiverScript.new()

@@ -19,6 +19,21 @@ var run_generation: int = -1
 @onready var collision_shape: CollisionShape3D = get_node_or_null("CollisionShape3D")
 @onready var mesh_instance: MeshInstance3D = get_node_or_null("MeshInstance3D")
 
+static var _shared_gem_material: StandardMaterial3D = null
+
+static func _get_shared_gem_material() -> StandardMaterial3D:
+	if _shared_gem_material == null:
+		var mat = StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+		mat.albedo_color = Color(0.25, 0.95, 0.55, 1.0) # Emerald XP Gem
+		mat.roughness = 0.25
+		mat.metallic = 0.20
+		mat.emission_enabled = true
+		mat.emission = Color(0.20, 0.85, 0.45)
+		mat.emission_energy_multiplier = 2.2
+		_shared_gem_material = mat
+	return _shared_gem_material
+
 func _ready() -> void:
 	add_to_group("xp_drops")
 	collision_layer = 16 # Pickups / drops layer
@@ -37,15 +52,8 @@ func _ready() -> void:
 func _setup_visual_materials() -> void:
 	if not mesh_instance:
 		return
-	var mat = StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
-	mat.albedo_color = Color(0.25, 0.95, 0.55, 1.0) # Emerald XP Gem
-	mat.roughness = 0.25
-	mat.metallic = 0.20
-	mat.emission_enabled = true
-	mat.emission = Color(0.20, 0.85, 0.45)
-	mat.emission_energy_multiplier = 2.2
-	mesh_instance.material_override = mat
+	mesh_instance.material_override = _get_shared_gem_material()
+	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 func start_attraction(player: Node3D) -> void:
 	if is_collected or not _can_collect(player):

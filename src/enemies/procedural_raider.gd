@@ -1,9 +1,8 @@
 extends BaseEnemy
 
 ## ProceduralRaider — Multi-role procedural enemy controller for ground and air raiders.
-## Supports: scout_buggy, technical_truck, assault_apc, mortar_crawler, sam_launcher,
-## attack_wing, stealth_vtol, heavy_bomber, rocket_buggy, flame_tank, rail_crawler,
-## hunter_drone, torpedo_vtol, escort_fighter.
+## Supports: scout_buggy, assault_apc, raptor_raider, desert_barrage_rover, rail_crawler,
+## attack_wing, stealth_vtol, heavy_bomber, hunter_drone, torpedo_vtol, escort_fighter.
 
 const Shot = preload("res://scenes/combat/projectile.tscn")
 const Hit = preload("res://src/combat/damage_data.gd")
@@ -15,6 +14,17 @@ var orbit_sign := 1.0
 var burst_count := 0
 var burst_timer := 0.0
 var active_aim_target := Vector3.ZERO
+var _turret_node: Node3D = null
+var _muzzle_marker: Marker3D = null
+var _has_resolved_turret: bool = false
+
+func _resolve_turret() -> void:
+	_has_resolved_turret = true
+	_turret_node = get_node_or_null("Turret") as Node3D
+	if _turret_node:
+		_muzzle_marker = _turret_node.get_node_or_null("GunPitch/Recoil/Muzzle") as Marker3D
+		if not _muzzle_marker:
+			_muzzle_marker = _turret_node.get_node_or_null("Muzzle") as Marker3D
 
 func _ready() -> void:
 	super._ready()
@@ -70,45 +80,13 @@ func _custom_process(delta: float) -> void:
 			desired.y = (clampf(target.global_position.y + 10.0, 24, 42) - global_position.y) * 1.8
 			steer_air_unit(desired, 24.0, 46.0, delta)
 
-		"rocket_buggy":
-			var dir := get_ground_nav_heading(target.global_position, delta, (min_engagement_range + max_engagement_range) * 0.5, orbit_sign)
-			steer_ground_unit(dir, move_speed, delta)
-
-		"flame_tank":
-			var preferred := (min_engagement_range + max_engagement_range) * 0.5
-			var dir := get_ground_nav_heading(target.global_position, delta, preferred, orbit_sign)
-			var spd_mult = 0.75 if absf(distance - preferred) < 4.0 else 1.0
-			steer_ground_unit(dir, move_speed * spd_mult, delta)
-
 		"rail_crawler":
 			var preferred := (min_engagement_range + max_engagement_range) * 0.5
 			var dir := get_ground_nav_heading(target.global_position, delta, preferred, orbit_sign)
 			var spd_mult = 0.50 if behavior_state == BehaviorState.WINDUP else 1.0 # Braces while charging!
 			steer_ground_unit(dir, move_speed * spd_mult, delta)
 
-		"attack_wing":
-			var tangent := Vector3(-heading.z, 0, heading.x) * orbit_sign
-			var close_in = clampf((distance - max_engagement_range) / 20.0, 0.0, 1.0)
-			var desired := (heading * lerpf(0.6, 0.92, close_in) + tangent * lerpf(0.8, 0.18, close_in)).normalized() * move_speed
-			desired.y = (clampf(target.global_position.y + 8.0 + sin(phase) * 4.0, 22, 42) - global_position.y) * 2.0
-			steer_air_unit(desired, 20.0, 48.0, delta)
-
-		"stealth_vtol":
-			var tangent := Vector3(-heading.z, 0, heading.x) * sin(phase * 1.5)
-			var close_in = clampf((distance - max_engagement_range) / 18.0, 0.0, 1.0)
-			var desired := (heading * lerpf(0.6, 0.92, close_in) + tangent * lerpf(0.85, 0.15, close_in)).normalized() * move_speed
-			var target_alt := clampf(target.global_position.y + 4.0 + sin(phase * 2.0) * 2.5, 14.0, 32.0)
-			desired.y = (target_alt - global_position.y) * 2.5
-			steer_air_unit(desired, 26.0, 50.0, delta)
-
-		"heavy_bomber":
-			var tangent := Vector3(-heading.z, 0, heading.x) * orbit_sign
-			var close_in = clampf((distance - max_engagement_range) / 22.0, 0.0, 1.0)
-			var desired := (heading * lerpf(0.4, 0.90, close_in) + tangent * lerpf(0.8, 0.2, close_in)).normalized() * move_speed
-			desired.y = (34.0 - global_position.y) * 1.5
-			steer_air_unit(desired, 16.0, 34.0, delta)
-
-		"scout_buggy", "technical_truck", "assault_apc", "raptor_raider":
+		"scout_buggy", "assault_apc", "raptor_raider":
 			var preferred := (min_engagement_range + max_engagement_range) * 0.5
 			var dir := get_ground_nav_heading(target.global_position, delta, preferred, orbit_sign)
 			steer_ground_unit(dir, move_speed, delta)
@@ -119,21 +97,16 @@ func _custom_process(delta: float) -> void:
 			var spd_mult = 0.50 if behavior_state == BehaviorState.WINDUP else 1.0
 			steer_ground_unit(dir, move_speed * spd_mult, delta)
 
-		"sam_launcher":
+		_:
 			var preferred := (min_engagement_range + max_engagement_range) * 0.5
 			var dir := get_ground_nav_heading(target.global_position, delta, preferred, orbit_sign)
-			var spd_mult = 0.50 if behavior_state == BehaviorState.WINDUP else 1.0
-			steer_ground_unit(dir, move_speed * spd_mult, delta)
-
-		"mortar_crawler", _:
-			var preferred := (min_engagement_range + max_engagement_range) * 0.5
-			var dir := get_ground_nav_heading(target.global_position, delta, preferred, orbit_sign)
-			var spd_mult = 0.40 if behavior_state == BehaviorState.WINDUP else 1.0
-			steer_ground_unit(dir, move_speed * spd_mult, delta)
+			steer_ground_unit(dir, move_speed, delta)
 
 	# Turret Aiming with smooth tracking and predictive lead
+	if not _has_resolved_turret:
+		_resolve_turret()
 	var muzzle_origin := get_muzzle_origin()
-	var turret := get_node_or_null("Turret") as Node3D
+	var turret := _turret_node
 	var is_aligned := true
 	if turret:
 		active_aim_target = get_predicted_target_position(muzzle_origin, target, combat_proj_speed, combat_lead_accuracy, combat_spread_rad)
@@ -235,20 +208,15 @@ func _custom_process(delta: float) -> void:
 	var cue_col = Color("ff913e") if variant_id == "rail_crawler" else Color("ef8b49")
 	start_telegraph(combat_windup_time, combat_aim_commit_ratio, cue_col)
 
-	if variant_id == "sam_launcher" and has_node("/root/AudioManager"):
-		get_node("/root/AudioManager").trigger_alarm("sam_lock")
-
 func get_muzzle_origin() -> Vector3:
-	var turret := get_node_or_null("Turret") as Node3D
-	if turret:
-		if turret.has_method("get_muzzle_position"):
-			return turret.get_muzzle_position()
-		var muzzle_marker := turret.get_node_or_null("GunPitch/Recoil/Muzzle") as Marker3D
-		if not muzzle_marker:
-			muzzle_marker = turret.get_node_or_null("Muzzle") as Marker3D
-		if muzzle_marker:
-			return muzzle_marker.global_position
-		return turret.global_position
+	if not _has_resolved_turret:
+		_resolve_turret()
+	if _muzzle_marker and is_instance_valid(_muzzle_marker):
+		return _muzzle_marker.global_position
+	if _turret_node and is_instance_valid(_turret_node):
+		if _turret_node.has_method("get_muzzle_position"):
+			return _turret_node.get_muzzle_position()
+		return _turret_node.global_position
 	return global_position + Vector3.UP * 1.8
 
 func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
@@ -273,28 +241,24 @@ func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
 	shot.add_to_group("enemy_projectiles")
 
 	var tracer := shot.get_node_or_null("MeshInstance3D") as MeshInstance3D
-	if tracer and variant_id in ["flame_tank", "rail_crawler", "rocket_buggy", "torpedo_vtol"]:
+	if tracer and variant_id in ["rail_crawler", "torpedo_vtol", "desert_barrage_rover"]:
 		var material := StandardMaterial3D.new()
 		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		material.albedo_color = Color("ff913e") if variant_id == "flame_tank" else Color("78d8e0")
+		material.albedo_color = Color("ff913e") if variant_id == "desert_barrage_rover" else Color("78d8e0")
 		tracer.material_override = material
-		tracer.scale *= 3.0 if variant_id == "flame_tank" else 1.8
+		tracer.scale *= 1.8
 
 	var aim_dir = (shot_aim - muzzle_pos).normalized()
 
 	var profile_id: String = "enemy_bullet"
 	match variant_id:
-		"rocket_buggy", "torpedo_vtol", "desert_barrage_rover":
+		"torpedo_vtol", "desert_barrage_rover":
 			profile_id = "enemy_rocket"
 		"rail_crawler":
 			profile_id = "enemy_rail"
-		"flame_tank":
-			profile_id = "enemy_flame"
-		"sam_launcher":
-			profile_id = "enemy_sam"
-		"heavy_bomber", "mortar_crawler":
+		"heavy_bomber":
 			profile_id = "enemy_heavy"
-		"assault_apc", "stealth_vtol", "technical_truck", "raptor_raider":
+		"scout_buggy", "assault_apc", "raptor_raider", "stealth_vtol":
 			profile_id = "enemy_bullet"
 		_:
 			profile_id = "enemy_bullet"
@@ -305,39 +269,18 @@ func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
 		get_node("/root/FXManager").play_muzzle(profile_id, muzzle_tf, turret if turret else self, aim_dir)
 
 	match variant_id:
-		"rocket_buggy", "torpedo_vtol":
+		"torpedo_vtol":
 			shot.speed = 72.0
 			shot.blast_radius = 3.5
-			shot.is_homing = (variant_id == "torpedo_vtol")
+			shot.is_homing = true
 			shot.homing_turn_rate = 1.6
 			shot.velocity = aim_dir * shot.speed
 			shot.setup(Hit.new(14.0, GameConstants.WeaponType.MISSILE, self, false, shot.blast_radius), target, profile_id)
-			if shot.is_homing:
-				shot.add_to_group("homing_missiles")
+			shot.add_to_group("homing_missiles")
 
 		"rail_crawler":
 			shot.velocity = aim_dir * 220.0
 			shot.setup(Hit.new(26.0, GameConstants.WeaponType.MACHINE_GUN, self), null, profile_id)
-
-		"flame_tank":
-			shot.speed = 85.0
-			shot.lifetime = 0.40 # Short range matching 34m reach!
-			shot.blast_radius = 2.0
-			shot.velocity = aim_dir * shot.speed
-			var hit := Hit.new(4.0, GameConstants.WeaponType.MACHINE_GUN, self, false, 2.0)
-			hit.burn_chance = 0.35
-			shot.setup(hit, null, profile_id)
-
-		"sam_launcher":
-			shot.is_homing = true
-			shot.target_node = target
-			shot.homing_turn_rate = 3.6
-			shot.speed = 68.0
-			shot.blast_radius = 4.5
-			shot.add_to_group("homing_missiles")
-			var loft_dir = (aim_dir + Vector3(0, 0.35, 0)).normalized()
-			shot.velocity = loft_dir * shot.speed
-			shot.setup(Hit.new(28.0, GameConstants.WeaponType.MISSILE, self, false, shot.blast_radius), target, profile_id)
 
 		"heavy_bomber":
 			shot.global_position = global_position + Vector3.DOWN * 1.5
@@ -345,15 +288,15 @@ func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
 			shot.blast_radius = 6.0
 			shot.setup(Hit.new(22.0, GameConstants.WeaponType.ROCKET, self, false, shot.blast_radius), null, profile_id)
 
-		"mortar_crawler":
-			shot.velocity = aim_dir * 65.0
-			shot.blast_radius = 5.0
-			shot.setup(Hit.new(18.0, GameConstants.WeaponType.ROCKET, self, false, shot.blast_radius), null, profile_id)
-
 		"assault_apc":
 			shot.velocity = aim_dir * 160.0
 			shot.blast_radius = 0.0
 			shot.setup(Hit.new(9.0, GameConstants.WeaponType.MACHINE_GUN, self, false, 0.0), null, profile_id)
+
+		"scout_buggy":
+			shot.velocity = aim_dir * 140.0
+			shot.blast_radius = 0.0
+			shot.setup(Hit.new(7.0, GameConstants.WeaponType.MACHINE_GUN, self, false, 0.0), null, profile_id)
 
 		"raptor_raider":
 			shot.velocity = aim_dir * 175.0
@@ -370,11 +313,6 @@ func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
 			shot.velocity = aim_dir * 150.0
 			shot.blast_radius = 0.0
 			shot.setup(Hit.new(11.0, GameConstants.WeaponType.MACHINE_GUN, self, false, 0.0), null, profile_id)
-
-		"technical_truck":
-			shot.velocity = aim_dir * 140.0
-			shot.blast_radius = 0.0
-			shot.setup(Hit.new(6.0, GameConstants.WeaponType.MACHINE_GUN, self, false, 0.0), null, profile_id)
 
 		_:
 			shot.velocity = aim_dir * combat_proj_speed

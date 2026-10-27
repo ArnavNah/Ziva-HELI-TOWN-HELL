@@ -6,38 +6,71 @@ var instruction: Label
 var details: Label
 var progress: ProgressBar
 var action: Button
+var phase_label: Label
+var progress_caption: Label
 var refresh_timer := 0.0
 var panel: PanelContainer
 var column: VBoxContainer
+var panel_style: StyleBoxFlat
 
 class Navigation extends Control:
 	var manager: Node
+	var last_point := Vector2.ZERO
+	var last_offscreen := false
+
+	func _clamp_to_play_area(point: Vector2) -> Vector2:
+		var margin := 34.0
+		var safe := Rect2(Vector2(margin, 78), size - Vector2(margin * 2.0, 212))
+		point = point.clamp(safe.position, safe.end)
+		# Reserve the bottom-left briefing and top-right radar corners.
+		if point.x < 366.0 and point.y > size.y - 252.0:
+			point.y = size.y - 252.0
+		if point.x > size.x - 230.0 and point.y < 258.0:
+			point.y = 258.0
+		return point
+
 	func _draw() -> void:
-		if not is_instance_valid(manager) or not manager.is_mission_active or not is_instance_valid(manager.objective_site): return
+		if not is_instance_valid(manager) or not manager.is_mission_active or not is_instance_valid(manager.objective_site) or not manager.objective_site.marker_active:
+			return
 		var camera := get_viewport().get_camera_3d()
 		if not camera: return
-		var world: Vector3 = manager.objective_site.global_position + Vector3.UP * 5
+		var world: Vector3 = manager.objective_site.get_navigation_anchor()
 		var point := camera.unproject_position(world)
 		var center := size * 0.5
 		var direction := point - center
-		if camera.is_position_behind(world): direction = -direction
+		var behind := camera.is_position_behind(world)
+		if behind: direction = -direction
 		if direction.length_squared() < 1: direction = Vector2.DOWN
-		var safe := Rect2(Vector2(42, 110), size - Vector2(84, 180))
-		var offscreen := camera.is_position_behind(world) or not safe.has_point(point)
+		var offscreen := behind or point != _clamp_to_play_area(point)
 		if offscreen:
-			var half := safe.size * 0.5
-			var scale_factor := minf(half.x / maxf(absf(direction.x), 0.001), half.y / maxf(absf(direction.y), 0.001))
-			point = safe.get_center() + direction * scale_factor
+			var edge := center + direction.normalized() * maxf(size.x, size.y)
+			point = _clamp_to_play_area(edge)
+		last_point = point
+		last_offscreen = offscreen
+		var player = get_tree().get_first_node_in_group("player")
+		var distance := int(player.global_position.distance_to(manager.objective_site.global_position)) if is_instance_valid(player) else 0
+		# At close range the world beacon and its caption already identify the site.
+		if not offscreen and distance < 40:
+			return
 		var color: Color = manager.objective_site.marker_color
-		draw_circle(point, 16, Color(0.03, 0.08, 0.1, 0.85))
-		draw_arc(point, 16, 0, TAU, 24, color, 2, true)
+		var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.005)
+		draw_circle(point, 15, Color(0.015, 0.045, 0.055, 0.91))
+		draw_arc(point, 15 + pulse * 2.0, 0, TAU, 24, color, 2.5, true)
 		if offscreen:
 			var forward := direction.normalized()
 			var right := forward.orthogonal()
-			draw_colored_polygon(PackedVector2Array([point + forward * 11, point - forward * 7 + right * 7, point - forward * 7 - right * 7]), color)
+			draw_colored_polygon(PackedVector2Array([point + forward * 10, point - forward * 5 + right * 6, point - forward * 5 - right * 6]), color)
 		else:
-			draw_line(point + Vector2(-6, 0), point + Vector2(6, 0), color, 2)
-			draw_line(point + Vector2(0, -6), point + Vector2(0, 6), color, 2)
+			draw_line(point + Vector2(-5, 0), point + Vector2(5, 0), color, 2)
+			draw_line(point + Vector2(0, -5), point + Vector2(0, 5), color, 2)
+		if is_instance_valid(player):
+			var label := "%s  %dm" % [manager.objective_site.caption, distance]
+			var font := get_theme_default_font()
+			var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+			var label_offset_y := -24.0 if point.y > size.y * 0.6 else 42.0
+			var label_pos := _clamp_to_play_area(point + Vector2(-width * 0.5, label_offset_y))
+			draw_rect(Rect2(label_pos - Vector2(5, 15), Vector2(width + 10, 21)), Color(0.015, 0.045, 0.055, 0.92), true)
+			draw_string(font, label_pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, color)
 
 func _ready() -> void:
 	name = "MissionTracker"
@@ -59,17 +92,17 @@ func _ready() -> void:
 	panel.offset_top = -226
 	panel.offset_right = 342
 	panel.offset_bottom = -26
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.035, 0.075, 0.08, 0.94)
-	style.border_color = Color("b6a06c")
-	style.set_border_width_all(1)
-	style.border_width_left = 4
-	style.set_corner_radius_all(5)
-	style.content_margin_left = 15
-	style.content_margin_right = 15
-	style.content_margin_top = 13
-	style.content_margin_bottom = 12
-	panel.add_theme_stylebox_override("panel", style)
+	panel_style = StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.018, 0.048, 0.055, 0.96)
+	panel_style.border_color = Color("b6a06c")
+	panel_style.set_border_width_all(1)
+	panel_style.border_width_left = 4
+	panel_style.set_corner_radius_all(5)
+	panel_style.content_margin_left = 15
+	panel_style.content_margin_right = 15
+	panel_style.content_margin_top = 12
+	panel_style.content_margin_bottom = 12
+	panel.add_theme_stylebox_override("panel", panel_style)
 	root_control.add_child(panel)
 	column = VBoxContainer.new()
 	column.add_theme_constant_override("separation", 7)
@@ -77,14 +110,16 @@ func _ready() -> void:
 	title = _label(column, 18, Color("f7d498"))
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.custom_minimum_size.x = 280
+	phase_label = _label(column, 12, Color("8ed5c9"))
 	instruction = _label(column, 14, Color("f0efdf"))
 	instruction.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	instruction.custom_minimum_size.x = 280
 	details = _label(column, 13, Color("8ed5c9"))
 	details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	details.custom_minimum_size.x = 280
+	progress_caption = _label(column, 12, Color("c7ddd6"))
 	progress = ProgressBar.new()
-	progress.custom_minimum_size.y = 7
+	progress.custom_minimum_size.y = 8
 	progress.show_percentage = false
 	var fill := StyleBoxFlat.new()
 	fill.bg_color = Color("62d6c2")
@@ -124,12 +159,14 @@ func _process(delta: float) -> void:
 	get_child(0).get_node("MissionNavigation").queue_redraw()
 	var active: bool = manager.is_mission_active
 	title.text = str(manager.active_mission_data.get("title", "TACTICAL OPERATIONS")) if active else "TACTICAL OPERATIONS"
+	var kind: String = str(manager.active_mission_data.get("kind", "")) if active else ""
+	phase_label.text = "OBJECTIVE  /  %s" % manager.phase if active else "SECTOR PATROL"
 	instruction.text = manager.status_text if active else (manager.result_text if manager.result_timer > 0 else "Next task incoming. Patrol the sector.")
 	var player = get_tree().get_first_node_in_group("player")
 	var distance := 0
 	if active and is_instance_valid(manager.objective_site) and is_instance_valid(player):
 		distance = int(player.global_position.distance_to(manager.objective_site.global_position))
-	details.text = "%s  /  %dm  /  %ds left" % [manager.phase, distance, maxi(0, int(manager.active_mission_data.get("time_limit", 240.0) - manager.mission_timer))] if active else "MISSIONS AWARD CREDITS + PHYSICAL XP"
+	details.text = "%dm TO MARKER  •  %ds LEFT" % [distance, maxi(0, int(manager.active_mission_data.get("time_limit", 240.0) - manager.mission_timer))] if active else "MISSIONS AWARD CREDITS + PHYSICAL XP"
 	if active and manager.passengers_aboard > 0: details.text += "  /  %d ABOARD" % manager.passengers_aboard
 	if active and manager.active_mission_id == "clear_airspace":
 		details.text += "  /  AIR %d/%d" % [manager.current_kills, int(manager.active_mission_data.get("target_kills", 10))]
@@ -137,8 +174,21 @@ func _process(delta: float) -> void:
 		var receiver = manager.objective_site.get_node("DamageReceiver")
 		details.text += "  /  TRANSPORT %d%%" % int(100.0 * receiver.current_health / receiver.max_health)
 	progress.visible = active
+	progress_caption.visible = active
 	progress.max_value = maxf(1, manager.progress_goal)
 	progress.value = manager.hold_progress
+	if active:
+		if kind == "escort":
+			progress_caption.text = "ROUTE  %d / %d" % [int(manager.hold_progress), int(manager.progress_goal)]
+		elif kind == "airspace":
+			progress_caption.text = "AIRCRAFT  %d / %d" % [manager.current_kills, int(manager.progress_goal)]
+		elif kind in ["hunt", "destroy"]:
+			progress_caption.text = "TARGET DAMAGE  %d%%" % int(100.0 * manager.hold_progress / maxf(1.0, manager.progress_goal))
+		else:
+			progress_caption.text = "HOLD  %.1f / %.1f s" % [manager.hold_progress, manager.progress_goal]
+	var objective_color: Color = manager.objective_site.marker_color if active and is_instance_valid(manager.objective_site) else Color("b6a06c")
+	panel_style.border_color = objective_color
+	phase_label.add_theme_color_override("font_color", objective_color)
 	var cd = get_node("/root/CombatDirector")
 	var is_exfil: bool = active and manager.active_mission_id == "sortie_extraction"
 	action.visible = (is_exfil and manager.phase == "READY") or (not is_exfil and cd.current_wave >= 3)

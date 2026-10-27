@@ -1,6 +1,8 @@
 class_name TankChassisController
 extends Node3D
 
+var _damage_receiver: Node = null
+
 ## Tank Chassis Motion Controller for Modular Tanks.
 ## Simulates restrained cosmetic chassis acceleration/braking pitch and turning roll,
 ## driven by actual planar movement and velocity changes.
@@ -32,6 +34,7 @@ func _find_parent_body() -> void:
 	while p:
 		if p is CharacterBody3D:
 			_parent_body = p
+			_damage_receiver = _parent_body.get_node_or_null("DamageReceiver")
 			break
 		p = p.get_parent()
 
@@ -76,9 +79,8 @@ func _physics_process(delta: float) -> void:
 		_turret_bind_pos = config.turret_mount_offset * _turret_node.scale.y
 
 	# Stop animating if enemy is dead or game is paused
-	if _parent_body.has_node("DamageReceiver"):
-		var dr = _parent_body.get_node("DamageReceiver")
-		if dr and dr.is_dead:
+	if _damage_receiver and is_instance_valid(_damage_receiver):
+		if _damage_receiver.is_dead:
 			_settle_to_rest(delta)
 			return
 	if "behavior_state" in _parent_body and _parent_body.behavior_state == BaseEnemy.BehaviorState.DEAD:

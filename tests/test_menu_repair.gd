@@ -21,7 +21,7 @@ func frames(count: int = 3) -> void:
 func screenshot(name: String) -> void:
 	if not captures:
 		return
-	await RenderingServer.frame_post_draw
+	RenderingServer.force_draw(false)
 	root.get_texture().get_image().save_png("res://artifacts/menu-repair-tests/" + name + ".png")
 
 func click(button: BaseButton) -> void:

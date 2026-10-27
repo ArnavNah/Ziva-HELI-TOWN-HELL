@@ -5,7 +5,7 @@ func _init() -> void:
 
 func capture(path: String) -> void:
 	for i in range(12): await process_frame
-	await RenderingServer.frame_post_draw
+	RenderingServer.force_draw(false)
 	root.get_texture().get_image().save_png(path)
 	print("CAPTURE ", path)
 

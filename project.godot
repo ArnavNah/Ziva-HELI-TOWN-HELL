@@ -51,6 +51,7 @@ import/fbx/enabled=false
 
 3d/physics_engine="Jolt Physics"
 common/physics_interpolation=true
+common/max_physics_steps_per_frame=2
 
 [rendering]
 

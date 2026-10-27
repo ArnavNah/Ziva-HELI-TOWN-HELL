@@ -254,7 +254,7 @@ func _gather_meshes(node: Node, out_list: Array[MeshInstance3D]) -> void:
 
 		# Do not outline transparent rotor discs or thin spinning rotor blades (prevents bloated geometry)
 
-		if not n_lower.contains("rotordisc") and not n_lower.contains("rotor_disc") and not n_lower.contains("main_rotor") and not n_lower.contains("tail_rotor") and not n_lower.contains("rotor"):
+		if not n_lower.contains("rotordisc") and not n_lower.contains("rotor_disc") and not n_lower.contains("main_rotor") and not n_lower.contains("tail_rotor") and not n_lower.contains("rotor") and not n_lower.contains("wheel") and not n_lower.contains("tire") and not n_lower.contains("tread"):
 
 			out_list.append(node)
 

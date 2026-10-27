@@ -284,11 +284,12 @@ func _reveal(scene: Node) -> void:
 
 	var is_headless: bool = DisplayServer.get_name() == "headless"
 	if not is_headless:
-		# Give GPU 2 frames to warm up viewport, terrain shaders, and camera before dropping curtain
+		# Draw once explicitly: hidden/minimized Windows windows may stop emitting
+		# frame_post_draw, which otherwise leaves the loading curtain stuck forever.
 		await get_tree().process_frame
 		if attempt != _attempt or not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(scene) or scene.is_queued_for_deletion():
 			return
-		await RenderingServer.frame_post_draw
+		RenderingServer.force_draw(false)
 		if attempt != _attempt or not is_inside_tree() or is_queued_for_deletion() or not is_instance_valid(scene) or scene.is_queued_for_deletion():
 			return
 

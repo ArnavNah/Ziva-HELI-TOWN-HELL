@@ -8,6 +8,8 @@ const GatlingHeavyScene: PackedScene = preload("res://scenes/enemies/gatling_hea
 const InterceptorScene: PackedScene = preload("res://scenes/enemies/interceptor_visuals.tscn")
 const RaptorRaiderScene: PackedScene = preload("res://scenes/enemies/raptor_raider_visuals.tscn")
 const DesertBarrageRoverScene: PackedScene = preload("res://scenes/enemies/desert_barrage_rover_visuals.tscn")
+const AzureSiegeTankScene: PackedScene = preload("res://scenes/enemies/azure_siege_tank_visuals.tscn")
+const DesertIroncladScene: PackedScene = preload("res://scenes/enemies/desert_ironclad_visuals.tscn")
 
 static func build(enemy: Node3D, role: String) -> void:
 	var visual := Node3D.new()
@@ -161,178 +163,48 @@ static func build(enemy: Node3D, role: String) -> void:
 			box(turret, Vector3(1.2, 0.3, 2.4), Vector3(0, 0, 0), dark)
 
 		"assault_apc":
-			var modular_scene: PackedScene = AssaultAPCScene
-			if modular_scene:
-				# Remove placeholder visual created at start of build()
-				enemy.remove_child(visual)
-				visual.queue_free()
-				
-				var rig = modular_scene.instantiate()
-				var new_visuals = rig.get_node_or_null("Visuals")
-				var turret = rig.get_node_or_null("Turret")
-				if new_visuals and turret:
-					rig.remove_child(new_visuals)
-					rig.remove_child(turret)
-					new_visuals.owner = null
-					turret.owner = null
-					enemy.add_child(new_visuals)
-					enemy.add_child(turret)
-					rig.queue_free()
-				else:
-					push_warning("Assault APC modular visuals hierarchy incomplete, falling back to procedural model")
-					_build_procedural_assault_apc(enemy, visual)
-			else:
-				push_warning("Assault APC modular visuals unavailable, falling back to procedural model")
-				_build_procedural_assault_apc(enemy, visual)
-
-		"sam_launcher":
-			# Heavy tracked surface-to-air missile platform
-			box(visual, Vector3(3.4, 1.2, 6.4), Vector3(0, 1.0, 0), steel)
-			box(visual, Vector3(3.6, 0.9, 5.8), Vector3(0, 0.6, 0), dark) # Lower hull & tracks
-			# Caterpillar tread sides
-			for side in [-1.0, 1.0]:
-				box(visual, Vector3(0.6, 0.9, 6.0), Vector3(side * 1.7, 0.6, 0), dark)
-				box(visual, Vector3(0.7, 0.2, 5.8), Vector3(side * 1.7, 1.1, 0), armor) # Skirts
-			# SAM Launch Turret with 4 missile tubes
-			var turret := Node3D.new()
-			turret.name = "Turret"
-			turret.position = Vector3(0, 1.8, -0.4)
-			enemy.add_child(turret)
-			box(turret, Vector3(2.2, 0.8, 2.2), Vector3.ZERO, armor)
-			# 4 angled missile canisters
-			for sx in [-0.65, 0.65]:
-				for sy in [0.4, 1.0]:
-					cylinder(turret, 0.24, 2.6, Vector3(sx, sy, -0.4), Materials.surface(Color("e8ecef")), 8)
-					box(turret, Vector3(0.28, 0.28, 0.4), Vector3(sx, sy, -1.6), red) # Warhead tip
-			# Radar tracking dish
-			cylinder(turret, 0.6, 0.1, Vector3(0, 1.4, 0.6), accent, 8)
-
-		"technical_truck":
-			# Agile desert raider pickup with heavy machine gun pintle
-			box(visual, Vector3(2.2, 0.9, 2.2), Vector3(0, 1.1, -1.0), desert) # Cab
-			box(visual, Vector3(1.9, 0.6, 1.4), Vector3(0, 1.6, -0.8), dark) # Windshield/roof
-			box(visual, Vector3(2.2, 0.7, 2.6), Vector3(0, 0.9, 1.2), desert) # Truck bed
-			box(visual, Vector3(0.12, 0.8, 2.4), Vector3(-1.0, 1.3, 1.2), steel) # Bed side rail L
-			box(visual, Vector3(0.12, 0.8, 2.4), Vector3(1.0, 1.3, 1.2), steel) # Bed side rail R
-			# 4 off-road tires
-			for side in [-1.0, 1.0]:
-				for axle in [-1.4, 1.4]:
-					wheel_mesh(visual, 0.58, 0.4, Vector3(side * 1.2, 0.58, axle), dark)
-			# Rear pintle gun
-			var turret := Node3D.new()
-			turret.name = "Turret"
-			turret.position = Vector3(0, 1.6, 1.2)
-			enemy.add_child(turret)
-			box(turret, Vector3(0.4, 0.8, 0.4), Vector3(0, 0, 0), steel) # Mount
-			box(turret, Vector3(0.3, 0.3, 1.6), Vector3(0, 0.4, -0.6), dark) # Heavy barrel
-			box(turret, Vector3(0.4, 0.3, 0.4), Vector3(0.3, 0.4, -0.2), accent) # Ammo box
+			_mount_modular_rig(enemy, visual, AssaultAPCScene, "Assault APC")
 
 		"scout_buggy":
-			var modular_scene: PackedScene = ScoutBuggyScene
-			if modular_scene:
-				# Remove placeholder visual created at start of build()
-				enemy.remove_child(visual)
-				visual.queue_free()
-				
-				var rig = modular_scene.instantiate()
-				var new_visuals = rig.get_node_or_null("Visuals")
-				var turret = rig.get_node_or_null("Turret")
-				if new_visuals and turret:
-					rig.remove_child(new_visuals)
-					rig.remove_child(turret)
-					new_visuals.owner = null
-					turret.owner = null
-					enemy.add_child(new_visuals)
-					enemy.add_child(turret)
-					rig.queue_free()
-				else:
-					push_warning("Scout Buggy modular visuals hierarchy incomplete, falling back to procedural model")
-					_build_procedural_scout_buggy(enemy, visual)
-			else:
-				push_warning("Scout Buggy modular visuals unavailable, falling back to procedural model")
-				_build_procedural_scout_buggy(enemy, visual)
+			_mount_modular_rig(enemy, visual, ScoutBuggyScene, "Scout Buggy")
 
 		"gatling_heavy":
-			var modular_scene: PackedScene = GatlingHeavyScene
-			if modular_scene:
-				# Remove placeholder visual created at start of build()
-				enemy.remove_child(visual)
-				visual.queue_free()
-				
-				var rig = modular_scene.instantiate()
-				var new_visuals = rig.get_node_or_null("Visuals")
-				var turret = rig.get_node_or_null("Turret")
-				if new_visuals and turret:
-					rig.remove_child(new_visuals)
-					rig.remove_child(turret)
-					new_visuals.owner = null
-					turret.owner = null
-					enemy.add_child(new_visuals)
-					enemy.add_child(turret)
-					rig.queue_free()
-				else:
-					push_warning("Gatling Heavy modular visuals hierarchy incomplete, falling back to procedural model")
-					_build_procedural_gatling_heavy(enemy, visual)
-			else:
-				push_warning("Gatling Heavy modular visuals unavailable, falling back to procedural model")
-				_build_procedural_gatling_heavy(enemy, visual)
+			_mount_modular_rig(enemy, visual, GatlingHeavyScene, "Gatling Heavy")
 
 		"raptor_raider":
-			var modular_scene: PackedScene = RaptorRaiderScene
-			if modular_scene:
-				enemy.remove_child(visual)
-				visual.queue_free()
-				var rig = modular_scene.instantiate()
-				var new_visuals = rig.get_node_or_null("Visuals")
-				var turret = rig.get_node_or_null("Turret")
-				if new_visuals and turret:
-					rig.remove_child(new_visuals)
-					rig.remove_child(turret)
-					new_visuals.owner = null
-					turret.owner = null
-					enemy.add_child(new_visuals)
-					enemy.add_child(turret)
-					rig.queue_free()
-				else:
-					push_warning("Raptor Raider visuals hierarchy incomplete")
-			else:
-				push_warning("Raptor Raider scene unavailable")
+			_mount_modular_rig(enemy, visual, RaptorRaiderScene, "Raptor Raider")
 
 		"desert_barrage_rover":
-			var modular_scene: PackedScene = DesertBarrageRoverScene
-			if modular_scene:
-				enemy.remove_child(visual)
-				visual.queue_free()
-				var rig = modular_scene.instantiate()
-				var new_visuals = rig.get_node_or_null("Visuals")
-				var turret = rig.get_node_or_null("Turret")
-				if new_visuals and turret:
-					rig.remove_child(new_visuals)
-					rig.remove_child(turret)
-					new_visuals.owner = null
-					turret.owner = null
-					enemy.add_child(new_visuals)
-					enemy.add_child(turret)
-					rig.queue_free()
-				else:
-					push_warning("Desert Barrage Rover visuals hierarchy incomplete")
-			else:
-				push_warning("Desert Barrage Rover scene unavailable")
+			_mount_modular_rig(enemy, visual, DesertBarrageRoverScene, "Desert Barrage Rover")
 
-		"mortar_crawler", _:
-			box(visual, Vector3(2.8, 0.85, 5.0), Vector3(0, 0.9, 0), armor)
-			box(visual, Vector3(2.0, 0.9, 2.0), Vector3(0, 1.65, 0.4), dark)
-			for side in [-1.0, 1.0]:
-				for axle in [-1.4, 0.0, 1.4]:
-					wheel_mesh(visual, 0.6, 0.45, Vector3(side * 1.4, 0.6, axle), dark)
-			var turret := Node3D.new()
-			turret.name = "Turret"
-			turret.position = Vector3(0, 2.0, 0)
+		"rail_crawler":
+			_mount_modular_rig(enemy, visual, AzureSiegeTankScene, "Azure Siege Tank")
+
+		"siege_tank":
+			_mount_modular_rig(enemy, visual, DesertIroncladScene, "Desert Ironclad")
+
+		_:
+			push_warning("RaiderVisuals: unknown role: %s" % role)
+
+static func _mount_modular_rig(enemy: Node3D, visual: Node3D, scene: PackedScene, vehicle_name: String) -> void:
+	if scene:
+		enemy.remove_child(visual)
+		visual.queue_free()
+		var rig = scene.instantiate()
+		var new_visuals = rig.get_node_or_null("Visuals")
+		var turret = rig.get_node_or_null("Turret")
+		if new_visuals and turret:
+			rig.remove_child(new_visuals)
+			rig.remove_child(turret)
+			new_visuals.owner = null
+			turret.owner = null
+			enemy.add_child(new_visuals)
 			enemy.add_child(turret)
-			box(turret, Vector3(1.2, 0.5, 1.2), Vector3.ZERO, armor)
-			for side in [-0.4, 0.4]:
-				box(turret, Vector3(0.5, 0.5, 2.2), Vector3(side, 0.3, -0.8), accent)
-			box(visual, Vector3(2.2, 0.16, 0.3), Vector3(0, 1.3, -2.0), accent)
+			rig.queue_free()
+		else:
+			push_error("%s visuals hierarchy incomplete (missing Visuals or Turret)" % vehicle_name)
+	else:
+		push_error("%s modular scene unavailable" % vehicle_name)
 
 static func box(parent: Node3D, size: Vector3, pos: Vector3, mat: Material) -> void:
 	var instance := MeshInstance3D.new()
@@ -368,59 +240,4 @@ static func wheel_mesh(parent: Node3D, radius: float, width: float, pos: Vector3
 	wheel.position = pos
 	parent.add_child(wheel)
 
-static func _build_procedural_scout_buggy(enemy: Node3D, visual: Node3D) -> void:
-	var buggy_color := Materials.surface(Color("af6546"))
-	var dark := Materials.surface(Color("222b35"))
-	var accent := Materials.surface(Color("f4b653"))
-	box(visual, Vector3(2.6, 0.75, 4.0), Vector3(0, 0.9, 0), buggy_color)
-	box(visual, Vector3(1.8, 0.9, 1.8), Vector3(0, 1.65, 0.4), dark)
-	for side in [-1.0, 1.0]:
-		for axle in [-1.25, 1.25]:
-			wheel_mesh(visual, 0.6, 0.45, Vector3(side * 1.4, 0.6, axle), dark)
-	var turret := Node3D.new()
-	turret.name = "Turret"
-	turret.position = Vector3(0, 2.0, 0)
-	enemy.add_child(turret)
-	box(turret, Vector3(1.0, 0.4, 1.0), Vector3.ZERO, buggy_color)
-	box(turret, Vector3(0.18, 0.18, 1.6), Vector3(0, 0.3, -0.8), dark)
-	box(visual, Vector3(2.2, 0.16, 0.3), Vector3(0, 1.3, -1.6), accent)
-
-static func _build_procedural_assault_apc(enemy: Node3D, visual: Node3D) -> void:
-	var armor := Materials.surface(Color("7d8850"))
-	var steel := Materials.surface(Color("4a5866"))
-	var dark := Materials.surface(Color("222b35"))
-	var accent := Materials.surface(Color("f4b653"))
-	box(visual, Vector3(3.2, 1.4, 6.2), Vector3(0, 1.2, 0), armor)
-	box(visual, Vector3(2.8, 0.6, 2.2), Vector3(0, 1.8, 0.8), steel)
-	box(visual, Vector3(3.0, 0.4, 1.8), Vector3(0, 1.1, -2.4), steel)
-	for side in [-1.0, 1.0]:
-		for axle in [-1.8, 0.0, 1.8]:
-			wheel_mesh(visual, 0.65, 0.45, Vector3(side * 1.7, 0.65, axle), dark)
-	var turret := Node3D.new()
-	turret.name = "Turret"
-	turret.position = Vector3(0, 2.1, 0.4)
-	enemy.add_child(turret)
-	box(turret, Vector3(1.4, 0.6, 1.6), Vector3.ZERO, steel)
-	box(turret, Vector3(0.14, 0.14, 2.4), Vector3(-0.25, 0.1, -1.2), dark)
-	box(turret, Vector3(0.14, 0.14, 2.4), Vector3(0.25, 0.1, -1.2), dark)
-	box(turret, Vector3(0.4, 0.5, 0.7), Vector3(0.8, 0.1, 0), accent)
-
-static func _build_procedural_gatling_heavy(enemy: Node3D, visual: Node3D) -> void:
-	var slate_purple := Materials.surface(Color("594f6b"))
-	var charcoal := Materials.surface(Color("2e333d"))
-	var mustard := Materials.surface(Color("d9a338"))
-	var dark := Materials.surface(Color("1f2129"))
-	# Hull
-	box(visual, Vector3(3.4, 0.95, 6.8), Vector3(0, 0.95, 0), slate_purple)
-	box(visual, Vector3(3.24, 0.15, 0.8), Vector3(0, 1.55, -2.1), mustard)
-	for side in [-1.0, 1.0]:
-		box(visual, Vector3(0.55, 1.15, 7.0), Vector3(side * 1.9, 0.85, 0), slate_purple)
-		box(visual, Vector3(0.52, 0.45, 6.6), Vector3(side * 1.88, 0.25, 0), dark)
-	var turret := Node3D.new()
-	turret.name = "Turret"
-	turret.position = Vector3(0, 1.7, -0.2)
-	enemy.add_child(turret)
-	box(turret, Vector3(2.5, 0.9, 2.8), Vector3(0, 0.65, -0.2), slate_purple)
-	cylinder(turret, 0.5, 3.4, Vector3(0, 0.65, -2.5), charcoal, 8)
-	box(turret, Vector3(1.8, 0.9, 1.6), Vector3(0, 0.68, 1.75), charcoal)
 

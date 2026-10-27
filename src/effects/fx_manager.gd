@@ -56,6 +56,7 @@ const MAX_PROJECTILE_TRAILS: int = 32
 const MAX_FLASH_LIGHTS: int = 4
 const MAX_ORDINARY_EXPLOSIONS: int = 12
 const MAX_SPARK_EMITTERS: int = 16
+const MAX_PICKUP_SPARKLES: int = 16
 
 var muzzle_pool: Array = []
 var impact_pool: Array = []
@@ -64,6 +65,8 @@ var trail_pool: Array = []
 var flash_light_pool: Array[OmniLight3D] = []
 var spark_pool: Array = []
 var _spark_cursor: int = 0
+var pickup_sparkle_pool: Array = []
+var _pickup_sparkle_cursor: int = 0
 var active_flash_lights: Array[Dictionary] = [] # { light, timer, duration, initial_energy, base_energy, priority, pos }
 var active_composed_explosions: Array = []
 
@@ -152,6 +155,32 @@ func _setup_gameplay_fx_pools() -> void:
 		sparks.emitting = false
 		gameplay_fx_root.add_child(sparks)
 		spark_pool.append(sparks)
+
+	# 8. Pooled pickup collection sparkles (16 bounded slots, zero runtime node allocation)
+	var pickup_spark_mesh = BoxMesh.new()
+	pickup_spark_mesh.size = Vector3(0.08, 0.08, 0.08)
+	var pickup_spark_mat = StandardMaterial3D.new()
+	pickup_spark_mat.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+	pickup_spark_mat.vertex_color_use_as_albedo = true
+	pickup_spark_mesh.material = pickup_spark_mat
+
+	for i in range(MAX_PICKUP_SPARKLES):
+		var p_sparks = CPUParticles3D.new()
+		p_sparks.name = "PickupSparks_%d" % i
+		p_sparks.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+		p_sparks.one_shot = true
+		p_sparks.explosiveness = 0.95
+		p_sparks.amount = 6
+		p_sparks.lifetime = 0.22
+		p_sparks.spread = 180.0
+		p_sparks.initial_velocity_min = 2.5
+		p_sparks.initial_velocity_max = 6.0
+		p_sparks.gravity = Vector3.ZERO
+		p_sparks.mesh = pickup_spark_mesh
+		p_sparks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		p_sparks.emitting = false
+		gameplay_fx_root.add_child(p_sparks)
+		pickup_sparkle_pool.append(p_sparks)
 
 func _connect_event_bus() -> void:
 	if has_node("/root/EventBus"):
@@ -441,6 +470,10 @@ func clear_combat_effects() -> void:
 		if is_instance_valid(spk):
 			spk.emitting = false
 
+	for p_spk in pickup_sparkle_pool:
+		if is_instance_valid(p_spk):
+			p_spk.emitting = false
+
 	for entry in active_flash_lights:
 		var light: OmniLight3D = entry.get("light")
 		if is_instance_valid(light):
@@ -466,7 +499,7 @@ func clear_combat_effects() -> void:
 func _is_pooled_child(child: Node) -> bool:
 	if child == fragment_trail_emitter:
 		return true
-	if child in muzzle_pool or child in impact_pool or child in patch_pool or child in trail_pool or child in spark_pool:
+	if child in muzzle_pool or child in impact_pool or child in patch_pool or child in trail_pool or child in spark_pool or child in pickup_sparkle_pool:
 		return true
 	if child is OmniLight3D and child in flash_light_pool:
 		return true
@@ -911,36 +944,16 @@ func spawn_bounty_popup(pos: Vector3, score_amount: int) -> void:
 	bounty_label.setup("$%d" % score_amount, bounty_pos, FloatingTextClass.TextType.BOUNTY, Color(1.0, 0.88, 0.15, 1.0))
 
 # ------------------------------------------------------------------------------
-# 10. PICKUP COLLECTION SPARKS
+# 10. PICKUP COLLECTION SPARKS (Zero-allocation pooled particle emitters)
 # ------------------------------------------------------------------------------
 func spawn_pickup_sparkle(pos: Vector3, sparkle_color: Color = Color(1.0, 0.9, 0.3)) -> void:
-	if not is_inside_tree() or get_tree() == null or get_tree().get_nodes_in_group("combat_sparks").size() >= 32:
+	if pickup_sparkle_pool.is_empty():
 		return
-	var sparks = CPUParticles3D.new()
-	get_tree().root.add_child(sparks)
-	sparks.add_to_group("combat_sparks")
+	var sparks: CPUParticles3D = pickup_sparkle_pool[_pickup_sparkle_cursor]
+	_pickup_sparkle_cursor = (_pickup_sparkle_cursor + 1) % MAX_PICKUP_SPARKLES
 	sparks.global_position = pos
-	sparks.emitting = true
-	sparks.one_shot = true
-	sparks.explosiveness = 0.95
-	sparks.amount = 6
-	sparks.lifetime = 0.22
-	sparks.spread = 180.0
-	sparks.initial_velocity_min = 2.5
-	sparks.initial_velocity_max = 6.0
-	sparks.gravity = Vector3.ZERO
-	
-	var mesh = BoxMesh.new()
-	mesh.size = Vector3(0.08, 0.08, 0.08)
-	var mat = StandardMaterial3D.new()
-	mat.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
-	mat.albedo_color = sparkle_color
-	mesh.material = mat
-	sparks.mesh = mesh
-	
-	var tw = sparks.create_tween()
-	tw.tween_interval(0.25)
-	tw.tween_callback(sparks.queue_free)
+	sparks.color = sparkle_color
+	sparks.restart()
 
 # ------------------------------------------------------------------------------
 # 11. EventBus Callbacks

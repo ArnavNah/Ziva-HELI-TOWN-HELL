@@ -12,19 +12,15 @@ const KamikazeDroneScript = preload("res://src/enemies/air/kamikaze_drone.gd")
 const RocketGunshipScript = preload("res://src/enemies/air/rocket_gunship.gd")
 const InterceptorScript = preload("res://src/enemies/air/interceptor.gd")
 const MinelayerScript = preload("res://src/enemies/air/minelayer.gd")
-const FlakTankScript = preload("res://src/enemies/ground/flak_tank.gd")
-const MissileCarrierScript = preload("res://src/enemies/ground/missile_carrier.gd")
 const SiegeTankScript = preload("res://src/enemies/ground/siege_tank.gd")
-const DesertIroncladScene: PackedScene = preload("res://scenes/enemies/desert_ironclad_visuals.tscn")
 const GatlingHeavyScript = preload("res://src/enemies/ground/gatling_heavy.gd")
-const InfantrySquadScript = preload("res://src/enemies/ground/infantry_squad.gd")
 const ShieldDroneScript = preload("res://src/enemies/support/shield_drone.gd")
 const RepairDroneScript = preload("res://src/enemies/support/repair_drone.gd")
 const DamageReceiverScript = preload("res://src/combat/damage_receiver.gd")
 const ProceduralRaider = preload("res://src/enemies/procedural_raider.gd")
 const RaiderVisuals = preload("res://src/enemies/raider_visuals.gd")
 const FieldRaiderVisuals = preload("res://src/enemies/field_raider_visuals.gd")
-const FIELD_ROLES = ["rocket_buggy", "flame_tank", "rail_crawler", "hunter_drone", "torpedo_vtol", "escort_fighter"]
+const FIELD_ROLES = ["hunter_drone", "torpedo_vtol", "escort_fighter"]
 const SpawnCardClass = preload("res://src/resources/spawn_card.gd")
 
 var encounter_rng := RandomNumberGenerator.new()
@@ -530,12 +526,14 @@ func find_valid_spawn_position(family: String, center_pos: Vector3, variant_key:
 			# Test clearance against buildings & obstacles (Mask 6)
 			if space != null and _cached_shape_query != null and _cached_box_shape != null:
 				var box_size = Vector3(3.2, 2.2, 5.2)
-				if variant_key in ["flak_tank", "missile_carrier", "siege_tank", "gatling_heavy"]:
-					box_size = Vector3(3.6, 2.4, 7.2)
-				elif variant_key in ["sam_launcher", "assault_apc", "desert_barrage_rover"]:
+				if variant_key in ["siege_tank", "gatling_heavy", "rail_crawler"]:
+					box_size = Vector3(3.8, 2.4, 7.2)
+				elif variant_key in ["assault_apc", "desert_barrage_rover"]:
 					box_size = Vector3(3.4, 2.4, 6.4)
 				elif variant_key == "raptor_raider":
 					box_size = Vector3(3.8, 2.2, 5.8)
+				elif variant_key == "scout_buggy":
+					box_size = Vector3(3.0, 2.0, 4.4)
 				elif variant_key == "boss_ground_fortress":
 					box_size = Vector3(11, 8, 18)
 				_cached_box_shape.size = box_size
@@ -596,9 +594,9 @@ func find_valid_spawn_position(family: String, center_pos: Vector3, variant_key:
 func _create_enemy_node(variant_key: String) -> CharacterBody3D:
 	var enemy: CharacterBody3D
 	match variant_key:
-		"rocket_buggy", "flame_tank", "rail_crawler", "hunter_drone", "torpedo_vtol", "escort_fighter":
+		"rail_crawler", "hunter_drone", "torpedo_vtol", "escort_fighter":
 			enemy = ProceduralRaider.new()
-		"scout_buggy", "mortar_crawler", "attack_wing", "assault_apc", "sam_launcher", "technical_truck", "stealth_vtol", "heavy_bomber", "raptor_raider", "desert_barrage_rover":
+		"scout_buggy", "attack_wing", "assault_apc", "stealth_vtol", "heavy_bomber", "raptor_raider", "desert_barrage_rover":
 			enemy = ProceduralRaider.new()
 		"attack_gunship":
 			enemy = AttackGunshipScript.new()
@@ -612,16 +610,10 @@ func _create_enemy_node(variant_key: String) -> CharacterBody3D:
 			enemy = InterceptorScript.new()
 		"minelayer":
 			enemy = MinelayerScript.new()
-		"flak_tank":
-			enemy = FlakTankScript.new()
-		"missile_carrier":
-			enemy = MissileCarrierScript.new()
 		"siege_tank":
 			enemy = SiegeTankScript.new()
 		"gatling_heavy":
 			enemy = GatlingHeavyScript.new()
-		"infantry_squad":
-			enemy = InfantrySquadScript.new()
 		"shield_drone":
 			enemy = ShieldDroneScript.new()
 		"repair_drone":
@@ -631,21 +623,19 @@ func _create_enemy_node(variant_key: String) -> CharacterBody3D:
 
 	enemy.variant_id = variant_key
 
-	# Calibrated scale based on unit class (Tanks: 7m long, Gunships: 9m, Drones: 2.8m, Infantry: 1.8m)
+	# Calibrated scale based on unit class (Tanks: 7m long, Gunships: 9m, Drones: 2.8m)
 	var col_size = Vector3(2.5, 2.0, 3.5)
 
-	if variant_key in ["flak_tank", "missile_carrier", "siege_tank", "gatling_heavy"]:
+	if variant_key in ["siege_tank", "gatling_heavy"]:
 		col_size = Vector3(3.6, 2.2, 7.0)
-	elif variant_key == "sam_launcher":
-		col_size = Vector3(3.4, 2.4, 6.4)
-	elif variant_key == "assault_apc":
+	elif variant_key == "rail_crawler":
+		col_size = Vector3(3.9, 2.5, 6.2)
+	elif variant_key in ["assault_apc", "desert_barrage_rover"]:
 		col_size = Vector3(3.2, 2.2, 6.2)
-	elif variant_key == "desert_barrage_rover":
-		col_size = Vector3(3.2, 2.4, 6.2)
 	elif variant_key == "raptor_raider":
 		col_size = Vector3(3.8, 2.2, 5.8)
-	elif variant_key == "technical_truck":
-		col_size = Vector3(2.2, 1.8, 4.4)
+	elif variant_key == "scout_buggy":
+		col_size = Vector3(2.5, 2.0, 3.8)
 	elif variant_key in ["scout_drone", "kamikaze_drone", "shield_drone", "repair_drone"]:
 		col_size = Vector3(2.4, 1.4, 2.8)
 	elif variant_key in ["attack_gunship", "rocket_gunship", "minelayer"]:
@@ -654,17 +644,8 @@ func _create_enemy_node(variant_key: String) -> CharacterBody3D:
 		col_size = Vector3(8.0, 2.2, 8.0)
 	elif variant_key == "stealth_vtol":
 		col_size = Vector3(5.5, 1.8, 5.0)
-	elif variant_key == "infantry_squad":
-		col_size = Vector3(2.0, 1.8, 2.0)
 	elif variant_key in ["attack_wing", "interceptor"]:
 		col_size = Vector3(6.0, 1.5, 4.0)
-	elif variant_key == "mortar_crawler":
-		col_size = Vector3(3.6, 2.5, 5.0)
-
-	if variant_key == "rocket_buggy":
-		col_size = Vector3(2.8, 2.4, 4.6)
-	elif variant_key in ["flame_tank", "rail_crawler"]:
-		col_size = Vector3(3.9, 2.5, 6.2)
 	elif variant_key == "hunter_drone":
 		col_size = Vector3(3.6, 1.5, 3.6)
 	elif variant_key in ["torpedo_vtol", "escort_fighter"]:
@@ -709,319 +690,136 @@ func _build_enemy_visuals(enemy: CharacterBody3D, variant_key: String, _col_size
 	if variant_key in FIELD_ROLES:
 		FieldRaiderVisuals.build(enemy, variant_key, encounter_rng.randi())
 		return
-	if variant_key in ["scout_buggy", "gatling_heavy", "mortar_crawler", "attack_wing", "interceptor", "assault_apc", "sam_launcher", "technical_truck", "stealth_vtol", "heavy_bomber", "attack_gunship", "rocket_gunship", "minelayer", "raptor_raider", "desert_barrage_rover"]:
+	if variant_key in ["scout_buggy", "gatling_heavy", "attack_wing", "interceptor", "assault_apc", "stealth_vtol", "heavy_bomber", "attack_gunship", "rocket_gunship", "minelayer", "raptor_raider", "desert_barrage_rover", "rail_crawler", "siege_tank"]:
 		RaiderVisuals.build(enemy, variant_key)
 		return
-	if variant_key == "siege_tank":
-		var rig = DesertIroncladScene.instantiate()
-		var new_visuals = rig.get_node_or_null("Visuals")
-		var turret = rig.get_node_or_null("Turret")
-		if new_visuals and turret:
-			rig.remove_child(new_visuals)
-			rig.remove_child(turret)
-			new_visuals.owner = null
-			turret.owner = null
-			enemy.add_child(new_visuals)
-			enemy.add_child(turret)
-			rig.queue_free()
-			return
+
 	var vis = Node3D.new()
 	vis.name = "Visuals"
 	enemy.add_child(vis)
-
-	# Common Military Materials
-	var mat_armor_green = StandardMaterial3D.new()
-	var ground_palette := {"flak_tank": Color("65754a"), "siege_tank": Color("9a7751"), "gatling_heavy": Color("635d76"), "missile_carrier": Color("517875")}
-	mat_armor_green.albedo_color = ground_palette.get(variant_key, Color("65754a"))
-	mat_armor_green.metallic = 0.35
-	mat_armor_green.roughness = 0.65
 
 	var mat_armor_dark = StandardMaterial3D.new()
 	mat_armor_dark.albedo_color = Color(0.20, 0.22, 0.24, 1.0) # Gunship charcoal
 	mat_armor_dark.metallic = 0.5
 	mat_armor_dark.roughness = 0.4
 
-	var mat_treads = StandardMaterial3D.new()
-	mat_treads.albedo_color = Color(0.12, 0.13, 0.14, 1.0) # Dark rubber/steel
-	mat_treads.metallic = 0.7
-	mat_treads.roughness = 0.8
-
 	var mat_gun_metal = StandardMaterial3D.new()
 	mat_gun_metal.albedo_color = Color(0.14, 0.15, 0.16, 1.0)
 	mat_gun_metal.metallic = 0.85
 	mat_gun_metal.roughness = 0.3
 
-	if variant_key in ["flak_tank", "missile_carrier", "siege_tank", "gatling_heavy"]:
-		# --- GROUND TANK VEHICLES ---
-		# 1. Armored Lower Hull (3.4m x 1.2m x 6.6m)
-		var hull_inst = MeshInstance3D.new()
-		var hull_mesh = BoxMesh.new()
-		hull_mesh.size = Vector3(3.4, 1.2, 6.6)
-		hull_mesh.material = mat_armor_green
-		hull_inst.mesh = hull_mesh
-		hull_inst.position = Vector3(0, 0.6, 0)
-		vis.add_child(hull_inst)
+	# --- DRONES & SUPPORT UNITS ---
+	# Drone central body
+	var body = MeshInstance3D.new()
+	var b_mesh = BoxMesh.new()
+	b_mesh.size = Vector3(1.6, 0.55, 1.8)
+	b_mesh.material = mat_armor_dark
+	body.mesh = b_mesh
+	body.position = Vector3(0, 0.7, 0)
+	vis.add_child(body)
 
-		# 2. Left & Right Track Skirts
-		for side in [-1.0, 1.0]:
-			var tread = MeshInstance3D.new()
-			var tr_mesh = BoxMesh.new()
-			tr_mesh.size = Vector3(0.42, 0.9, 6.8)
-			tr_mesh.material = mat_treads
-			tread.mesh = tr_mesh
-			tread.position = Vector3(side * 1.62, 0.45, 0)
-			vis.add_child(tread)
+	# 4 Corner Quadrotor Arms & Discs
+	var disc_mat = StandardMaterial3D.new()
+	disc_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	disc_mat.albedo_color = Color(0.15, 0.18, 0.22, 0.32)
 
-		# 3. Turret Assembly (attached to $Turret node for independent aiming tracking)
-		var turret = Node3D.new()
-		turret.name = "Turret"
-		turret.position = Vector3(0, 1.25, -0.2)
-		enemy.add_child(turret)
+	for ox in [-1.2, 1.2]:
+		for oz in [-1.2, 1.2]:
+			var arm = MeshInstance3D.new()
+			var arm_m = BoxMesh.new()
+			arm_m.size = Vector3(0.12, 0.1, 1.2)
+			arm_m.material = mat_gun_metal
+			arm.mesh = arm_m
+			arm.position = Vector3(ox * 0.5, 0.7, oz * 0.5)
+			arm.rotation_degrees = Vector3(0, 45.0 if (ox * oz > 0) else -45.0, 0)
+			vis.add_child(arm)
 
-		var turret_mesh_inst = MeshInstance3D.new()
-		var t_mesh = BoxMesh.new()
-		t_mesh.size = Vector3(2.4, 0.8, 2.8)
-		t_mesh.material = mat_armor_green
-		turret_mesh_inst.mesh = t_mesh
-		turret_mesh_inst.position = Vector3(0, 0.4, 0)
-		turret.add_child(turret_mesh_inst)
+			var prop = MeshInstance3D.new()
+			var p_mesh = CylinderMesh.new()
+			p_mesh.top_radius = 0.65
+			p_mesh.bottom_radius = 0.65
+			p_mesh.height = 0.02
+			prop.mesh = p_mesh
+			prop.material_override = disc_mat
+			prop.position = Vector3(ox, 0.8, oz)
+			vis.add_child(prop)
 
-		# Commander cupola hatch
-		var hatch = MeshInstance3D.new()
-		var h_mesh = CylinderMesh.new()
-		h_mesh.top_radius = 0.32
-		h_mesh.bottom_radius = 0.32
-		h_mesh.height = 0.18
-		h_mesh.material = mat_treads
-		hatch.mesh = h_mesh
-		hatch.position = Vector3(0.5, 0.85, 0.3)
-		turret.add_child(hatch)
+	# Role-Specific Core Emitters
+	match variant_key:
+		"kamikaze_drone":
+			var core = MeshInstance3D.new()
+			var c_m = SphereMesh.new()
+			c_m.radius = 0.45
+			c_m.height = 0.9
+			var c_mat = StandardMaterial3D.new()
+			c_mat.albedo_color = Color(1.0, 0.15, 0.1) # Glowing red warhead
+			c_mat.emission_enabled = true
+			c_mat.emission = Color(1.0, 0.2, 0.1)
+			c_mat.emission_energy_multiplier = 2.0
+			core.mesh = c_m
+			core.material_override = c_mat
+			core.position = Vector3(0, 0.7, 0)
+			vis.add_child(core)
 
-		# Armament based on tank class (extending along -Z)
-		match variant_key:
-			"flak_tank":
-				# Dual AA autocannon barrels elevated at +18 deg
-				for side in [-0.5, 0.5]:
-					var barrel = MeshInstance3D.new()
-					var b_mesh = CylinderMesh.new()
-					b_mesh.top_radius = 0.1
-					b_mesh.bottom_radius = 0.1
-					b_mesh.height = 3.6
-					b_mesh.material = mat_gun_metal
-					barrel.mesh = b_mesh
-					barrel.position = Vector3(side, 0.5, -2.1)
-					barrel.rotation_degrees = Vector3(-72.0, 0, 0) # Tilted up toward sky
-					turret.add_child(barrel)
+		"shield_drone":
+			# Luminous energy core + outer bubble shield
+			var core = MeshInstance3D.new()
+			var c_m = SphereMesh.new()
+			c_m.radius = 0.5
+			c_m.height = 1.0
+			var c_mat = StandardMaterial3D.new()
+			c_mat.albedo_color = Color(0.15, 0.75, 1.0)
+			c_mat.emission_enabled = true
+			c_mat.emission = Color(0.2, 0.8, 1.0)
+			c_mat.emission_energy_multiplier = 2.5
+			core.mesh = c_m
+			core.material_override = c_mat
+			core.position = Vector3(0, 0.7, 0)
+			vis.add_child(core)
 
-			"siege_tank":
-				# Massive 125mm heavy cannon barrel extending forward
-				var cannon = MeshInstance3D.new()
-				var c_mesh = CylinderMesh.new()
-				c_mesh.top_radius = 0.16
-				c_mesh.bottom_radius = 0.18
-				c_mesh.height = 4.8
-				c_mesh.material = mat_gun_metal
-				cannon.mesh = c_mesh
-				cannon.position = Vector3(0, 0.4, -2.6)
-				cannon.rotation_degrees = Vector3(-90.0, 0, 0)
-				turret.add_child(cannon)
+			# Translucent energy bubble shield
+			var bubble = MeshInstance3D.new()
+			var b_sph = SphereMesh.new()
+			b_sph.radius = 7.0
+			b_sph.height = 14.0
+			var b_mat = StandardMaterial3D.new()
+			b_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			b_mat.albedo_color = Color(0.2, 0.65, 1.0, 0.16)
+			b_mat.roughness = 0.1
+			b_mat.emission_enabled = true
+			b_mat.emission = Color(0.1, 0.5, 0.9)
+			b_mat.emission_energy_multiplier = 0.4
+			bubble.mesh = b_sph
+			bubble.material_override = b_mat
+			bubble.position = Vector3(0, 0.7, 0)
+			vis.add_child(bubble)
 
-				var brake = MeshInstance3D.new()
-				var br_mesh = BoxMesh.new()
-				br_mesh.size = Vector3(0.52, 0.38, 0.6)
-				br_mesh.material = mat_gun_metal
-				brake.mesh = br_mesh
-				brake.position = Vector3(0, 0.4, -4.9)
-				turret.add_child(brake)
+		"repair_drone":
+			var core = MeshInstance3D.new()
+			var c_m = SphereMesh.new()
+			c_m.radius = 0.45
+			c_m.height = 0.9
+			var c_mat = StandardMaterial3D.new()
+			c_mat.albedo_color = Color(0.2, 1.0, 0.3) # Bright medical green
+			c_mat.emission_enabled = true
+			c_mat.emission = Color(0.2, 1.0, 0.3)
+			c_mat.emission_energy_multiplier = 2.0
+			core.mesh = c_m
+			core.material_override = c_mat
+			core.position = Vector3(0, 0.7, 0)
+			vis.add_child(core)
 
-			"gatling_heavy":
-				# Rotary multi-barrel gatling gun
-				var gatling = MeshInstance3D.new()
-				var g_mesh = CylinderMesh.new()
-				g_mesh.top_radius = 0.28
-				g_mesh.bottom_radius = 0.28
-				g_mesh.height = 3.4
-				g_mesh.material = mat_gun_metal
-				gatling.mesh = g_mesh
-				gatling.position = Vector3(0, 0.4, -2.0)
-				gatling.rotation_degrees = Vector3(-90.0, 0, 0)
-				turret.add_child(gatling)
-
-			"missile_carrier":
-				# Elevated dual SAM missile launcher box
-				var rack = MeshInstance3D.new()
-				var r_mesh = BoxMesh.new()
-				r_mesh.size = Vector3(2.0, 0.8, 2.6)
-				r_mesh.material = mat_armor_green
-				rack.mesh = r_mesh
-				rack.position = Vector3(0, 0.65, -0.4)
-				rack.rotation_degrees = Vector3(-32.0, 0, 0)
-				turret.add_child(rack)
-
-				# Missiles loaded in launcher
-				var mat_missile = StandardMaterial3D.new()
-				mat_missile.albedo_color = Color(0.92, 0.92, 0.95)
-				for side in [-0.55, 0.55]:
-					var m_tip = MeshInstance3D.new()
-					var tip_mesh = CylinderMesh.new()
-					tip_mesh.top_radius = 0.12
-					tip_mesh.bottom_radius = 0.12
-					tip_mesh.height = 2.2
-					tip_mesh.material = mat_missile
-					m_tip.mesh = tip_mesh
-					m_tip.position = Vector3(side, 0.75, -1.2)
-					m_tip.rotation_degrees = Vector3(-32.0, 0, 0)
-					turret.add_child(m_tip)
-
-	elif variant_key == "infantry_squad":
-		# --- INFANTRY FIRETEAM SQUAD (3 Soldiers on Street) ---
-		var offsets = [Vector3(0, 0, -0.6), Vector3(-0.7, 0, 0.6), Vector3(0.7, 0, 0.6)]
-		for pos_off in offsets:
-			var soldier = Node3D.new()
-			soldier.position = pos_off
-			vis.add_child(soldier)
-
-			# Torso
-			var torso = MeshInstance3D.new()
-			var t_mesh = BoxMesh.new()
-			t_mesh.size = Vector3(0.48, 0.75, 0.32)
-			t_mesh.material = mat_armor_green
-			torso.mesh = t_mesh
-			torso.position = Vector3(0, 0.75, 0)
-			soldier.add_child(torso)
-
-			# Helmet
-			var helmet = MeshInstance3D.new()
-			var h_mesh = SphereMesh.new()
-			h_mesh.radius = 0.22
-			h_mesh.height = 0.38
-			h_mesh.material = mat_armor_green
-			helmet.mesh = h_mesh
-			helmet.position = Vector3(0, 1.35, 0)
-			soldier.add_child(helmet)
-
-			# Rifle
-			var rifle = MeshInstance3D.new()
-			var r_mesh = BoxMesh.new()
-			r_mesh.size = Vector3(0.1, 0.12, 0.75)
-			r_mesh.material = mat_gun_metal
-			rifle.mesh = r_mesh
-			rifle.position = Vector3(0.22, 0.8, -0.35)
-			soldier.add_child(rifle)
-
-	else:
-		# --- DRONES & SUPPORT UNITS ---
-		# Drone central body
-		var body = MeshInstance3D.new()
-		var b_mesh = BoxMesh.new()
-		b_mesh.size = Vector3(1.6, 0.55, 1.8)
-		b_mesh.material = mat_armor_dark
-		body.mesh = b_mesh
-		body.position = Vector3(0, 0.7, 0)
-		vis.add_child(body)
-
-		# 4 Corner Quadrotor Arms & Discs
-		var disc_mat = StandardMaterial3D.new()
-		disc_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		disc_mat.albedo_color = Color(0.15, 0.18, 0.22, 0.32)
-
-		for ox in [-1.2, 1.2]:
-			for oz in [-1.2, 1.2]:
-				var arm = MeshInstance3D.new()
-				var arm_m = BoxMesh.new()
-				arm_m.size = Vector3(0.12, 0.1, 1.2)
-				arm_m.material = mat_gun_metal
-				arm.mesh = arm_m
-				arm.position = Vector3(ox * 0.5, 0.7, oz * 0.5)
-				arm.rotation_degrees = Vector3(0, 45.0 if (ox * oz > 0) else -45.0, 0)
-				vis.add_child(arm)
-
-				var prop = MeshInstance3D.new()
-				var p_mesh = CylinderMesh.new()
-				p_mesh.top_radius = 0.65
-				p_mesh.bottom_radius = 0.65
-				p_mesh.height = 0.02
-				prop.mesh = p_mesh
-				prop.material_override = disc_mat
-				prop.position = Vector3(ox, 0.8, oz)
-				vis.add_child(prop)
-
-		# Role-Specific Core Emitters
-		match variant_key:
-			"kamikaze_drone":
-				var core = MeshInstance3D.new()
-				var c_m = SphereMesh.new()
-				c_m.radius = 0.45
-				c_m.height = 0.9
-				var c_mat = StandardMaterial3D.new()
-				c_mat.albedo_color = Color(1.0, 0.15, 0.1) # Glowing red warhead
-				c_mat.emission_enabled = true
-				c_mat.emission = Color(1.0, 0.2, 0.1)
-				c_mat.emission_energy_multiplier = 2.0
-				core.mesh = c_m
-				core.material_override = c_mat
-				core.position = Vector3(0, 0.7, 0)
-				vis.add_child(core)
-
-			"shield_drone":
-				# Luminous energy core + outer bubble shield
-				var core = MeshInstance3D.new()
-				var c_m = SphereMesh.new()
-				c_m.radius = 0.5
-				c_m.height = 1.0
-				var c_mat = StandardMaterial3D.new()
-				c_mat.albedo_color = Color(0.15, 0.75, 1.0)
-				c_mat.emission_enabled = true
-				c_mat.emission = Color(0.2, 0.8, 1.0)
-				c_mat.emission_energy_multiplier = 2.5
-				core.mesh = c_m
-				core.material_override = c_mat
-				core.position = Vector3(0, 0.7, 0)
-				vis.add_child(core)
-
-				# Translucent energy bubble shield
-				var bubble = MeshInstance3D.new()
-				var b_sph = SphereMesh.new()
-				b_sph.radius = 7.0
-				b_sph.height = 14.0
-				var b_mat = StandardMaterial3D.new()
-				b_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-				b_mat.albedo_color = Color(0.2, 0.65, 1.0, 0.16)
-				b_mat.roughness = 0.1
-				b_mat.emission_enabled = true
-				b_mat.emission = Color(0.1, 0.5, 0.9)
-				b_mat.emission_energy_multiplier = 0.4
-				bubble.mesh = b_sph
-				bubble.material_override = b_mat
-				bubble.position = Vector3(0, 0.7, 0)
-				vis.add_child(bubble)
-
-			"repair_drone":
-				var core = MeshInstance3D.new()
-				var c_m = SphereMesh.new()
-				c_m.radius = 0.45
-				c_m.height = 0.9
-				var c_mat = StandardMaterial3D.new()
-				c_mat.albedo_color = Color(0.2, 1.0, 0.3) # Bright medical green
-				c_mat.emission_enabled = true
-				c_mat.emission = Color(0.2, 1.0, 0.3)
-				c_mat.emission_energy_multiplier = 2.0
-				core.mesh = c_m
-				core.material_override = c_mat
-				core.position = Vector3(0, 0.7, 0)
-				vis.add_child(core)
-
-			_: # scout_drone
-				var core = MeshInstance3D.new()
-				var c_m = SphereMesh.new()
-				c_m.radius = 0.35
-				c_m.height = 0.7
-				var c_mat = StandardMaterial3D.new()
-				c_mat.albedo_color = Color(1.0, 0.85, 0.2) # Amber sensor eye
-				c_mat.emission_enabled = true
-				c_mat.emission = Color(1.0, 0.85, 0.2)
-				c_mat.emission_energy_multiplier = 1.8
-				core.mesh = c_m
-				core.material_override = c_mat
-				core.position = Vector3(0, 0.7, -0.6)
-				vis.add_child(core)
+		_: # scout_drone
+			var core = MeshInstance3D.new()
+			var c_m = SphereMesh.new()
+			c_m.radius = 0.35
+			c_m.height = 0.7
+			var c_mat = StandardMaterial3D.new()
+			c_mat.albedo_color = Color(1.0, 0.85, 0.2) # Amber sensor eye
+			c_mat.emission_enabled = true
+			c_mat.emission = Color(1.0, 0.85, 0.2)
+			c_mat.emission_energy_multiplier = 1.8
+			core.mesh = c_m
+			core.material_override = c_mat
+			core.position = Vector3(0, 0.7, -0.6)
+			vis.add_child(core)

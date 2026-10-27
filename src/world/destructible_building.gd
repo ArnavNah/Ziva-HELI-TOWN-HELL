@@ -64,7 +64,7 @@ func _setup_structure() -> void:
 
 	mesh_instance.visibility_range_end = 260.0
 	mesh_instance.visibility_range_end_margin = 35.0
-	mesh_instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	mesh_instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	_update_visuals_and_collision()
 
 func _on_damaged(_amount: float, remaining_hp: float, _data: RefCounted) -> void:

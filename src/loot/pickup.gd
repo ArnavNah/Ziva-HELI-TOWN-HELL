@@ -101,6 +101,7 @@ func _setup_mesh_and_material() -> void:
 			mesh_instance = c
 			break
 	if mesh_instance:
+		mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		if mesh_instance.material_override is StandardMaterial3D:
 			base_mat = mesh_instance.material_override.duplicate() as StandardMaterial3D
 		elif mesh_instance.mesh and mesh_instance.mesh.material is StandardMaterial3D:

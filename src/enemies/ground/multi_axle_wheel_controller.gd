@@ -1,6 +1,8 @@
 class_name MultiAxleWheelController
 extends Node3D
 
+var _damage_receiver: Node = null
+
 ## General Multi-Axle Wheel Controller for Wheeled Ground Enemies.
 ## Supports arbitrary axle/wheel counts (e.g. 4 wheels for Raptor Raider, 6 wheels for Desert Barrage Rover).
 ## - Automatically discovers steer and spin pivots under $Wheels.
@@ -49,6 +51,7 @@ func _find_parent_body() -> void:
 	while p:
 		if p is CharacterBody3D:
 			_parent_body = p
+			_damage_receiver = _parent_body.get_node_or_null("DamageReceiver")
 			break
 		p = p.get_parent()
 
@@ -74,9 +77,8 @@ func _physics_process(delta: float) -> void:
 			return
 
 	# Stop animating if dead or paused
-	if _parent_body.has_node("DamageReceiver"):
-		var dr = _parent_body.get_node("DamageReceiver")
-		if dr and dr.is_dead:
+	if _damage_receiver and is_instance_valid(_damage_receiver):
+		if _damage_receiver.is_dead:
 			return
 	if "behavior_state" in _parent_body and _parent_body.behavior_state == BaseEnemy.BehaviorState.DEAD:
 		return

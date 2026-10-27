@@ -197,7 +197,7 @@ func run() -> void:
 	# ------------------------------------------------------------------
 	print("\n>>> STAGE 6: Visual Evidence Capture")
 	if DisplayServer.get_name() != "headless":
-		await RenderingServer.frame_post_draw
+		RenderingServer.force_draw(false)
 		var img = root.get_texture().get_image()
 		img.save_png("res://artifacts/playability_verified_gameplay.png")
 		print("  [INFO] Captured visual proof to artifacts/playability_verified_gameplay.png")

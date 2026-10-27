@@ -45,6 +45,7 @@ static func instance(kind: String, point: Vector3) -> MeshInstance3D:
 	prop.name = "Town_" + kind
 	prop.mesh = mesh(kind)
 	prop.position = point
-	prop.visibility_range_end = 260.0
-	prop.visibility_range_end_margin = 35.0
+	prop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	prop.visibility_range_end = 150.0
+	prop.visibility_range_end_margin = 20.0
 	return prop

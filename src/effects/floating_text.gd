@@ -109,31 +109,17 @@ func setup(
 	scale = Vector3(0.1, 0.1, 0.1)
 
 	var tween = create_tween()
-	tween.set_parallel(true)
-
 	# 0. Color flash from white to gold
-	var flash_tween = create_tween()
-	flash_tween.tween_interval(0.05)
-	flash_tween.tween_property(self, "modulate", main_col, 0.07)
-
+	tween.tween_property(self, "modulate", main_col, 0.07).set_delay(0.05)
 	# 1. Scale punch & settle
-	var scale_tween = create_tween()
-	scale_tween.tween_property(self, "scale", Vector3.ONE * peak_scale, 0.09).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	scale_tween.tween_property(self, "scale", Vector3.ONE * base_scale, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-
-	# 2. Animate flying to the top (high upward trajectory towards sky/top of screen)
-	tween.tween_property(self, "global_position:y", global_position.y + float_height, duration).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-
+	tween.parallel().tween_property(self, "scale", Vector3.ONE * peak_scale, 0.09).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.chain().tween_property(self, "scale", Vector3.ONE * base_scale, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# 2. Animate flying to the top
+	tween.parallel().tween_property(self, "global_position:y", global_position.y + float_height, duration).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	# 3. Fade out as it ascends to the top
 	var hold_time = duration * 0.35
 	var fade_time = duration - hold_time
-	var fade_tween = create_tween()
-	fade_tween.tween_interval(hold_time)
-	fade_tween.tween_property(self, "modulate:a", 0.0, fade_time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-
-	var outline_fade = create_tween()
-	outline_fade.tween_interval(hold_time)
-	outline_fade.tween_property(self, "outline_modulate:a", 0.0, fade_time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-
+	tween.parallel().tween_property(self, "modulate:a", 0.0, fade_time).set_delay(hold_time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(self, "outline_modulate:a", 0.0, fade_time).set_delay(hold_time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	# 4. Auto free
-	fade_tween.tween_callback(queue_free)
+	tween.chain().tween_callback(queue_free)
