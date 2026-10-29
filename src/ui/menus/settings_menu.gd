@@ -21,6 +21,9 @@ var controls_box: VBoxContainer
 var caller_focus_node: Control
 var status_label: Label
 var _populating: bool = false
+var pad_sensitivity_slider: HSlider
+var pad_deadzone_slider: HSlider
+var pad_invert_check: CheckBox
 
 func _ready() -> void:
 	theme = preload("res://src/ui/menus/menu_theme.gd").create()
@@ -159,8 +162,15 @@ func _build_ui_layout() -> void:
 	settings_box.add_child(defaults)
 	var actions: Dictionary = get_node("/root/InputManager").CONTROL_LABELS
 	var aim := Label.new()
-	aim.text = "Aim: mouse  |  Weapons: 1–4 / mouse wheel"
+	aim.text = "Aim: mouse / right stick  |  Weapons: 1–4 / wheel / L3-R3\nGamepad: A confirm, B back, View mission/radar, Start pause.\nButton names use Xbox positions; equivalent PlayStation/SDL pads use the same layout."
+	aim.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	controls_box.add_child(aim)
+	pad_sensitivity_slider = _controller_slider("Right-stick sensitivity", "pad_sensitivity", 0.3, 2.5, 0.05)
+	pad_deadzone_slider = _controller_slider("Right-stick deadzone", "pad_deadzone", 0.08, 0.40, 0.01)
+	pad_invert_check = CheckBox.new()
+	pad_invert_check.text = "Invert right-stick vertical aim"
+	pad_invert_check.toggled.connect(func(value): _set_preference("pad_invert_y", value))
+	controls_box.add_child(pad_invert_check)
 	for action in actions:
 		var names: Array[String] = []
 		for event in InputMap.action_get_events(action):
@@ -186,11 +196,43 @@ func _switch_sub_view(show_settings: bool) -> void:
 	controls_box.visible = not show_settings
 	tab_settings_btn.disabled = show_settings
 	tab_controls_btn.disabled = not show_settings
+	# Changing tabs must not strand focus on the button that just became disabled.
+	if is_inside_tree() and is_visible_in_tree():
+		if show_settings and is_instance_valid(window_mode_btn): window_mode_btn.grab_focus.call_deferred()
+		elif not show_settings and is_instance_valid(pad_sensitivity_slider): pad_sensitivity_slider.grab_focus.call_deferred()
+
+func _controller_slider(caption: String, key: String, low: float, high: float, increment: float) -> HSlider:
+	var row := HBoxContainer.new()
+	var label := Label.new()
+	label.text = caption
+	label.custom_minimum_size.x = 240
+	row.add_child(label)
+	var slider := HSlider.new()
+	slider.min_value = low
+	slider.max_value = high
+	slider.step = increment
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(slider)
+	var value_label := Label.new()
+	value_label.custom_minimum_size.x = 65
+	row.add_child(value_label)
+	slider.value_changed.connect(func(value):
+		value_label.text = "%.2f" % value
+		_set_preference(key, value)
+	)
+	slider.set_meta("value_label", value_label)
+	controls_box.add_child(row)
+	return slider
 
 func _load_current_values() -> void:
 	_populating = true
 	var store = get_node("/root/SettingsStore")
 	var v: Dictionary = store.values
+	pad_sensitivity_slider.set_value_no_signal(v.pad_sensitivity)
+	pad_deadzone_slider.set_value_no_signal(v.pad_deadzone)
+	pad_sensitivity_slider.get_meta("value_label").text = "%.2f" % v.pad_sensitivity
+	pad_deadzone_slider.get_meta("value_label").text = "%.2f" % v.pad_deadzone
+	pad_invert_check.set_pressed_no_signal(v.pad_invert_y)
 	window_mode_btn.select(v.window)
 	fps_mode_btn.select([60, 120, 0].find(int(v.fps)))
 	vsync_btn.select(int(v.vsync))

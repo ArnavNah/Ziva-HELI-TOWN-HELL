@@ -183,13 +183,30 @@ func refresh(manager: Node, player: Node3D) -> void:
 	if director:
 		if director.transition_timer > 0.0:
 			stage_timer.text = clock_text(director.transition_timer, true)
-			wave_subtitle.text = "WAVE %d / INCOMING" % (director.current_wave + 1)
+			wave_subtitle.text = "WAVE %d / CLEARED! NEXT INCOMING" % director.current_wave
 		else:
 			stage_timer.text = clock_text(director.wave_timer, true)
-			wave_subtitle.text = "WAVE %d / %s" % [director.current_wave, str(director.active_theme).to_upper()]
+			if director.current_wave == 10:
+				wave_subtitle.text = "WAVE 10 / BOSS BATTLE"
+			elif "wave_kill_quota" in director and director.wave_kill_quota > 0:
+				wave_subtitle.text = "WAVE %d / %s [%d/%d HOSTILES]" % [
+					director.current_wave,
+					str(director.active_theme).to_upper(),
+					director.wave_kills,
+					director.wave_kill_quota
+				]
+			else:
+				wave_subtitle.text = "WAVE %d / %s" % [director.current_wave, str(director.active_theme).to_upper()]
 	if is_instance_valid(player):
 		hp_label.text = "%d/%d" % [maxi(0, int(player.current_hull)), int(player.max_hull)]
-		fuel_caption.text = "FUEL %d%%" % int(100 * player.current_fuel / maxf(player.max_fuel, 1))
+		var fuel_pct: int = int(100.0 * player.current_fuel / maxf(player.max_fuel, 1.0))
+		fuel_caption.text = "FUEL %d%%" % fuel_pct
+		if fuel_pct <= 15:
+			fuel_caption.add_theme_color_override("font_color", Color(1.0, 0.25, 0.2))
+		elif fuel_pct <= 30:
+			fuel_caption.add_theme_color_override("font_color", Color(1.0, 0.75, 0.2))
+		else:
+			fuel_caption.add_theme_color_override("font_color", Color("8fe0c3"))
 		var progression := get_node_or_null("/root/XpManager")
 		if progression:
 			var level: int = progression.current_level

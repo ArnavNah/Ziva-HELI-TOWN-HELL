@@ -57,7 +57,7 @@ func try_activate_super() -> bool:
 	cooldown_timer = GameConstants.SUPER_COOLDOWN
 
 	if player_helicopter:
-		player_helicopter.is_invulnerable = true
+		player_helicopter.update_invulnerability_state()
 
 	# Radial 240-unit damage pulse (Page 20)
 	_trigger_devastation_pulse()
@@ -72,7 +72,7 @@ func try_activate_super() -> bool:
 func _deactivate_super() -> void:
 	is_active = false
 	if player_helicopter:
-		player_helicopter.is_invulnerable = false
+		player_helicopter.update_invulnerability_state()
 	super_ended.emit()
 
 func _trigger_devastation_pulse() -> void:

@@ -304,7 +304,7 @@ func _apply_pickup_effect(player: Node3D) -> void:
 				player.repair(35.0) # Page 17: Restore 35 hull
 		PickupType.FUEL:
 			if player.has_method("refill_fuel"):
-				player.refill_fuel(35.0) # Restore 35 fuel
+				player.refill_fuel(40.0) # Restores 40 fuel
 		PickupType.AMMO_PACK:
 			if player.has_node("Weapons"):
 				var wp = player.get_node("Weapons")

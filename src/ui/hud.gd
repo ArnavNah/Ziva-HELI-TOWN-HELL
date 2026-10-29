@@ -51,10 +51,22 @@ var missile_scan_timer := 0.0
 var missile_alarm_timer := 0.0
 var incoming_missiles := 0
 var missile_urgent := false
+var controller_hint: Label
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_survival_hud()
+	controller_hint = Label.new()
+	controller_hint.name = "ControllerHint"
+	controller_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	controller_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	controller_hint.offset_top = -24
+	controller_hint.offset_bottom = -5
+	controller_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	controller_hint.add_theme_font_size_override("font_size", 12)
+	controller_hint.add_theme_color_override("font_outline_color", Color.BLACK)
+	controller_hint.add_theme_constant_override("outline_size", 3)
+	add_child(controller_hint)
 	_setup_tactical_overlays()
 	damage_indicator = preload("res://src/ui/damage_indicator.gd").new()
 	damage_indicator.player = player_helicopter
@@ -305,10 +317,14 @@ func _update_blood_vignette(delta: float) -> void:
 		blood_material.set_shader_parameter("hit_flash", 0.0 if reduced else hit_flash_intensity * 0.25)
 
 func _update_reticle() -> void:
+	var controls = get_node("/root/InputManager")
+	if controller_hint:
+		controller_hint.visible = controls.controller_active or controls.notice_timer > 0.0
+		controller_hint.text = controls.controller_notice if controls.notice_timer > 0.0 else "RS AIM  /  RT FIRE  /  LT SALVO  /  L3-R3 WEAPONS  /  VIEW MISSIONS  /  START PAUSE"
 	has_barrel_pos = false
 	is_turret_blocked = false
 	if reticle_widget:
-		var mouse_pos = get_viewport().get_mouse_position()
+		var mouse_pos: Vector2 = get_node("/root/InputManager").get_aim_screen_position()
 		reticle_widget.position = mouse_pos - Vector2(16, 16)
 		
 		var p = get_tree().get_first_node_in_group("player")

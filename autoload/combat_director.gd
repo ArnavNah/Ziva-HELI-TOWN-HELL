@@ -15,6 +15,8 @@ var wave_max_duration: float = 45.0
 var is_wave_active: bool = false
 var active_theme: String = "Normal"
 var transition_timer: float = 0.0
+var wave_kills: int = 0
+var wave_kill_quota: int = 0
 
 # Pause-aware Active Combat Time (seconds)
 var active_combat_time: float = 0.0
@@ -114,11 +116,15 @@ func _ready() -> void:
 	catalog = SpawnCardCatalogClass.new()
 	seedable_rng.seed = encounter_seed
 	if has_node("/root/EventBus"):
-		get_node("/root/EventBus").run_state_changed.connect(_on_run_state_changed)
+		var bus = get_node("/root/EventBus")
+		bus.run_state_changed.connect(_on_run_state_changed)
+		bus.entity_destroyed.connect(_on_entity_destroyed)
 
 func stop_wave_director() -> void:
 	is_wave_active = false
 	transition_timer = 0.0
+	wave_kills = 0
+	wave_kill_quota = 0
 	fast_wallet = 0.0
 	slow_wallet = 0.0
 	reserved_population = 0
@@ -156,10 +162,23 @@ func _setup_wave(wave_num: int) -> void:
 	transition_timer = 0.0
 	current_wave = wave_num
 	is_wave_active = true
+	wave_kills = 0
 
 	# Duration formula: 45s on wave 1, falling 1.5s/wave to 30s floor (Page 11)
 	wave_max_duration = maxf(30.0, 45.0 - float(wave_num - 1) * 1.5)
 	wave_timer = wave_max_duration
+
+	# Dynamic Kill Quota for responsive pacing:
+	if wave_num <= 3:
+		wave_kill_quota = [6, 9, 12][wave_num - 1]
+	elif wave_num <= 6:
+		wave_kill_quota = [15, 18, 22][wave_num - 4]
+	elif wave_num <= 9:
+		wave_kill_quota = [25, 29, 34][wave_num - 7]
+	elif wave_num == 10:
+		wave_kill_quota = 0
+	else:
+		wave_kill_quota = 25 + (wave_num - 10) * 3
 
 	# Determine Wave Theme before calculating theme-scaled population (Page 11)
 	_select_wave_theme(wave_num)
@@ -620,7 +639,19 @@ func _check_wave_10_boss() -> void:
 	if has_node("/root/EventBus"):
 		get_node("/root/EventBus").boss_spawned.emit(boss)
 
+func _on_entity_destroyed(entity: Node, _killer: String, _score: int, _xp: int) -> void:
+	if not is_wave_active or current_wave == 10:
+		return
+	if is_instance_valid(entity) and entity.is_in_group("enemies"):
+		wave_kills += 1
+		if wave_kill_quota > 0 and wave_kills >= wave_kill_quota:
+			var active_enemies = get_active_enemy_count()
+			if active_enemies <= 1 or (wave_max_duration - wave_timer >= 8.0):
+				_complete_current_wave()
+
 func _complete_current_wave() -> void:
+	if not is_wave_active:
+		return
 	# Wave 10 requires defeating the Heavy Gunship boss before clearing
 	if current_wave == 10:
 		if not wave_boss_spawned:

@@ -57,10 +57,10 @@ const WEAPONS: Dictionary = {
 	},
 	WeaponType.MISSILE: {
 		"name": "Missile",
-		"damage": 55.0,
-		"interval": 0.95,
-		"ammo_max": 20,
-		"reload_time": 2.5,
+		"damage": 65.0,
+		"interval": 0.80,
+		"ammo_max": 30,
+		"reload_time": 2.0,
 		"projectile_count": 1,
 		"speed": 260.0,
 		"blast_radius": 16.0,
@@ -69,10 +69,10 @@ const WEAPONS: Dictionary = {
 	},
 	WeaponType.ROCKET: {
 		"name": "Rocket",
-		"damage": 80.0,
-		"interval": 1.45,
-		"ammo_max": 12,
-		"reload_time": 3.2,
+		"damage": 95.0,
+		"interval": 1.20,
+		"ammo_max": 18,
+		"reload_time": 2.4,
 		"projectile_count": 1,
 		"speed": 235.0,
 		"blast_radius": 28.0,
@@ -82,15 +82,15 @@ const WEAPONS: Dictionary = {
 	},
 	WeaponType.SHOTGUN: {
 		"name": "Shotgun",
-		"damage": 10.0,
-		"interval": 0.45,
-		"ammo_max": 40,
-		"reload_time": 2.0,
+		"damage": 12.0,
+		"interval": 0.40,
+		"ammo_max": 48,
+		"reload_time": 1.6,
 		"projectile_count": 6,
 		"speed": 280.0,
 		"blast_radius": 0.0,
 		"homing": false,
-		"spread": 0.30
+		"spread": 0.18
 	}
 }
 
@@ -99,9 +99,9 @@ const SALVO_MAX_LOCKS: int = 6
 const SALVO_MAX_PER_TARGET: int = 3
 const SALVO_SEARCH_RADIUS: float = 38.0
 const SALVO_PAINT_INTERVAL: float = 0.18
-const SALVO_BASE_COOLDOWN: float = 5.0
+const SALVO_BASE_COOLDOWN: float = 4.0
 const SALVO_COOLDOWN_FLOOR: float = 1.5
-const SALVO_MISSILE_DAMAGE: float = 55.0
+const SALVO_MISSILE_DAMAGE: float = 65.0
 const SALVO_MISSILE_SPEED: float = 265.0
 const SALVO_MISSILE_BLAST_RADIUS: float = 12.0
 
@@ -178,7 +178,7 @@ const STATUS_PROC_CAP: float = 0.95
 const PLAYER_BASE_HULL: float = 100.0
 const MAX_ARMOR_MITIGATION: float = 0.24 # Max 24% damage reduction
 const PLAYER_BASE_FUEL: float = 100.0
-const FUEL_DRAIN_PER_SECOND: float = 0.85
+const FUEL_DRAIN_PER_SECOND: float = 0.55
 const FUEL_STARVATION_DAMAGE_INTERVAL: float = 1.0
 const FUEL_STARVATION_DAMAGE_AMOUNT: float = 8.0
 const SUBSYSTEM_DAMAGE_CHANCE: float = 0.40

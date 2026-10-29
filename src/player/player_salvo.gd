@@ -22,6 +22,20 @@ var lock_range_multiplier: float = 1.0
 var max_locks: int = GameConstants.SALVO_MAX_LOCKS
 var extra_missiles: int = 0
 
+func _ready() -> void:
+	var bus = get_node_or_null("/root/EventBus")
+	if bus: bus.run_state_changed.connect(_on_input_state_changed)
+
+func _on_input_state_changed(state: int, _previous: int) -> void:
+	if state not in [GameManager.RunState.ACTIVE, GameManager.RunState.EXTRACTION, GameManager.RunState.TUTORIAL]:
+		cancel_painting()
+
+func cancel_painting() -> void:
+	is_painting = false
+	paint_timer = 0.0
+	current_locks.clear()
+	locks_cleared.emit()
+
 func apply_subsystem_upgrade(stats: Dictionary) -> void:
 	max_locks += int(stats.get("max_locks_add", 0))
 	extra_missiles += int(stats.get("missile_count_add", 0))

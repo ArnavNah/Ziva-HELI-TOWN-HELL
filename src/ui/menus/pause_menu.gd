@@ -174,7 +174,9 @@ func _enhance_ui() -> void:
 			quit_btn.focus_neighbor_top = main_menu_btn.get_path()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_echo() or not event.is_action_pressed("pause"):
+	var flow = get_node_or_null("/root/UIFlow")
+	if flow and is_instance_valid(flow.confirmation): return
+	if event.is_echo() or not (event.is_action_pressed("pause") or (visible and event.is_action_pressed("ui_cancel"))):
 		return
 	var settings = get_parent().get_node_or_null("SettingsMenu")
 	if settings and settings.visible:

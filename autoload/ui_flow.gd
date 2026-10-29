@@ -8,7 +8,7 @@ var confirmation: ConfirmationDialog
 var hangar_origin: String = "main_menu"
 var _release_frames: int = 0
 var _quit_requested: bool = false
-const HELD_ACTIONS := ["fire_primary", "paint_salvo", "climb", "descend", "evasive_dash", "super_ability", "deploy_flares", "reload", "ui_accept", "pause"]
+const HELD_ACTIONS := ["fire_primary", "paint_salvo", "climb", "descend", "evasive_dash", "super_ability", "deploy_flares", "reload", "next_weapon", "prev_weapon", "mission_action", "ui_accept", "ui_cancel", "pause"]
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -42,7 +42,7 @@ func _process(_delta: float) -> void:
 
 func gameplay_input_allowed() -> bool:
 	var gm = get_node("/root/GameManager")
-	if not (not busy and input_armed and not get_tree().paused and gm.current_state in [gm.RunState.ACTIVE, gm.RunState.EXTRACTION, gm.RunState.TUTORIAL]):
+	if not (not busy and not is_instance_valid(confirmation) and input_armed and not get_tree().paused and gm.current_state in [gm.RunState.ACTIVE, gm.RunState.EXTRACTION, gm.RunState.TUTORIAL]):
 		return false
 	var player = get_tree().get_first_node_in_group("player")
 	if is_instance_valid(player) and "is_dying" in player and player.is_dying:

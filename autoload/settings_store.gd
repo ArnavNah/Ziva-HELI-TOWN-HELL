@@ -2,7 +2,7 @@ extends Node
 signal changed(key: String)
 signal save_failed(message: String)
 const Storage = preload("res://src/ui/menus/game_storage.gd")
-const DEFAULTS := {"master": 1.0, "sfx": 1.0, "music": 0.8, "shake": 2, "flashes": false, "telemetry": true, "fps": 60, "vsync": false, "window": 0}
+const DEFAULTS := {"master": 1.0, "sfx": 1.0, "music": 0.8, "shake": 2, "flashes": false, "telemetry": true, "fps": 60, "vsync": false, "window": 0, "pad_sensitivity": 1.0, "pad_deadzone": 0.18, "pad_invert_y": false}
 var values: Dictionary = DEFAULTS.duplicate()
 var last_error: String = ""
 var save_path: String
@@ -39,6 +39,8 @@ func load_settings() -> void:
 
 func _validated(key: String, value: Variant) -> Variant:
 	match key:
+		"pad_sensitivity": return clampf(float(value), 0.3, 2.5) if value is float or value is int else DEFAULTS[key]
+		"pad_deadzone": return clampf(float(value), 0.08, 0.40) if value is float or value is int else DEFAULTS[key]
 		"master", "sfx", "music": return clampf(float(value), 0.0, 1.0) if value is float or value is int else DEFAULTS[key]
 		"shake", "window": return clampi(int(value), 0, 2) if value is float or value is int else DEFAULTS[key]
 		"fps": return int(value) if value in [0, 60, 120] else 60
@@ -53,6 +55,10 @@ func set_value(key: String, value: Variant) -> void:
 	save_timer.start()
 
 func apply_all(include_display: bool = true) -> void:
+	var inputs = get_node("/root/InputManager")
+	inputs.aim_sensitivity = values.pad_sensitivity
+	inputs.aim_deadzone = values.pad_deadzone
+	inputs.aim_invert_y = values.pad_invert_y
 	var am = get_node("/root/AudioManager")
 	am.set_master_volume(values.master)
 	am.set_sfx_volume(values.sfx)

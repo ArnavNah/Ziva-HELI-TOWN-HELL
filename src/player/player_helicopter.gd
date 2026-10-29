@@ -32,7 +32,8 @@ var damage_history: Array[Dictionary] = []
 const MAX_DAMAGE_HISTORY: int = 50
 
 func has_protection() -> bool:
-	return debug_invulnerable or is_dying or mortal_protection.grace_left > 0.0 or (shield_timer > 0.0 and shield_capacity <= 0.0) or spawn_grace_timer > 0.0 or (is_dashing and dash_timer > 0.0)
+	var super_controller = get_node_or_null("DevastationSuper")
+	return debug_invulnerable or is_dying or (super_controller != null and super_controller.is_active) or mortal_protection.grace_left > 0.0 or (shield_timer > 0.0 and shield_capacity <= 0.0) or spawn_grace_timer > 0.0 or (is_dashing and dash_timer > 0.0)
 
 func update_invulnerability_state() -> void:
 	is_invulnerable = has_protection()
@@ -44,6 +45,8 @@ func get_protection_reasons() -> Array[String]:
 	if shield_timer > 0.0: reasons.append("shield")
 	if spawn_grace_timer > 0.0: reasons.append("spawn_grace")
 	if mortal_protection.grace_left > 0.0: reasons.append("mortal_grace")
+	var super_controller = get_node_or_null("DevastationSuper")
+	if super_controller != null and super_controller.is_active: reasons.append("super")
 	if is_dashing and dash_timer > 0.0: reasons.append("dash")
 	return reasons
 
@@ -531,7 +534,7 @@ func _process(delta: float) -> void:
 	if camera and camera.has_method("update_camera"):
 		camera.update_camera(delta)
 	if turret and camera:
-		var mouse_pos = get_viewport().get_mouse_position()
+		var mouse_pos: Vector2 = get_node("/root/InputManager").get_aim_screen_position()
 		turret.update_aim(camera, mouse_pos, self, delta)
 
 	# Fluid visual animations & rotor spinning executed at full render framerate
@@ -1134,10 +1137,19 @@ func _trigger_dash(input_data: Dictionary) -> void:
 # ------------------------------------------------------------------------------
 # 2. FUEL & STARVATION (Page 8)
 # ------------------------------------------------------------------------------
+var _low_fuel_warned: bool = false
+
 func _process_fuel(delta: float) -> void:
 	if current_fuel > 0.0:
 		current_fuel = maxf(0.0, current_fuel - fuel_drain_rate * delta)
 		_emit_event_bus_player_fuel_changed(current_fuel, max_fuel)
+		var fuel_ratio := current_fuel / maxf(max_fuel, 1.0)
+		if fuel_ratio <= 0.20 and not _low_fuel_warned:
+			_low_fuel_warned = true
+			if has_node("/root/AudioManager"):
+				get_node("/root/AudioManager").trigger_alarm("low_fuel")
+		elif fuel_ratio > 0.25:
+			_low_fuel_warned = false
 	else:
 		# Fuel Starvation repeated damage
 		fuel_starvation_timer += delta

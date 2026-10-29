@@ -352,11 +352,11 @@ static func get_effective_preview(entry_or_id: Variant, player: Node3D, current_
 				"change_text": "+15% Airspeed"
 			}
 		"turbine_tune":
-			var cur_dr: float = player.fuel_drain_rate if player else 2.5
-			var next_dr: float = maxf(0.4, cur_dr * 0.70)
+			var cur_dr: float = player.fuel_drain_rate if player else 0.55
+			var next_dr: float = maxf(0.25, cur_dr * 0.70)
 			return {
-				"current_text": "%.1f/s" % cur_dr,
-				"next_text": "%.1f/s" % next_dr,
+				"current_text": "%.2f/s" % cur_dr,
+				"next_text": "%.2f/s" % next_dr,
 				"change_text": "-30% Fuel Drain"
 			}
 		"airstrike":
@@ -469,7 +469,7 @@ static func apply_effect(item_id: String, player: Node3D, progression: Node) -> 
 			return true
 		"turbine_tune":
 			if player:
-				player.fuel_drain_rate = maxf(0.4, player.fuel_drain_rate * 0.70)
+				player.fuel_drain_rate = maxf(0.25, player.fuel_drain_rate * 0.70)
 			return true
 		"airstrike":
 			if player and player.is_inside_tree():
@@ -510,7 +510,7 @@ static func apply_effect(item_id: String, player: Node3D, progression: Node) -> 
 				progression.evolved_weapons.append("EVOLUTION: Rotor Predator")
 			if player:
 				player.cruise_speed *= 1.25
-				player.fuel_drain_rate = maxf(0.4, player.fuel_drain_rate * 0.70)
+				player.fuel_drain_rate = maxf(0.25, player.fuel_drain_rate * 0.70)
 			return true
 		"leg_death_from_above":
 			if progression:

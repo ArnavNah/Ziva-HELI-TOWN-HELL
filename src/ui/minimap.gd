@@ -22,7 +22,10 @@ func _ready() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.is_echo():
 		if event.keycode == KEY_M:
-			zoom_mode = ((zoom_mode + 1) % 3) as RadarZoomMode
+			cycle_zoom()
+
+func cycle_zoom() -> void:
+	zoom_mode = ((zoom_mode + 1) % 3) as RadarZoomMode
 
 func _process(delta: float) -> void:
 	pulse_time += delta

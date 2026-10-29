@@ -185,6 +185,7 @@ func _generate_procedural_sounds() -> void:
 	sound_cache["victory_fanfare"] = _create_victory_sound()
 	sound_cache["defeat_sound"] = _create_defeat_sound()
 	sound_cache["new_high_score"] = _create_high_score_sound()
+	sound_cache["wave_cleared"] = _create_victory_sound()
 	sound_cache["helicopter_rotor"] = _create_helicopter_rotor_stream()
 	sound_cache["thunder"] = _create_thunder_sound()
 	sound_cache["touchdown"] = _create_touchdown_sound()
@@ -242,6 +243,7 @@ func _connect_event_bus() -> void:
 	bus.boss_spawned.connect(_on_boss_spawned)
 	bus.boss_defeated.connect(_on_boss_defeated)
 	bus.wave_started.connect(_on_wave_started)
+	bus.wave_cleared.connect(func(_w): play_sfx("wave_cleared", 1.25, 0.0))
 	bus.run_completed.connect(_on_run_completed)
 	bus.run_state_changed.connect(_on_run_state_changed)
 	if "high_score_beaten" in bus:

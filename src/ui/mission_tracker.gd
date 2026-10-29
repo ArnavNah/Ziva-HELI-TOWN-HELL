@@ -12,6 +12,8 @@ var refresh_timer := 0.0
 var panel: PanelContainer
 var column: VBoxContainer
 var panel_style: StyleBoxFlat
+var owned_pause_state := -1
+var tactical_dialog: ConfirmationDialog
 
 class Navigation extends Control:
 	var manager: Node
@@ -73,6 +75,7 @@ class Navigation extends Control:
 			draw_string(font, label_pos, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, color)
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	name = "MissionTracker"
 	layer = 6
 	var root_control := Control.new()
@@ -126,6 +129,7 @@ func _ready() -> void:
 	progress.add_theme_stylebox_override("fill", fill)
 	column.add_child(progress)
 	action = Button.new()
+	action.focus_mode = Control.FOCUS_NONE # Flight A/RT must never activate a focused HUD button.
 	action.text = "REQUEST SORTIE EXTRACTION"
 	action.custom_minimum_size.y = 32
 	var button_style := StyleBoxFlat.new()
@@ -134,13 +138,67 @@ func _ready() -> void:
 	button_style.set_border_width_all(1)
 	button_style.set_content_margin_all(7)
 	action.add_theme_stylebox_override("normal", button_style)
-	action.pressed.connect(func():
-		var flow = get_node_or_null("/root/UIFlow")
-		if flow: flow.block_held_input()
-		if manager.is_mission_active and manager.active_mission_id == "sortie_extraction": manager.confirm_sortie_extraction()
+	action.pressed.connect(open_tactical_actions)
+	column.add_child(action)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not event.is_echo() and event.is_action_pressed("mission_action"):
+		open_tactical_actions()
+		get_viewport().set_input_as_handled()
+
+func _restore_owned_pause() -> void:
+	var gm = get_node("/root/GameManager")
+	var previous := owned_pause_state
+	owned_pause_state = -1
+	if previous >= 0 and gm.current_state == gm.RunState.PAUSED:
+		gm.change_state(previous)
+	get_node("/root/UIFlow").block_held_input()
+
+func open_tactical_actions() -> void:
+	if is_instance_valid(tactical_dialog):
+		tactical_dialog.hide()
+		return
+	var gm = get_node("/root/GameManager")
+	var flow = get_node("/root/UIFlow")
+	if not flow.gameplay_input_allowed() or gm.current_state != gm.RunState.ACTIVE or is_instance_valid(flow.confirmation): return
+	var exfil: bool = manager.is_mission_active and manager.active_mission_id == "sortie_extraction"
+	var ready: bool = exfil and manager.phase == "READY"
+	var allowed: bool = ready or (not exfil and get_node("/root/CombatDirector").current_wave >= 3)
+	owned_pause_state = gm.current_state
+	gm.change_state(gm.RunState.PAUSED)
+	var message: String = manager.status_text + "\n\n" + ("Confirm to end this sortie and bank your rewards." if ready else "Confirm to request an extraction LZ. Your current task will be replaced." if allowed else "Secure the extraction LZ before confirming departure." if exfil else "Sortie extraction unlocks at wave 3. Continue the current objective.")
+	flow.confirm_action("TACTICAL OPERATIONS / COMBAT PAUSED", message, func():
+		_restore_owned_pause()
+		if ready: manager.confirm_sortie_extraction()
 		else: manager.request_sortie_extraction()
 	)
-	column.add_child(action)
+	tactical_dialog = flow.confirmation
+	if not is_instance_valid(tactical_dialog):
+		_restore_owned_pause()
+		return
+	var dialog := tactical_dialog
+	dialog.set_meta("controller_tactical", true)
+	dialog.set_meta("controller_open_frame", Engine.get_process_frames())
+	dialog.get_ok_button().disabled = not allowed
+	dialog.get_ok_button().text = "END SORTIE / EXTRACT" if ready else "REQUEST EXTRACTION"
+	dialog.get_cancel_button().text = "RETURN TO FLIGHT [B]"
+	dialog.add_button("CYCLE RADAR ZOOM", false, "radar")
+	dialog.custom_action.connect(func(key):
+		if key == "radar":
+			var radar = get_tree().current_scene.find_child("TacticalRadar", true, false) if get_tree().current_scene else null
+			if radar: radar.cycle_zoom()
+	)
+	dialog.window_input.connect(func(event: InputEvent):
+		if event.is_action_pressed("mission_action") or event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel"):
+			dialog.hide()
+			dialog.set_input_as_handled()
+	)
+	dialog.visibility_changed.connect(func():
+		if not dialog.visible:
+			_restore_owned_pause()
+			tactical_dialog = null
+	)
+	dialog.get_cancel_button().grab_focus()
 
 func _label(parent: Node, font_size: int, color: Color) -> Label:
 	var label := Label.new()
@@ -193,4 +251,5 @@ func _process(delta: float) -> void:
 	var is_exfil: bool = active and manager.active_mission_id == "sortie_extraction"
 	action.visible = (is_exfil and manager.phase == "READY") or (not is_exfil and cd.current_wave >= 3)
 	action.text = "CONFIRM END SORTIE / EXTRACT" if is_exfil else "ABORT TASK / REQUEST EXFIL" if active else "REQUEST SORTIE EXTRACTION"
+	if get_node("/root/InputManager").controller_active: action.text += "  [VIEW]"
 	panel.offset_top = -26.0 - maxf(140.0, column.get_combined_minimum_size().y + 25.0)

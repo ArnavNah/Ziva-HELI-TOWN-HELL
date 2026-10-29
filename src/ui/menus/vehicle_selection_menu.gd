@@ -889,6 +889,16 @@ func _build_hangar_environment(viewport: SubViewport) -> void:
 func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
+	var controls = get_node_or_null("/root/InputManager")
+	if controls and controls.controller_active and not is_deploying:
+		var stick: Vector2 = controls.aim_stick()
+		if turntable_root and absf(stick.x) > 0.01:
+			if _selection_tween and _selection_tween.is_running(): _selection_tween.kill()
+			rot_velocity = 0.0
+			turntable_root.rotate_y(-stick.x * delta * 2.0)
+			if stage_viewport: stage_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+		var zoom: float = Input.get_action_strength("paint_salvo") - Input.get_action_strength("fire_primary")
+		target_fov = clampf(target_fov + zoom * delta * 24.0, MIN_FOV, MAX_FOV)
 
 	# Redraw the isolated preview only while it changes, rather than rendering
 	# the static hangar continuously (including while an ancestor is hidden).

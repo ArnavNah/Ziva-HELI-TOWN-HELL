@@ -239,6 +239,10 @@ func _populate_card_buttons(picks: Array) -> void:
 		else:
 			btn.visible = false
 			btn.disabled = true
+	var count := mini(picks.size(), card_buttons.size())
+	for index in range(count):
+		card_buttons[index].focus_neighbor_left = card_buttons[posmod(index - 1, count)].get_path()
+		card_buttons[index].focus_neighbor_right = card_buttons[(index + 1) % count].get_path()
 
 func _format_card_button(btn: Button, card: RefCounted, shortcut_idx: int) -> void:
 	# Clear previous custom styling
