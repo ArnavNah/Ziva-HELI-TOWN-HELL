@@ -2,7 +2,7 @@ extends Node
 signal changed(key: String)
 signal save_failed(message: String)
 const Storage = preload("res://src/ui/menus/game_storage.gd")
-const DEFAULTS := {"master": 1.0, "sfx": 1.0, "music": 0.8, "shake": 2, "flashes": false, "telemetry": true, "fps": 60, "vsync": false, "window": 0, "pad_sensitivity": 1.0, "pad_deadzone": 0.18, "pad_invert_y": false}
+const DEFAULTS := {"master": 1.0, "sfx": 1.0, "music": 0.8, "shake": 2, "flashes": false, "telemetry": true, "fps": 60, "vsync": false, "window": 0, "pad_sensitivity": 1.0, "pad_deadzone": 0.18, "pad_invert_y": false, "pad_rumble": true}
 var values: Dictionary = DEFAULTS.duplicate()
 var last_error: String = ""
 var save_path: String
@@ -59,6 +59,8 @@ func apply_all(include_display: bool = true) -> void:
 	inputs.aim_sensitivity = values.pad_sensitivity
 	inputs.aim_deadzone = values.pad_deadzone
 	inputs.aim_invert_y = values.pad_invert_y
+	inputs.rumble_enabled = values.pad_rumble
+	if not values.pad_rumble: inputs.stop_damage_rumble()
 	var am = get_node("/root/AudioManager")
 	am.set_master_volume(values.master)
 	am.set_sfx_volume(values.sfx)

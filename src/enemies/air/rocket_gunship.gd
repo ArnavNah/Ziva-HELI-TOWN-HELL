@@ -62,7 +62,7 @@ func _custom_process(delta: float) -> void:
 	var target_pos = target_player.global_position - to_player * standoff_distance + strafe_offset
 	target_pos.y = clampf(target_player.global_position.y + 6.0, 22.0, 52.0)
 	var move_dir = (target_pos - global_position).normalized()
-	steer_air_unit(move_dir * move_speed, 22.0, 52.0, delta)
+	steer_air_unit(move_dir * move_speed, 22.0, 52.0, delta, target_player.global_position)
 
 	# Aim point calculation with near-zero quadratic guard
 	var lead_aim = get_predicted_target_position(global_position, target_player, 135.0, 0.92, 0.0)
@@ -82,7 +82,7 @@ func _custom_process(delta: float) -> void:
 				set_behavior_state(BehaviorState.PURSUE)
 			else:
 				# Check 3D line of sight
-				var muzzle_pos = global_position + Vector3(0.0, -0.5, 0.0)
+				var muzzle_pos := get_air_weapon_origin()
 				if not check_muzzle_line_of_sight(muzzle_pos, target_player.global_position):
 					not_firing_reason = REASON_BLOCKED_SHOT
 				else:
@@ -101,7 +101,7 @@ func _custom_process(delta: float) -> void:
 						not_firing_reason = REASON_WAITING_PERMISSION
 
 		BehaviorState.WINDUP:
-			var windup_done = update_telegraph(global_position, cached_lead_aim, delta)
+			var windup_done = update_telegraph(get_air_weapon_origin(), cached_lead_aim, delta)
 			if windup_done:
 				clear_telegraph()
 				set_behavior_state(BehaviorState.FIRE)
@@ -114,9 +114,12 @@ func _custom_process(delta: float) -> void:
 			salvo_burst_delay -= delta
 			if salvo_burst_delay <= 0.0 and salvo_count > 0:
 				salvo_burst_delay = 0.28
-				salvo_count -= 1
-				salvo_index += 1
-				_fire_rocket(salvo_index)
+				if _fire_rocket(salvo_index + 1):
+					salvo_count -= 1
+					salvo_index += 1
+				else:
+					# Abort blocked salvos without consuming an outlet or slot indefinitely.
+					salvo_count = 0
 				if salvo_count <= 0:
 					_release_all_slots()
 					set_behavior_state(BehaviorState.RECOVER)
@@ -127,19 +130,10 @@ func _custom_process(delta: float) -> void:
 			if state_timer >= 1.0:
 				set_behavior_state(BehaviorState.POSITION)
 
-func _fire_rocket(shot_idx: int) -> void:
+func _fire_rocket(shot_idx: int) -> bool:
 	if not is_inside_tree() or not target_player:
-		return
-	var p = ProjectileScene.instantiate()
-	var p_data = DamageDataClass.new(24.0, GameConstants.WeaponType.ROCKET, self, false, 14.0)
-	var spawn_pos = global_position + Vector3(randf_range(-1.2, 1.2), -0.5, 0.0)
-	p.position = spawn_pos
-	var parent_node: Node = get_tree().current_scene if get_tree().current_scene else get_parent()
-	if not parent_node:
-		parent_node = get_tree().root
-	parent_node.add_child(p)
-	if p.is_inside_tree():
-		p.global_position = spawn_pos
+		return false
+	var spawn_pos := get_air_weapon_origin()
 	
 	# Bracket the player's path: -3 deg, 0 deg, +3 deg spread
 	var to_player = (target_player.global_position - global_position).normalized()
@@ -152,13 +146,23 @@ func _fire_rocket(shot_idx: int) -> void:
 
 	var fire_lead = committed_aim_point if aim_committed else cached_lead_aim
 	var target_spot = fire_lead + bracket_offset
+	if not air_weapon_can_fire(target_spot): return false
+	var muzzle_socket := get_air_weapon_socket()
+	var p = ProjectileScene.instantiate()
+	var p_data = DamageDataClass.new(24.0, GameConstants.WeaponType.ROCKET, self, false, 14.0)
+	var parent_node: Node = get_tree().current_scene if get_tree().current_scene else get_parent()
+	if not parent_node: parent_node = get_tree().root
+	parent_node.add_child(p)
+	p.global_position = spawn_pos
 	var aim_dir = (target_spot - spawn_pos).normalized()
 	p.velocity = aim_dir * 135.0
 	p.blast_radius = 14.0
 	p.collision_mask = 3
 	p.setup(p_data, null, "enemy_rocket")
+	commit_air_shot()
 
 	if has_node("/root/FXManager"):
 		var up_vec = Vector3.UP if absf(aim_dir.dot(Vector3.UP)) < 0.99 else Vector3.FORWARD
 		var muzzle_tf = Transform3D(Basis.looking_at(aim_dir, up_vec), spawn_pos)
-		get_node("/root/FXManager").play_muzzle("enemy_rocket", muzzle_tf, self, aim_dir)
+		get_node("/root/FXManager").play_muzzle("enemy_rocket", muzzle_tf, muzzle_socket, aim_dir)
+	return true

@@ -71,17 +71,19 @@ func _custom_process(delta: float) -> void:
 				state_timer = 0.0
 
 func _drop_proximity_mine() -> void:
-	if not is_inside_tree():
+	if not is_inside_tree() or (damage_receiver and damage_receiver.is_dead):
 		return
 	var mine = ProximityMineNode.new()
 	var parent_node = get_tree().current_scene if get_tree().current_scene else get_tree().root
 	parent_node.add_child(mine)
-	mine.global_position = global_position - Vector3(0, 1.5, 0)
+	mine.global_position = get_node("Visuals").get_drop_origin("MineDrop")
+	commit_air_shot()
 
 class ProximityMineNode extends Area3D:
 	var arm_timer: float = 1.5
 	var is_armed: bool = false
 	var lifetime: float = 25.0
+	var detonated := false
 
 	func _ready() -> void:
 		collision_layer = 0
@@ -118,7 +120,8 @@ class ProximityMineNode extends Area3D:
 				is_armed = true
 
 	func _on_body_entered(body: Node3D) -> void:
-		if is_armed and body.is_in_group("player"):
+		if is_armed and not detonated and body.is_in_group("player"):
+			detonated = true
 			# Cover occlusion check before delivering explosion damage
 			var occluded = false
 			var space_state = get_world_3d().direct_space_state

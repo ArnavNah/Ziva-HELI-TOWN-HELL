@@ -71,7 +71,7 @@ func _custom_process(delta: float) -> void:
 			var close_in = clampf((distance - max_engagement_range) / 20.0, 0.0, 1.0)
 			var desired := (heading * lerpf(0.65, 0.95, close_in) + tangent * lerpf(0.75, 0.15, close_in)).normalized() * move_speed
 			desired.y = (clampf(target.global_position.y + 6.0, 20.0, 48.0) - global_position.y) * 1.8
-			steer_air_unit(desired, 20.0, 48.0, delta)
+			steer_air_unit(desired, 20.0, 48.0, delta, target.global_position)
 
 		"torpedo_vtol":
 			var tangent := Vector3(-heading.z, 0, heading.x) * sin(phase)
@@ -96,6 +96,16 @@ func _custom_process(delta: float) -> void:
 			var dir := get_ground_nav_heading(target.global_position, delta, preferred, orbit_sign)
 			var spd_mult = 0.50 if behavior_state == BehaviorState.WINDUP else 1.0
 			steer_ground_unit(dir, move_speed * spd_mult, delta)
+
+		"attack_wing", "stealth_vtol", "heavy_bomber":
+			# These aircraft used the ground fallback after losing the old airframe.
+			# Retain tactical standoff/weave while using the shared flight controller.
+			var tangent := Vector3(-heading.z, 0, heading.x) * orbit_sign
+			var preferred := (min_engagement_range + max_engagement_range) * 0.5
+			var approach := clampf((distance - preferred) / 18.0, -0.6, 1.0)
+			var desired := (heading * approach + tangent * 0.65).normalized() * move_speed
+			desired.y = (clampf(target.global_position.y + 8.0, 22.0, 48.0) - global_position.y) * 1.8
+			steer_air_unit(desired, 22.0, 52.0, delta, target.global_position if variant_id != "heavy_bomber" else Vector3.INF)
 
 		_:
 			var preferred := (min_engagement_range + max_engagement_range) * 0.5
@@ -217,6 +227,8 @@ func get_muzzle_origin() -> Vector3:
 		if _turret_node.has_method("get_muzzle_position"):
 			return _turret_node.get_muzzle_position()
 		return _turret_node.global_position
+	if is_air_unit and has_node("Visuals") and get_node("Visuals").has_method("get_weapon_origin"):
+		return get_air_weapon_origin()
 	return global_position + Vector3.UP * 1.8
 
 func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
@@ -229,6 +241,10 @@ func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
 		turret.play_recoil()
 
 	var shot_aim = aim_point if aim_point != Vector3.ZERO else active_aim_target
+	var air_rig := get_node_or_null("Visuals")
+	var uses_air_sockets := is_air_unit and air_rig and air_rig.has_method("get_weapon_origin")
+	if uses_air_sockets and not air_weapon_can_fire(shot_aim, variant_id in ["attack_wing", "escort_fighter", "stealth_vtol"]): return
+	var air_socket := get_air_weapon_socket() if uses_air_sockets else null
 
 	var shot := Shot.instantiate()
 	var scene := get_tree().current_scene if get_tree().current_scene else get_parent()
@@ -266,7 +282,7 @@ func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
 	if has_node("/root/FXManager"):
 		var up_vec = Vector3.UP if absf(aim_dir.dot(Vector3.UP)) < 0.99 else Vector3.FORWARD
 		var muzzle_tf = Transform3D(Basis.looking_at(aim_dir, up_vec), muzzle_pos)
-		get_node("/root/FXManager").play_muzzle(profile_id, muzzle_tf, turret if turret else self, aim_dir)
+		get_node("/root/FXManager").play_muzzle(profile_id, muzzle_tf, air_socket if air_socket else (turret if turret else self), aim_dir)
 
 	match variant_id:
 		"torpedo_vtol":
@@ -283,7 +299,6 @@ func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
 			shot.setup(Hit.new(26.0, GameConstants.WeaponType.MACHINE_GUN, self), null, profile_id)
 
 		"heavy_bomber":
-			shot.global_position = global_position + Vector3.DOWN * 1.5
 			shot.velocity = Vector3(randf_range(-3, 3), -35.0, randf_range(-3, 3))
 			shot.blast_radius = 6.0
 			shot.setup(Hit.new(22.0, GameConstants.WeaponType.ROCKET, self, false, shot.blast_radius), null, profile_id)
@@ -318,3 +333,4 @@ func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
 			shot.velocity = aim_dir * combat_proj_speed
 			shot.blast_radius = 0.0
 			shot.setup(Hit.new(5.0, GameConstants.WeaponType.MACHINE_GUN, self, false, 0.0), null, profile_id)
+	if uses_air_sockets: commit_air_shot()

@@ -73,6 +73,11 @@ func _ready() -> void:
 
 	_build_ui_hierarchy()
 	_connect_xp_manager()
+	var controls = get_node_or_null("/root/InputManager")
+	if controls:
+		controls.input_mode_changed.connect(func(_controller):
+			if is_choosing: _update_subtitle()
+		)
 
 func _connect_xp_manager() -> void:
 	var xp_mgr = get_node_or_null("/root/XpManager")
@@ -270,6 +275,7 @@ func _format_card_button(btn: Button, card: RefCounted, shortcut_idx: int) -> vo
 		badge_lbl.add_theme_color_override("font_color", rarity_col)
 	if shortcut_lbl:
 		shortcut_lbl.text = "[ %d ]" % shortcut_idx
+		btn.set_meta("shortcut_index", shortcut_idx)
 	if title_lbl:
 		title_lbl.text = card.title.to_upper()
 	if sub_lbl:
@@ -281,6 +287,15 @@ func _format_card_button(btn: Button, card: RefCounted, shortcut_idx: int) -> vo
 		stats_lbl.text = card.get_formatted_stats()
 	if border_rect:
 		border_rect.border_color = rarity_col
+	_refresh_controller_focus(btn)
+
+func _refresh_controller_focus(btn: Button) -> void:
+	var shortcut = btn.get_node_or_null("Margin/VBox/Header/Shortcut")
+	var controls = get_node_or_null("/root/InputManager")
+	if not shortcut: return
+	var selected: bool = controls != null and controls.controller_active and btn.has_focus()
+	shortcut.text = "[A] APPLY" if selected else "[ %d ]" % int(btn.get_meta("shortcut_index", 1))
+	shortcut.add_theme_color_override("font_color", Color("ffd275") if selected else Color("9db5c3"))
 
 func _on_card_clicked(idx: int) -> void:
 	if not is_choosing or idx < 0 or idx >= current_draft.size():
@@ -349,6 +364,9 @@ func _update_subtitle(level: int = -1) -> void:
 		subtitle_label.text = "FIELD SELECTION // LEVEL %d  [+%d PENDING]  -- COMBAT PAUSED" % [level, queued]
 	else:
 		subtitle_label.text = "FIELD SELECTION // LEVEL %d  [SELECT 1 AUGMENTATION]  -- COMBAT PAUSED" % level
+	if get_node("/root/InputManager").controller_active:
+		subtitle_label.text += "\nD-PAD SELECT / A APPLY"
+	for button in card_buttons: _refresh_controller_focus(button)
 
 func _get_player() -> Node:
 	if is_inside_tree():
@@ -425,6 +443,8 @@ func _create_card_button(idx: int) -> Button:
 	btn.focus_mode = Control.FOCUS_ALL
 	btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	btn.pressed.connect(_on_card_clicked.bind(idx))
+	btn.focus_entered.connect(func(): _refresh_controller_focus(btn))
+	btn.focus_exited.connect(func(): _refresh_controller_focus(btn))
 
 	var style_normal = StyleBoxFlat.new()
 	style_normal.bg_color = Color(0.04, 0.08, 0.12, 0.95)

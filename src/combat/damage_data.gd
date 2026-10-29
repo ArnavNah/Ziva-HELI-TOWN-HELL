@@ -53,7 +53,7 @@ func clone_scaled(scale_factor: float = 1.0) -> DamageData:
 	var copy = DamageData.new(
 		raw_damage * scale_factor,
 		weapon_type,
-		attacker,
+		attacker if is_instance_valid(attacker) else null,
 		is_salvo,
 		blast_radius,
 		false # Do not reapply attacker multiplier!

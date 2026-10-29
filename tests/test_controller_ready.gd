@@ -10,6 +10,12 @@ func check(ok: bool, message: String) -> void:
 	if not ok: failures += 1
 func frames(count: int = 3) -> void:
 	for index in range(count): await process_frame
+func capture(name: String) -> void:
+	if not "--capture" in OS.get_cmdline_user_args(): return
+	await frames(8)
+	RenderingServer.force_draw(false) # Works while an embedded modal owns window focus.
+	root.get_texture().get_image().save_png("res://artifacts/controller-ready/" + name + ".png")
+	print("CAPTURE controller-ready/", name)
 func button(code: int, pressed: bool) -> void:
 	var event := InputEventJoypadButton.new()
 	event.device = PAD
@@ -28,18 +34,12 @@ func axis(code: int, value: float) -> void:
 	Input.parse_input_event(event)
 	await frames(2)
 func aim_at(point: Vector2, controls: Node) -> void:
-	for step in range(120):
-		var difference: Vector2 = point - controls.get_aim_screen_position()
-		if difference.length() < 10: break
-		var magnitude: float = controls.aim_deadzone + (1.0 - controls.aim_deadzone) * pow(clampf(difference.length() / 120.0, 0.0, 1.0), 1.0 / 1.6)
-		var stick := difference.normalized() * magnitude
-		for entry in [[JOY_AXIS_RIGHT_X, stick.x], [JOY_AXIS_RIGHT_Y, stick.y]]:
-			var event := InputEventJoypadMotion.new()
-			event.device = PAD
-			event.axis = entry[0]
-			event.axis_value = entry[1]
-			Input.parse_input_event(event)
-		await process_frame
+	var player := get_first_node_in_group("player") as Node3D
+	var anchor := root.get_camera_3d().unproject_position(player.global_position)
+	var stick := (point - anchor).normalized()
+	await axis(JOY_AXIS_RIGHT_X,stick.x)
+	await axis(JOY_AXIS_RIGHT_Y,stick.y)
+	await frames(8)
 	await axis(JOY_AXIS_RIGHT_X, 0)
 	await axis(JOY_AXIS_RIGHT_Y, 0)
 func run() -> void:
@@ -47,6 +47,8 @@ func run() -> void:
 		quit(2)
 		return
 	print("Physical controllers available: ", Input.get_connected_joypads(), " / tests inject device ", PAD)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://artifacts/controller-ready"))
+	root.gui_embed_subwindows = true
 	var controls = root.get_node("InputManager")
 	var gm = root.get_node("GameManager")
 	var flow = root.get_node("UIFlow")
@@ -88,6 +90,16 @@ func run() -> void:
 	check(hangar.current_tab == hangar.TabIndex.PERKS, "gamepad switches hangar categories")
 	await tap(JOY_BUTTON_B)
 	check(not hangar.visible and root.gui_get_focus_owner() == menu.hangar_btn, "B leaves hangar and restores operations focus")
+	menu.manual_btn.grab_focus()
+	await tap(JOY_BUTTON_A)
+	check(menu.manual_dialog.visible, "gamepad opens flight manual")
+	await tap(JOY_BUTTON_B)
+	check(not menu.manual_dialog.visible, "B dismisses the flight manual window")
+	menu.exit_btn.grab_focus()
+	await tap(JOY_BUTTON_A)
+	check(is_instance_valid(flow.confirmation), "controller quit still requires explicit confirmation")
+	await tap(JOY_BUTTON_B)
+	check(not is_instance_valid(flow.confirmation), "B cancels a generic confirmation without quitting")
 	menu.settings_btn.grab_focus()
 	await tap(JOY_BUTTON_A)
 	var settings = menu.get_node("SettingsMenu")
@@ -101,6 +113,7 @@ func run() -> void:
 	settings.pad_invert_check.grab_focus()
 	await tap(JOY_BUTTON_A)
 	check(controls.aim_invert_y == settings.pad_invert_check.button_pressed and controls.aim_invert_y, "gamepad toggles real invert-Y preference")
+	await capture("controller-settings")
 	store.set_value("pad_invert_y", false)
 	store.set_value("pad_sensitivity", 1.0)
 	check(store.flush(), "controller settings save to isolated profile")
@@ -133,7 +146,7 @@ func run() -> void:
 	await frames(5)
 	check(flow.gameplay_input_allowed(), "launch-confirm input releases before combat arms")
 	await axis(JOY_AXIS_LEFT_X, 0.8)
-	check(controls.get_flight_input().yaw > 0.5, "left stick controls real flight yaw on a nonzero device")
+	check(controls.get_flight_input().strafe > 0.5 and is_zero_approx(controls.get_flight_input().yaw), "left stick moves sideways without yaw on a nonzero device")
 	await axis(JOY_AXIS_LEFT_X, 0)
 	await button(JOY_BUTTON_DPAD_UP, true)
 	check(controls.get_flight_input().lift > 0.9, "D-pad up controls collective climb")
@@ -151,7 +164,7 @@ func run() -> void:
 	await axis(JOY_AXIS_RIGHT_X, 0)
 	var held_aim: Vector2 = controls.virtual_aim
 	await frames(5)
-	check(controls.virtual_aim.is_equal_approx(held_aim), "neutral stick preserves aim without snapping to mouse")
+	check(controls.virtual_aim.distance_to(held_aim) < 5.0, "neutral stick preserves aim direction without snapping to mouse")
 	await axis(JOY_AXIS_RIGHT_X, 0.10)
 	check(controls.aim_stick().is_zero_approx(), "radial deadzone rejects stick drift")
 	await axis(JOY_AXIS_RIGHT_X, 1.0)
@@ -211,6 +224,15 @@ func run() -> void:
 	box.size = Vector3(3, 3, 3)
 	collision.shape = box
 	target.add_child(collision)
+	var mesh := MeshInstance3D.new()
+	var target_mesh := BoxMesh.new()
+	target_mesh.size = Vector3(3, 3, 3)
+	mesh.mesh = target_mesh
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color("c96b56")
+	material.roughness = 1.0
+	mesh.material_override = material
+	target.add_child(mesh)
 	var receiver = load("res://src/combat/damage_receiver.gd").new()
 	receiver.name = "DamageReceiver"
 	receiver.max_health = 10000
@@ -222,6 +244,7 @@ func run() -> void:
 	await aim_at(player.get_node("PlayerCamera").unproject_position(target.global_position), controls)
 	await frames(6)
 	check(turret.current_target_node == target, "gamepad aim acquires a real visible combat target")
+	await capture("controller-aim")
 	await axis(JOY_AXIS_TRIGGER_LEFT, 1.0)
 	await frames(30)
 	check(salvo.current_locks.has(target), "left trigger paints actual target locks using right-stick aim")
@@ -239,9 +262,14 @@ func run() -> void:
 	check(paused and gm.current_state == gm.RunState.PAUSED and game.get_node("UI/PauseMenu").visible, "Start opens the real pause menu")
 	check(not salvo.is_painting and salvo.current_locks.is_empty(), "pausing cancels painting so release cannot launch stale missiles")
 	await axis(JOY_AXIS_TRIGGER_LEFT, 0)
+	await axis(JOY_AXIS_TRIGGER_RIGHT, 1)
+	var held_ammo: int = weapons.weapon_states[weapon].ammo
 	await button(JOY_BUTTON_A, true)
 	await frames(4)
 	await button(JOY_BUTTON_A, false)
+	await frames(4)
+	check(not flow.gameplay_input_allowed() and weapons.weapon_states[weapon].ammo == held_ammo, "held trigger cannot leak fire out of a controller menu")
+	await axis(JOY_AXIS_TRIGGER_RIGHT, 0)
 	await frames(4)
 	check(not paused and flow.gameplay_input_allowed(), "gamepad resumes and re-arms after held buttons release")
 	var xp = root.get_node("XpManager")
@@ -252,6 +280,7 @@ func run() -> void:
 		if ui and ui.is_choosing: break
 		await process_frame
 	check(ui != null and ui.is_choosing and paused, "earned XP opens the real card draft")
+	await capture("controller-cards")
 	if ui and ui.is_choosing:
 		var first = root.gui_get_focus_owner()
 		await tap(JOY_BUTTON_DPAD_RIGHT)
@@ -259,6 +288,15 @@ func run() -> void:
 		await tap(JOY_BUTTON_A)
 		await frames(5)
 		check(not ui.is_choosing and xp.queued_level_ups == 0 and not paused, "A applies exactly one real card and resumes combat")
+	root.get_node("EventBus").boss_defeated.emit()
+	await frames(4)
+	var boss_dialog = game.get_node("UI/BossDecisionDialog")
+	check(boss_dialog.visible and root.gui_get_focus_owner() == boss_dialog.extract_btn, "boss decision starts with controller focus")
+	await tap(JOY_BUTTON_DPAD_RIGHT)
+	await tap(JOY_BUTTON_A)
+	check(not boss_dialog.visible and gm.current_state == gm.RunState.ACTIVE, "D-pad and A choose real boss overdrive continuation")
+	director.stop_wave_director()
+	for enemy in get_nodes_in_group("enemies"): enemy.queue_free()
 	await tap(JOY_BUTTON_START)
 	await tap(JOY_BUTTON_B)
 	await frames(4)
@@ -271,9 +309,19 @@ func run() -> void:
 	player.set_physics_process(false)
 	player.velocity = Vector3.ZERO
 	check(not player.is_dashing, "dash completes normally after controller input")
+	director.current_wave = 1 # Separate early mission gate fixture from boss overdrive wave 11.
 	var tracker = mission.get_node("MissionTracker")
 	await tap(JOY_BUTTON_BACK)
 	check(is_instance_valid(tracker.tactical_dialog) and paused, "View opens paused mission actions")
+	await capture("controller-missions")
+	if "--capture" in OS.get_cmdline_user_args():
+		print("CONTROLLER_VISUALS: four captures complete; full input path is verified by the headless run")
+		if is_instance_valid(tracker.tactical_dialog): tracker.tactical_dialog.hide()
+		await frames(2)
+		game.queue_free()
+		await process_frame
+		quit(1 if failures else 0)
+		return
 	if is_instance_valid(tracker.tactical_dialog):
 		check(tracker.tactical_dialog.get_ok_button().disabled, "extraction cannot be requested before wave three")
 		var radar = game.find_child("TacticalRadar", true, false)

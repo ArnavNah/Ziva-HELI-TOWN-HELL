@@ -24,6 +24,7 @@ var _populating: bool = false
 var pad_sensitivity_slider: HSlider
 var pad_deadzone_slider: HSlider
 var pad_invert_check: CheckBox
+var pad_rumble_check: CheckBox
 
 func _ready() -> void:
 	theme = preload("res://src/ui/menus/menu_theme.gd").create()
@@ -162,15 +163,19 @@ func _build_ui_layout() -> void:
 	settings_box.add_child(defaults)
 	var actions: Dictionary = get_node("/root/InputManager").CONTROL_LABELS
 	var aim := Label.new()
-	aim.text = "Aim: mouse / right stick  |  Weapons: 1–4 / wheel / L3-R3\nGamepad: A confirm, B back, View mission/radar, Start pause.\nButton names use Xbox positions; equivalent PlayStation/SDL pads use the same layout."
+	aim.text = "Left stick: move in any direction. Right stick: point toward enemies to auto-aim.\nD-pad: turn / altitude. L3-R3: weapons. View: mission/radar. Start: pause.\nA confirms and B goes back in menus."
 	aim.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	controls_box.add_child(aim)
-	pad_sensitivity_slider = _controller_slider("Right-stick sensitivity", "pad_sensitivity", 0.3, 2.5, 0.05)
+	pad_sensitivity_slider = _controller_slider("Right-stick free-aim reach", "pad_sensitivity", 0.3, 2.5, 0.05)
 	pad_deadzone_slider = _controller_slider("Right-stick deadzone", "pad_deadzone", 0.08, 0.40, 0.01)
 	pad_invert_check = CheckBox.new()
 	pad_invert_check.text = "Invert right-stick vertical aim"
 	pad_invert_check.toggled.connect(func(value): _set_preference("pad_invert_y", value))
 	controls_box.add_child(pad_invert_check)
+	pad_rumble_check = CheckBox.new()
+	pad_rumble_check.text = "Controller rumble when hit"
+	pad_rumble_check.toggled.connect(func(value): _set_preference("pad_rumble", value))
+	controls_box.add_child(pad_rumble_check)
 	for action in actions:
 		var names: Array[String] = []
 		for event in InputMap.action_get_events(action):
@@ -217,7 +222,7 @@ func _controller_slider(caption: String, key: String, low: float, high: float, i
 	value_label.custom_minimum_size.x = 65
 	row.add_child(value_label)
 	slider.value_changed.connect(func(value):
-		value_label.text = "%.2f" % value
+		value_label.text = "%d%%" % roundi(value * 100) if key == "pad_deadzone" else "%.2fx" % value
 		_set_preference(key, value)
 	)
 	slider.set_meta("value_label", value_label)
@@ -230,9 +235,10 @@ func _load_current_values() -> void:
 	var v: Dictionary = store.values
 	pad_sensitivity_slider.set_value_no_signal(v.pad_sensitivity)
 	pad_deadzone_slider.set_value_no_signal(v.pad_deadzone)
-	pad_sensitivity_slider.get_meta("value_label").text = "%.2f" % v.pad_sensitivity
-	pad_deadzone_slider.get_meta("value_label").text = "%.2f" % v.pad_deadzone
+	pad_sensitivity_slider.get_meta("value_label").text = "%.2fx" % v.pad_sensitivity
+	pad_deadzone_slider.get_meta("value_label").text = "%d%%" % roundi(v.pad_deadzone * 100)
 	pad_invert_check.set_pressed_no_signal(v.pad_invert_y)
+	pad_rumble_check.set_pressed_no_signal(v.pad_rumble)
 	window_mode_btn.select(v.window)
 	fps_mode_btn.select([60, 120, 0].find(int(v.fps)))
 	vsync_btn.select(int(v.vsync))

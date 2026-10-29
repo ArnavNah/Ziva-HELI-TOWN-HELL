@@ -40,3 +40,6 @@ assets/player/apache_game_lowpoly.blend filter=lfs diff=lfs merge=lfs -text
 assets/player/apache_rotors_lowpoly.blend filter=lfs diff=lfs merge=lfs -text
 assets/player/player.glb filter=lfs diff=lfs merge=lfs -text
 assets/player/player_backup.glb filter=lfs diff=lfs merge=lfs -text
+assets/Enemy/air/**/*.blend filter=lfs diff=lfs merge=lfs -text
+assets/Enemy/air/**/*.png filter=lfs diff=lfs merge=lfs -text
+assets/Enemy/air/**/*.glb filter=lfs diff=lfs merge=lfs -text

@@ -34,8 +34,20 @@ var pending_volley_speed: float = 95.0
 func _ready() -> void:
 	# The director constructs this controller directly; provide its complete physical rig.
 	if not has_node("Visuals"):
-		preload("res://src/enemies/raider_visuals.gd").build(self, "attack_gunship")
-		get_node("Visuals").scale = Vector3.ONE * 1.5
+		preload("res://src/enemies/raider_visuals.gd").build(self, "heavy_gunship_boss")
+	if get_node("Visuals").has_method("get_weapon_origin") and not telegraph_label:
+		telegraph_label = Label3D.new()
+		telegraph_label.name = "TelegraphLabel"
+		# Above-hull text overlaps the boss HUD in the real chase camera. Place
+		# warnings below the hull and keep rooftops from occluding preparation.
+		telegraph_label.position.y = -2.8
+		telegraph_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		telegraph_label.font_size = 44
+		telegraph_label.pixel_size = 0.035
+		telegraph_label.outline_size = 8
+		telegraph_label.no_depth_test = true
+		telegraph_label.modulate = Color("ffad48")
+		add_child(telegraph_label)
 	if not has_node("CollisionShape3D"):
 		var shape := BoxShape3D.new()
 		shape.size = Vector3(5, 3.5, 11)
@@ -51,6 +63,12 @@ func _ready() -> void:
 	add_to_group("bosses")
 	_setup_boss_stats()
 	_find_player()
+
+func _weapon_origin() -> Vector3:
+	var rig := get_node_or_null("Visuals")
+	if rig and rig.has_method("get_weapon_origin"): return rig.get_weapon_origin()
+	# Modular fortress bosses retain their own articulated battery.
+	return turret_pivot.global_position if turret_pivot else global_position + Vector3.UP * 2.0
 
 func _setup_boss_stats() -> void:
 	if not damage_receiver:
@@ -108,7 +126,7 @@ func _process(delta: float) -> void:
 		rotation.y = rotate_toward(rotation.y, target_yaw, delta * 3.5)
 
 	# Predictive turret tracking
-	var muzzle_pos: Vector3 = turret_pivot.global_position if turret_pivot else global_position + Vector3.UP * 2.0
+	var muzzle_pos := _weapon_origin()
 	var proj_speed := pending_volley_speed if is_telegraphing else (95.0 if current_stage == BossStage.OPENING else (115.0 if current_stage == BossStage.ESCALATION else 135.0))
 	var aim_lead := _predict_lead_point(muzzle_pos, target_player, proj_speed)
 
@@ -119,7 +137,7 @@ func _process(delta: float) -> void:
 	if is_telegraphing:
 		telegraph_timer -= delta
 		if telegraph_label:
-			telegraph_label.text = "! DANGER: ATTACK TELEGRAPH !"
+			telegraph_label.text = "INCOMING BARRAGE"
 		if telegraph_timer <= 0.0:
 			is_telegraphing = false
 			if telegraph_label:
@@ -171,24 +189,26 @@ func _release_attack_slots() -> void:
 
 func on_attack_slot_expired(_kind: String) -> void:
 	is_telegraphing = false
+	if telegraph_label: telegraph_label.text = ""
 	volley_timer = 0.3
 	_release_attack_slots()
 
 func _fire_spread_volley(count: int, speed: float, aim_lead: Vector3) -> void:
-	if not is_inside_tree() or get_tree() == null:
+	if not is_inside_tree() or get_tree() == null or defeat_settled or (damage_receiver and damage_receiver.is_dead):
 		return
 	if not target_player or not is_instance_valid(target_player):
 		return
-	var muzzle_pos: Vector3 = turret_pivot.global_position if turret_pivot else global_position + Vector3.UP * 2.0
+	var muzzle_pos := _weapon_origin()
 	var base_dir = (aim_lead - muzzle_pos).normalized()
 	var perp = Vector3(-base_dir.z, 0.0, base_dir.x).normalized()
 
-	if has_node("/root/FXManager"):
-		var up_vec = Vector3.UP if absf(base_dir.dot(Vector3.UP)) < 0.99 else Vector3.FORWARD
-		var muzzle_tf = Transform3D(Basis.looking_at(base_dir, up_vec), muzzle_pos)
-		get_node("/root/FXManager").play_muzzle("enemy_boss", muzzle_tf, self, base_dir)
-
 	for i in range(count):
+		muzzle_pos = _weapon_origin()
+		var rig := get_node_or_null("Visuals")
+		var muzzle_socket: Node3D = rig.get_weapon_socket() if rig and rig.has_method("get_weapon_socket") else self
+		if rig and rig.has_method("get_weapon_origin"):
+			var query := PhysicsRayQueryParameters3D.create(muzzle_pos, aim_lead, 2)
+			if not get_world_3d().direct_space_state.intersect_ray(query).is_empty(): continue
 		var p = ProjectileScene.instantiate()
 		var p_data = DamageDataClass.new(12.0, GameConstants.WeaponType.ROCKET, self, false, 6.0)
 		get_tree().root.add_child(p)
@@ -199,6 +219,10 @@ func _fire_spread_volley(count: int, speed: float, aim_lead: Vector3) -> void:
 		p.blast_radius = 6.0
 		p.collision_mask = 3 # Player + environment
 		p.setup(p_data, null, "enemy_boss")
+		if rig and rig.has_method("commit_shot"): rig.commit_shot()
+		if has_node("/root/FXManager"):
+			var up_vec = Vector3.UP if absf(fire_dir.dot(Vector3.UP)) < 0.99 else Vector3.FORWARD
+			get_node("/root/FXManager").play_muzzle("enemy_boss", Transform3D(Basis.looking_at(fire_dir, up_vec), muzzle_pos), muzzle_socket, fire_dir)
 
 func _predict_lead_point(origin: Vector3, target: Node3D, proj_speed: float) -> Vector3:
 	if not is_instance_valid(target):
@@ -227,12 +251,19 @@ func _on_damaged(_amount: float, remaining_hp: float, _data: RefCounted) -> void
 		_update_core_visual(Color(1.0, 0.6, 0.1)) # Orange unstable core
 
 func _update_core_visual(color: Color) -> void:
+	var rig := get_node_or_null("Visuals")
+	if rig and rig.has_method("get_weapon_origin"):
+		var cue := rig.get_node("CosmeticOffset/StateCue") as MeshInstance3D
+		var cue_mat: StandardMaterial3D = cue.get_active_material(0).duplicate()
+		cue_mat.albedo_color = color
+		cue_mat.emission = color
+		cue.material_override = cue_mat
 	if core_mesh and core_mesh.mesh:
 		var mat = StandardMaterial3D.new()
 		mat.albedo_color = color
 		mat.emission_enabled = true
 		mat.emission = color
-		core_mesh.mesh.material = mat
+		core_mesh.material_override = mat
 
 func _on_destroyed(_data: RefCounted) -> void:
 	if defeat_settled:

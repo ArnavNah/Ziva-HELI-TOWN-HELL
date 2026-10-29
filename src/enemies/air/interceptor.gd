@@ -6,6 +6,9 @@ extends BaseEnemy
 
 const ProjectileScene = preload("res://scenes/combat/projectile.tscn")
 const DamageDataClass = preload("res://src/combat/damage_data.gd")
+# The dedicated controller has shipped at 310; EnemyData's 280 is legacy metadata.
+# Keep this live value authoritative during model integration (no balance change).
+const PROJECTILE_SPEED: float = 310.0
 
 var target_player: Node3D = null
 var strafe_state: int = 0 # 0: Ingress, 1: Attack Run, 2: Egress Loop
@@ -17,7 +20,6 @@ var windup_duration: float = 0.30
 var aim_commit_ratio: float = 0.60
 var cached_aim_point: Vector3 = Vector3.ZERO
 var burst_shots_remaining: int = 0
-var _alt_muzzle_left: bool = false
 
 func _ready() -> void:
 	variant_id = "interceptor"
@@ -60,7 +62,7 @@ func _custom_process(delta: float) -> void:
 	strafe_timer += delta
 	var to_player = (target_player.global_position - global_position).normalized()
 	var dist = global_position.distance_to(target_player.global_position)
-	var lead_aim := get_predicted_target_position(global_position, target_player, 310.0, 0.95, deg_to_rad(1.0))
+	var lead_aim := get_predicted_target_position(get_air_weapon_origin(), target_player, PROJECTILE_SPEED, 0.95, deg_to_rad(1.0))
 	cached_aim_point = lead_aim
 
 	match strafe_state:
@@ -92,7 +94,7 @@ func _custom_process(delta: float) -> void:
 			steer_air_unit(strafe_vector * (move_speed * 1.35), 20.0, 55.0, delta)
 
 			if behavior_state == BehaviorState.WINDUP:
-				var windup_done = update_telegraph(global_position, cached_aim_point, delta)
+				var windup_done = update_telegraph(get_air_weapon_origin(), cached_aim_point, delta)
 				if windup_done:
 					clear_telegraph()
 					set_behavior_state(BehaviorState.FIRE)
@@ -105,7 +107,7 @@ func _custom_process(delta: float) -> void:
 				if gun_timer <= 0.0 and burst_shots_remaining > 0:
 					gun_timer = 0.07
 					burst_shots_remaining -= 1
-					if check_muzzle_line_of_sight(global_position, target_player.global_position):
+					if check_muzzle_line_of_sight(get_air_weapon_origin(), target_player.global_position):
 						_fire_interceptor_round()
 					else:
 						not_firing_reason = REASON_BLOCKED_SHOT
@@ -134,11 +136,12 @@ func _custom_process(delta: float) -> void:
 func _fire_interceptor_round() -> void:
 	if not is_inside_tree() or not target_player:
 		return
+	var fire_aim = committed_aim_point if aim_committed else cached_aim_point
+	if not air_weapon_can_fire(fire_aim, true): return
+	var muzzle_socket := get_air_weapon_socket()
 	var p = ProjectileScene.instantiate()
 	var p_data = DamageDataClass.new(9.0, GameConstants.WeaponType.MACHINE_GUN, self)
-	_alt_muzzle_left = not _alt_muzzle_left
-	var muzzle_socket = get_node_or_null("Airframe/Weapons/Muzzle_" + ("L" if _alt_muzzle_left else "R"))
-	var spawn_pos: Vector3 = muzzle_socket.global_position if muzzle_socket else global_position
+	var spawn_pos := get_air_weapon_origin()
 	p.position = spawn_pos
 	var parent_node: Node = get_tree().current_scene if get_tree().current_scene else get_parent()
 	if not parent_node:
@@ -146,13 +149,13 @@ func _fire_interceptor_round() -> void:
 	parent_node.add_child(p)
 	if p.is_inside_tree():
 		p.global_position = spawn_pos
-	var fire_aim = committed_aim_point if aim_committed else cached_aim_point
 	var aim_dir = (fire_aim - spawn_pos).normalized()
-	p.velocity = aim_dir * 310.0
+	p.velocity = aim_dir * PROJECTILE_SPEED
 	p.collision_mask = 3
 	p.setup(p_data, null, "enemy_bullet")
+	commit_air_shot()
 
 	if has_node("/root/FXManager"):
 		var up_vec = Vector3.UP if absf(aim_dir.dot(Vector3.UP)) < 0.99 else Vector3.FORWARD
 		var muzzle_tf = Transform3D(Basis.looking_at(aim_dir, up_vec), spawn_pos)
-		get_node("/root/FXManager").play_muzzle("enemy_bullet", muzzle_tf, self, aim_dir)
+		get_node("/root/FXManager").play_muzzle("enemy_bullet", muzzle_tf, muzzle_socket, aim_dir)

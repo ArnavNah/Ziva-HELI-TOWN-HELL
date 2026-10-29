@@ -319,7 +319,9 @@ func _update_blood_vignette(delta: float) -> void:
 func _update_reticle() -> void:
 	var controls = get_node("/root/InputManager")
 	if controller_hint:
-		controller_hint.visible = controls.controller_active or controls.notice_timer > 0.0
+		var gm = get_node("/root/GameManager")
+		var combat: bool = gm.current_state in [gm.RunState.ACTIVE, gm.RunState.EXTRACTION, gm.RunState.TUTORIAL]
+		controller_hint.visible = (controls.controller_active and combat) or (controls.notice_timer > 0.0 and (combat or gm.current_state == gm.RunState.PAUSED))
 		controller_hint.text = controls.controller_notice if controls.notice_timer > 0.0 else "RS AIM  /  RT FIRE  /  LT SALVO  /  L3-R3 WEAPONS  /  VIEW MISSIONS  /  START PAUSE"
 	has_barrel_pos = false
 	is_turret_blocked = false

@@ -647,7 +647,8 @@ func _process_flight_physics(delta: float) -> void:
 	# Compute current local velocity components
 	var v_fwd = velocity.dot(forward_dir)
 	var v_lat = velocity.dot(right_dir)
-	var strafe_speed = max_speed * 0.72 # Sideways authority follows aircraft performance
+	var direct_move: bool = input_data.get("direct_move", false)
+	var strafe_speed = max_speed if direct_move else max_speed * 0.72
 	fwd_speed_ratio = clampf(v_fwd / max_speed, -1.0, 1.0)
 	lat_speed_ratio = clampf(v_lat / strafe_speed, -1.0, 1.0)
 	
@@ -717,7 +718,7 @@ func _process_flight_physics(delta: float) -> void:
 		target_fwd_vel = thrust_input * max_speed
 	elif thrust_input < 0.0:
 		# One continuous brake-to-reverse command; no zero-speed threshold latch.
-		target_fwd_vel = thrust_input * max_speed * 0.65
+		target_fwd_vel = thrust_input * max_speed * (1.0 if direct_move else 0.65)
 
 	# Decoupled Strafe: cleanly driven by strafe input without injecting unwanted drift during yaw turning
 	var target_str_vel = strafe_input * strafe_speed
@@ -741,6 +742,9 @@ func _process_flight_physics(delta: float) -> void:
 	var lateral_error = target_str_vel - v_lat
 	var braking_sideways = absf(strafe_input) < 0.001 or v_lat * strafe_input < 0.0
 	var lateral_limit = (strafe_braking if braking_sideways else strafe_acceleration) * control_authority
+	if direct_move:
+		# Match forward response, with a bounded quick stop/reversal for dodging.
+		lateral_limit = maxf(lateral_limit, max_speed * (6.0 if braking_sideways else 4.2) * control_authority)
 	if absf(strafe_input) < 0.001:
 		lateral_limit *= maxf(0.35, drag_multiplier)
 	# Ease into small corrections instead of alternating full-strength thrust
@@ -1193,14 +1197,18 @@ func take_damage(amount_or_data: Variant, source: String = "Enemy", hit_origin: 
 		return
 	# Apply capped mitigation
 	var effective_damage = amount * (1.0 - clampf(armor_mitigation, 0.0, GameConstants.MAX_ARMOR_MITIGATION))
+	var absorbed_damage := 0.0
 	if shield_timer > 0.0 and shield_capacity > 0.0:
 		var absorbed := minf(shield_capacity, effective_damage)
+		absorbed_damage = absorbed
 		shield_capacity -= absorbed
 		effective_damage -= absorbed
 		if shield_capacity <= 0.0:
 			shield_timer = 0.0
 		update_invulnerability_state()
 	if effective_damage <= 0.0:
+		if absorbed_damage > 0.0 and has_node("/root/InputManager"):
+			get_node("/root/InputManager").play_damage_rumble(absorbed_damage * 0.5)
 		return
 	# Flat plating applies only to identified non-explosive enemy small arms.
 	if amount_or_data is RefCounted and "blast_radius" in amount_or_data and "weapon_type" in amount_or_data:
@@ -1220,6 +1228,8 @@ func take_damage(amount_or_data: Variant, source: String = "Enemy", hit_origin: 
 		return
 	current_hull = maxf(0.0, current_hull - effective_damage)
 	var accepted_damage: float = prev_hull - current_hull
+	if source != "Fuel Starvation" and has_node("/root/InputManager"):
+		get_node("/root/InputManager").play_damage_rumble(accepted_damage + absorbed_damage * 0.5)
 	
 	# Subsystem Damage roll (40% chance to hit engine or rotor) if alive
 	if current_hull > 0.0 and randf() < GameConstants.SUBSYSTEM_DAMAGE_CHANCE:

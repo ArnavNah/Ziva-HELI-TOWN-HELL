@@ -20,7 +20,7 @@ const DamageReceiverScript = preload("res://src/combat/damage_receiver.gd")
 const ProceduralRaider = preload("res://src/enemies/procedural_raider.gd")
 const RaiderVisuals = preload("res://src/enemies/raider_visuals.gd")
 const FieldRaiderVisuals = preload("res://src/enemies/field_raider_visuals.gd")
-const FIELD_ROLES = ["hunter_drone", "torpedo_vtol", "escort_fighter"]
+const FIELD_ROLES = ["hunter_drone"]
 const SpawnCardClass = preload("res://src/resources/spawn_card.gd")
 
 var encounter_rng := RandomNumberGenerator.new()
@@ -566,7 +566,7 @@ func find_valid_spawn_position(family: String, center_pos: Vector3, variant_key:
 
 				var shape_query = PhysicsShapeQueryParameters3D.new()
 				var sphere = SphereShape3D.new()
-				sphere.radius = 3.8
+				sphere.radius = spawn_bounds_radius(variant_key)
 				if variant_key == "boss_air_titan": sphere.radius = 16.0
 				shape_query.shape = sphere
 				shape_query.transform = Transform3D(Basis.IDENTITY, Vector3(cand_x, cand_y, cand_z))
@@ -650,14 +650,52 @@ func _create_enemy_node(variant_key: String) -> CharacterBody3D:
 		col_size = Vector3(3.6, 1.5, 3.6)
 	elif variant_key in ["torpedo_vtol", "escort_fighter"]:
 		col_size = Vector3(7.0, 2.0, 5.5)
+	# Hull/weapon geometry only; rotor sweeps and empty wing corners are not solid.
+	var air_hulls := {
+		"attack_gunship": Vector3(2.2, 1.9, 7.6),
+		"rocket_gunship": Vector3(2.2, 1.9, 8.5),
+		"interceptor": Vector3(2.0, 1.3, 5.6),
+		"escort_fighter": Vector3(2.0, 1.4, 6.1),
+		"attack_wing": Vector3(2.0, 1.65, 5.1),
+		"heavy_bomber": Vector3(2.0, 2.0, 6.8),
+		"torpedo_vtol": Vector3(3.1, 1.5, 5.5),
+		"stealth_vtol": Vector3(3.1, 1.5, 5.5),
+		"minelayer": Vector3(3.1, 1.5, 5.5),
+	}
+	if air_hulls.has(variant_key): col_size = air_hulls[variant_key]
 
 	# Add CollisionShape3D
 	var col = CollisionShape3D.new()
+	col.name = "CollisionShape3D"
 	var shape = BoxShape3D.new()
 	shape.size = col_size
 	col.shape = shape
 	col.position = Vector3(0, col_size.y * 0.5, 0)
 	enemy.add_child(col)
+	var wing_shapes := {
+		"interceptor": [Vector3(4.0, 0.35, 1.4), Vector3(0, 0.5, 0.6)],
+		"escort_fighter": [Vector3(4.65, 0.4, 1.5), Vector3(0, 0.62, 0.65)],
+		"attack_wing": [Vector3(5.7, 0.45, 1.35), Vector3(0, 0.88, 0.15)],
+		"heavy_bomber": [Vector3(7.85, 0.45, 1.65), Vector3(0, 1.15, -0.55)],
+	}
+	if wing_shapes.has(variant_key):
+		var wing := CollisionShape3D.new()
+		wing.name = "WingCollision"
+		var wing_box := BoxShape3D.new()
+		wing_box.size = wing_shapes[variant_key][0]
+		wing.shape = wing_box
+		wing.position = wing_shapes[variant_key][1]
+		enemy.add_child(wing)
+	if variant_key in ["torpedo_vtol", "stealth_vtol", "minelayer"]:
+		for side in [-1, 1]:
+			var duct := CollisionShape3D.new()
+			duct.name = "DuctCollisionL" if side < 0 else "DuctCollisionR"
+			var duct_shape := CylinderShape3D.new()
+			duct_shape.radius = 0.9
+			duct_shape.height = 0.75
+			duct.shape = duct_shape
+			duct.position = Vector3(side * 2.43, 1.17, -0.16)
+			enemy.add_child(duct)
 
 	# Add DamageReceiver
 	var receiver = DamageReceiverScript.new()
@@ -690,7 +728,7 @@ func _build_enemy_visuals(enemy: CharacterBody3D, variant_key: String, _col_size
 	if variant_key in FIELD_ROLES:
 		FieldRaiderVisuals.build(enemy, variant_key, encounter_rng.randi())
 		return
-	if variant_key in ["scout_buggy", "gatling_heavy", "attack_wing", "interceptor", "assault_apc", "stealth_vtol", "heavy_bomber", "attack_gunship", "rocket_gunship", "minelayer", "raptor_raider", "desert_barrage_rover", "rail_crawler", "siege_tank"]:
+	if variant_key in ["scout_buggy", "gatling_heavy", "attack_wing", "interceptor", "assault_apc", "stealth_vtol", "heavy_bomber", "attack_gunship", "rocket_gunship", "minelayer", "raptor_raider", "desert_barrage_rover", "rail_crawler", "siege_tank", "torpedo_vtol", "escort_fighter", "heavy_gunship_boss", "boss_air_titan"]:
 		RaiderVisuals.build(enemy, variant_key)
 		return
 

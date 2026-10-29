@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/Enemy/air/ironclad_skycarrier/ironclad_skycarrier_animated.glb" id="1"]
+[ext_resource type="Script" path="res://src/enemies/air/air_visual_rig.gd" id="2"]
+[ext_resource type="Script" path="res://src/enemies/air/helicopter_rotor_controller.gd" id="3"]
+
+[sub_resource type="StandardMaterial3D" id="CueMaterial"]
+shading_mode = 0
+albedo_color = Color(1, 0.4, 0.08, 1)
+emission_enabled = true
+emission = Color(1, 0.25, 0.04, 1)
+
+[sub_resource type="SphereMesh" id="CueMesh"]
+material = SubResource("CueMaterial")
+radius = 0.10
+height = 0.20
+radial_segments = 8
+rings = 4
+
+[node name="Visuals" type="Node3D"]
+script = ExtResource("2")
+weapon_sockets = Array[NodePath]([NodePath("CosmeticOffset/Sockets/BombDrop")])
+
+[node name="CosmeticOffset" type="Node3D" parent="."]
+
+[node name="Model" parent="CosmeticOffset" instance=ExtResource("1")]
+position = Vector3(0, 1.2, 0)
+scale = Vector3(8.5, 8.5, 8.5)
+
+[node name="Sockets" type="Node3D" parent="CosmeticOffset"]
+position = Vector3(0, 1.2, 0)
+scale = Vector3(8.5, 8.5, 8.5)
+
+[node name="BombDrop" type="Marker3D" parent="CosmeticOffset/Sockets"]
+position = Vector3(0, -0.145, -0.06)
+
+[node name="StateCue" type="MeshInstance3D" parent="CosmeticOffset"]
+position = Vector3(0, 1.6, -0.8)
+mesh = SubResource("CueMesh")
+cast_shadow = 0
+visible = false
+
+[node name="RotorController" type="Node" parent="."]
+script = ExtResource("3")
+extra_rotor_paths = Array[NodePath]([NodePath("CosmeticOffset/Model/Propeller_L"), NodePath("CosmeticOffset/Model/Propeller_R")])
+extra_rotor_axis = Vector3(0, 0, 1)

@@ -94,9 +94,14 @@ func update_aim(camera: Camera3D, mouse_pos: Vector2, parent_heli: Node3D, delta
 
 	var best_candidate: Node3D = null
 	var best_score: float = 0.0
+	var inputs := get_node_or_null("/root/InputManager")
+	var controller_aim: bool = inputs != null and inputs.controller_active
 
 	# If direct raycast clicked an enemy collider, it receives maximum direct-hit score
-	if is_instance_valid(direct_hit_enemy) and _is_enemy_valid(direct_hit_enemy, heli_pos):
+	if controller_aim:
+		best_candidate = _controller_target(camera, parent_heli, space, inputs.aim_direction)
+		best_score = 100.0 if best_candidate else 0.0
+	elif is_instance_valid(direct_hit_enemy) and _is_enemy_valid(direct_hit_enemy, heli_pos):
 		best_candidate = direct_hit_enemy
 		best_score = 100.0
 	else:
@@ -143,6 +148,7 @@ func update_aim(camera: Camera3D, mouse_pos: Vector2, parent_heli: Node3D, delta
 		current_target_node = null
 		current_target_score = 0.0
 		target_world_pos = requested_world_point
+	if controller_aim: inputs.set_auto_aim_target(current_target_node)
 
 	# 5. Compute Gimbal Angles in Chin-Gun Local Space
 	var local_target_dir = global_transform.affine_inverse() * target_world_pos
@@ -170,6 +176,36 @@ func update_aim(camera: Camera3D, mouse_pos: Vector2, parent_heli: Node3D, delta
 	# 6. Actual Aim Direction & Real Impact Point along Barrel Trajectory
 	actual_aim_direction = get_aim_direction()
 	_update_actual_impact_point(space, parent_heli)
+
+func _controller_target(camera: Camera3D, heli: Node3D, space: PhysicsDirectSpaceState3D, direction: Vector2) -> Node3D:
+	if not heli: return null
+	var anchor := camera.unproject_position(heli.global_position)
+	var bounds := camera.get_viewport().get_visible_rect().grow(-8.0)
+	var best: Node3D
+	var best_score := -INF
+	for candidate in cached_enemies:
+		if not _is_enemy_valid(candidate, heli.global_position): continue
+		var enemy := candidate as Node3D
+		var aim_point := _get_target_aim_point(enemy)
+		if camera.is_position_behind(aim_point): continue
+		var screen := camera.unproject_position(aim_point)
+		if not bounds.has_point(screen): continue
+		var offset := screen - anchor
+		if offset.length_squared() < 16.0: continue
+		var alignment := direction.dot(offset.normalized())
+		var cone := 38.0 if enemy == current_target_node else 28.0
+		if alignment < cos(deg_to_rad(cone)): continue
+		var local := to_local(aim_point)
+		var yaw := absf(atan2(-local.x, -local.z))
+		var pitch := atan2(local.y, Vector2(local.x, local.z).length())
+		if yaw > deg_to_rad(max_yaw_angle_deg) or pitch < deg_to_rad(min_pitch_deg) or pitch > deg_to_rad(max_pitch_deg): continue
+		if space and not _has_line_of_sight(space, get_next_muzzle_transform().origin, aim_point, heli): continue
+		var score := alignment * 100.0 - heli.global_position.distance_to(aim_point) * 0.12
+		if enemy == current_target_node: score += 6.0
+		if score > best_score:
+			best = enemy
+			best_score = score
+	return best
 
 func _is_enemy_valid(e: Variant, heli_pos: Vector3) -> bool:
 	if not is_instance_valid(e) or not (e is Node3D) or not (e as Node).is_inside_tree() or e.is_queued_for_deletion():

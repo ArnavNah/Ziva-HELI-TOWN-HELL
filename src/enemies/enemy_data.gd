@@ -184,6 +184,8 @@ const VARIANTS: Dictionary = {
 		"proj_speed": 68.0, "lead_accuracy": 0.92, "spread_rad": 0.0, "requires_heavy_slot": false, "requires_air_slot": false
 	},
 	"interceptor": {
+		# Dedicated Interceptor.PROJECTILE_SPEED (310) owns live prediction and fire.
+		# proj_speed below is retained metadata; changing balance is a separate task.
 		"name": "Interceptor",
 		"family": "air",
 		"base_hull": 40.0,

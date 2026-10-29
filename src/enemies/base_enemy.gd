@@ -208,11 +208,14 @@ func _apply_modifiers() -> void:
 			xp_value += 3
 			if visual_mesh:
 				visual_mesh.scale *= 1.2
-			var col = get_node_or_null("CollisionShape3D")
-			if col and col.shape:
+			for col in get_children():
+				if not col is CollisionShape3D or not col.shape: continue
 				col.shape = col.shape.duplicate()
 				if col.shape is BoxShape3D:
 					col.shape.size *= 1.2
+				elif col.shape is CylinderShape3D:
+					col.shape.radius *= 1.2
+					col.shape.height *= 1.2
 				else:
 					col.scale *= 1.2
 				col.position *= 1.2
@@ -372,6 +375,31 @@ func _cast_probe(space: PhysicsDirectSpaceState3D, from: Vector3, to: Vector3, m
 	_probe_query.collision_mask = mask
 	_probe_query.hit_from_inside = inside
 	return space.intersect_ray(_probe_query)
+
+func get_air_weapon_origin() -> Vector3:
+	var rig := get_node_or_null("Visuals")
+	return rig.get_weapon_origin() if rig and rig.has_method("get_weapon_origin") else global_position
+
+func get_air_weapon_socket() -> Marker3D:
+	var rig := get_node_or_null("Visuals")
+	return rig.get_weapon_socket() if rig and rig.has_method("get_weapon_socket") else null
+
+func air_weapon_can_fire(aim: Vector3, fixed_gun: bool = false) -> bool:
+	if not is_inside_tree() or is_queued_for_deletion(): return false
+	if damage_receiver and damage_receiver.is_dead: return false
+	var rig := get_node_or_null("Visuals")
+	if not rig or not rig.has_method("get_weapon_socket") or not rig.get_weapon_socket(): return false
+	if fixed_gun and not rig.is_in_firing_arc(aim):
+		not_firing_reason = REASON_TURNING
+		return false
+	if not check_muzzle_line_of_sight(rig.get_weapon_origin(), aim):
+		not_firing_reason = REASON_BLOCKED_SHOT
+		return false
+	return true
+
+func commit_air_shot() -> void:
+	var rig := get_node_or_null("Visuals")
+	if rig and rig.has_method("commit_shot"): rig.commit_shot()
 
 ## Checks 3D line of sight from muzzle to player (Mask 2: Buildings/Environment)
 func check_muzzle_line_of_sight(muzzle_pos: Vector3, target_aim: Variant) -> bool:
@@ -1021,7 +1049,7 @@ func steer_ground_unit(desired_direction: Vector3, target_speed: float, delta: f
 		stuck_timer = maxf(0.0, stuck_timer - delta * 2.0)
 
 ## Aerial craft steering with altitude safety floor, true roof clearance, and building avoidance
-func steer_air_unit(desired_vel: Vector3, min_alt: float, max_alt: float, delta: float) -> void:
+func steer_air_unit(desired_vel: Vector3, min_alt: float, max_alt: float, delta: float, facing_target: Vector3 = Vector3.INF) -> void:
 	var horiz_vel = Vector3(desired_vel.x, 0.0, desired_vel.z)
 	var h_speed = horiz_vel.length()
 	var horiz_dir = horiz_vel.normalized() if h_speed > 0.5 else -global_transform.basis.z
@@ -1083,7 +1111,10 @@ func steer_air_unit(desired_vel: Vector3, min_alt: float, max_alt: float, delta:
 
 	var current_h_vel = Vector3(velocity.x, 0.0, velocity.z)
 	if current_h_vel.length_squared() > 1.0:
-		var target_yaw = atan2(-current_h_vel.x, -current_h_vel.z)
+		# Fixed airframe guns track with the aircraft's existing yaw/bank controller.
+		# Translational tactics stay independent; do not rotate a combined gun mesh.
+		var facing: Vector3 = current_h_vel if facing_target == Vector3.INF else facing_target - global_position
+		var target_yaw = atan2(-facing.x, -facing.z)
 		rotation.y = rotate_toward(rotation.y, target_yaw, delta * 6.5)
 
 		var target_pitch = clampf(-velocity.y / (h_speed + 0.1) * 0.45, -0.35, 0.35)

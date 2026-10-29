@@ -34,6 +34,8 @@ export_credentials.cfg
 /test*_out.txt
 /test_out.txt
 /test_run.txt
+/godot_stdout.txt
+/scratch_air_inspect.txt
 /page4_5.txt
 /thumb_*.png
 /thumb_*.png.import

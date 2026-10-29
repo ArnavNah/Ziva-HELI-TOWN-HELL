@@ -177,6 +177,13 @@ func open_tactical_actions() -> void:
 		_restore_owned_pause()
 		return
 	var dialog := tactical_dialog
+	dialog.theme = preload("res://src/ui/menus/menu_theme.gd").create()
+	var dialog_panel := StyleBoxFlat.new()
+	dialog_panel.bg_color = Color("10232a")
+	dialog_panel.border_color = Color("547779")
+	dialog_panel.set_border_width_all(1)
+	dialog_panel.set_content_margin_all(12)
+	dialog.theme.set_stylebox("panel", "AcceptDialog", dialog_panel)
 	dialog.set_meta("controller_tactical", true)
 	dialog.set_meta("controller_open_frame", Engine.get_process_frames())
 	dialog.get_ok_button().disabled = not allowed

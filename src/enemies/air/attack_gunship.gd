@@ -44,7 +44,7 @@ func _custom_process(delta: float) -> void:
 
 	var dist = global_position.distance_to(target_player.global_position)
 	var to_player = (target_player.global_position - global_position).normalized()
-	var muzzle_pos := global_position - global_transform.basis.z * 2.0
+	var muzzle_pos := get_air_weapon_origin()
 
 	match current_state:
 		EnemyState.APPROACH:
@@ -73,7 +73,7 @@ func _custom_process(delta: float) -> void:
 			var perp := Vector3(-to_player.z, 0.0, to_player.x) * (1.0 if int(get_instance_id()) % 2 == 0 else -1.0)
 			var hover_vel := (perp * sin(state_timer * 2.8) * 8.0)
 			hover_vel.y = (clampf(target_player.global_position.y + 4.0, 20.0, 48.0) - global_position.y) * 2.0
-			steer_air_unit(hover_vel, 18.0, 52.0, delta)
+			steer_air_unit(hover_vel, 18.0, 52.0, delta, target_player.global_position)
 
 			# Strict permission check: NO timeout bypass! Waiting enemies continue useful positioning (Section 1)
 			var slot_granted = false
@@ -175,7 +175,9 @@ func _fire_gun(aim_point: Vector3) -> void:
 		return
 	if not target_player or not is_instance_valid(target_player):
 		return
-	var muzzle_pos := global_position - global_transform.basis.z * 2.0
+	if not air_weapon_can_fire(aim_point, true): return
+	var muzzle_socket := get_air_weapon_socket()
+	var muzzle_pos := get_air_weapon_origin()
 
 	var p = ProjectileScene.instantiate()
 	var p_data = DamageDataClass.new(8.0, GameConstants.WeaponType.MACHINE_GUN, self)
@@ -190,8 +192,9 @@ func _fire_gun(aim_point: Vector3) -> void:
 	p.velocity = aim_dir * 180.0
 	p.collision_mask = 3
 	p.setup(p_data, null, "enemy_bullet")
+	commit_air_shot()
 
 	if has_node("/root/FXManager"):
 		var up_vec = Vector3.UP if absf(aim_dir.dot(Vector3.UP)) < 0.99 else Vector3.FORWARD
 		var muzzle_tf = Transform3D(Basis.looking_at(aim_dir, up_vec), muzzle_pos)
-		get_node("/root/FXManager").play_muzzle("enemy_bullet", muzzle_tf, self, aim_dir)
+		get_node("/root/FXManager").play_muzzle("enemy_bullet", muzzle_tf, muzzle_socket, aim_dir)

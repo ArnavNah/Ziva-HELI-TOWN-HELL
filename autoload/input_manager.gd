@@ -1,6 +1,12 @@
 extends Node
 
 signal input_mode_changed(controller: bool)
+signal damage_rumble_requested(device: int, weak: float, strong: float, duration: float)
+var rumble_enabled := true
+var last_damage_rumble: Dictionary = {}
+var _rumble_device := -1
+var aim_direction := Vector2.UP
+var _auto_aim_target: WeakRef
 var controller_active := false
 var active_joypad := -1
 var aim_sensitivity := 1.0
@@ -32,17 +38,21 @@ func _setup_input_actions() -> void:
 	
 	_add_action_key("yaw_left", KEY_A)
 	_add_action_key("yaw_left", KEY_LEFT)
-	_add_action_joy_axis("yaw_left", JOY_AXIS_LEFT_X, -1.0)
+	_remove_joy_axis("yaw_left", JOY_AXIS_LEFT_X)
+	_add_action_joy_button("yaw_left", JOY_BUTTON_DPAD_LEFT)
 	
 	_add_action_key("yaw_right", KEY_D)
 	_add_action_key("yaw_right", KEY_RIGHT)
-	_add_action_joy_axis("yaw_right", JOY_AXIS_LEFT_X, 1.0)
+	_remove_joy_axis("yaw_right", JOY_AXIS_LEFT_X)
+	_add_action_joy_button("yaw_right", JOY_BUTTON_DPAD_RIGHT)
 	
 	_add_action_key("strafe_left", KEY_Q)
-	_add_action_joy_button("strafe_left", JOY_BUTTON_DPAD_LEFT)
+	_remove_joy_button("strafe_left", JOY_BUTTON_DPAD_LEFT)
+	_add_action_joy_axis("strafe_left", JOY_AXIS_LEFT_X, -1.0)
 	
 	_add_action_key("strafe_right", KEY_E)
-	_add_action_joy_button("strafe_right", JOY_BUTTON_DPAD_RIGHT)
+	_remove_joy_button("strafe_right", JOY_BUTTON_DPAD_RIGHT)
+	_add_action_joy_axis("strafe_right", JOY_AXIS_LEFT_X, 1.0)
 	
 	_add_action_key("climb", KEY_SPACE)
 	_add_action_key("climb", KEY_SHIFT)
@@ -94,7 +104,7 @@ func _setup_input_actions() -> void:
 	_add_action_joy_axis("aim_down", JOY_AXIS_RIGHT_Y, 1.0)
 	for action in ["aim_left", "aim_right", "aim_up", "aim_down"]:
 		InputMap.action_set_deadzone(action, 0.0) # One radial deadzone below, not two axial ones.
-	for action in ["thrust_forward", "thrust_backward", "yaw_left", "yaw_right"]:
+	for action in ["thrust_forward", "thrust_backward", "strafe_left", "strafe_right", "yaw_left", "yaw_right"]:
 		InputMap.action_set_deadzone(action, 0.20)
 	InputMap.action_set_deadzone("fire_primary", 0.15)
 	InputMap.action_set_deadzone("paint_salvo", 0.15)
@@ -115,6 +125,16 @@ func _setup_input_actions() -> void:
 	for mapping in [["ui_left", JOY_AXIS_LEFT_X, -1.0], ["ui_right", JOY_AXIS_LEFT_X, 1.0], ["ui_up", JOY_AXIS_LEFT_Y, -1.0], ["ui_down", JOY_AXIS_LEFT_Y, 1.0]]:
 		_add_action_joy_axis(mapping[0], mapping[1], mapping[2])
 		InputMap.action_set_deadzone(mapping[0], 0.35)
+
+func _remove_joy_axis(action: String, axis: int) -> void:
+	if not InputMap.has_action(action): return
+	for event in InputMap.action_get_events(action):
+		if event is InputEventJoypadMotion and event.axis == axis: InputMap.action_erase_event(action, event)
+
+func _remove_joy_button(action: String, button: int) -> void:
+	if not InputMap.has_action(action): return
+	for event in InputMap.action_get_events(action):
+		if event is InputEventJoypadButton and event.button_index == button: InputMap.action_erase_event(action, event)
 
 func _add_action_key(action: String, keycode: Key) -> void:
 	if not InputMap.has_action(action):
@@ -160,33 +180,55 @@ func _input(event: InputEvent) -> void:
 		_set_controller_mode(false)
 
 func _set_controller_mode(enabled: bool, device: int = -1) -> void:
-	if enabled: active_joypad = device
+	if enabled:
+		active_joypad = device
+		notice_timer = 0.0
+		controller_notice = ""
 	if controller_active == enabled: return
 	controller_active = enabled
 	aim_initialized = false
+	_auto_aim_target = null
+	if not enabled: stop_damage_rumble()
 	input_mode_changed.emit(enabled)
 
 func aim_stick() -> Vector2:
 	var raw := Vector2(Input.get_action_raw_strength("aim_right") - Input.get_action_raw_strength("aim_left"), Input.get_action_raw_strength("aim_down") - Input.get_action_raw_strength("aim_up"))
 	var magnitude := minf(1.0, raw.length())
 	if magnitude <= aim_deadzone: return Vector2.ZERO
-	var response := pow((magnitude - aim_deadzone) / (1.0 - aim_deadzone), 1.6)
+	var response := (magnitude - aim_deadzone) / (1.0 - aim_deadzone)
 	return raw.normalized() * response * Vector2(1, -1 if aim_invert_y else 1)
 
 func advance_controller_aim(delta: float, viewport_size: Vector2, initial_point: Vector2) -> void:
 	if viewport_size.x <= 48 or viewport_size.y <= 48: return
 	if not aim_initialized:
-		virtual_aim = initial_point
+		aim_direction = (initial_point - viewport_size * 0.5).normalized()
+		if aim_direction.is_zero_approx(): aim_direction = Vector2.UP
 		aim_initialized = true
-	elif aim_viewport != viewport_size and aim_viewport.x > 0 and aim_viewport.y > 0:
-		virtual_aim *= viewport_size / aim_viewport
 	aim_viewport = viewport_size
 	var scale := minf(viewport_size.x / 1280.0, viewport_size.y / 720.0)
-	virtual_aim += aim_stick() * 900.0 * aim_sensitivity * scale * clampf(delta, 0.0, 0.05)
+	var stick := aim_stick()
+	if not stick.is_zero_approx(): aim_direction = stick.normalized()
+	# Directional twin-stick intent, anchored to the helicopter rather than a
+	# cursor that must be dragged across the screen while the camera moves.
+	var anchor := viewport_size * Vector2(0.5, 0.58)
+	var camera := get_viewport().get_camera_3d()
+	var player := get_tree().get_first_node_in_group("player") as Node3D
+	if camera and player: anchor = camera.unproject_position(player.global_position)
+	virtual_aim = anchor + aim_direction * 220.0 * aim_sensitivity * scale
 	virtual_aim = virtual_aim.clamp(Vector2(24, 24), viewport_size - Vector2(24, 24))
+
+func set_auto_aim_target(target: Node3D) -> void:
+	_auto_aim_target = weakref(target) if is_instance_valid(target) else null
 
 func get_aim_screen_position() -> Vector2:
 	if controller_active:
+		var target: Node3D = _auto_aim_target.get_ref() if _auto_aim_target else null
+		var camera := get_viewport().get_camera_3d()
+		if is_instance_valid(target) and not target.is_queued_for_deletion() and camera and not camera.is_position_behind(target.global_position):
+			var receiver := target.get_node_or_null("DamageReceiver")
+			if not receiver or not receiver.is_dead:
+				var col := target.get_node_or_null("CollisionShape3D") as Node3D
+				return camera.unproject_position(col.global_position if col else target.global_position + Vector3.UP * 0.75)
 		return virtual_aim if aim_initialized else get_viewport().get_visible_rect().size * 0.5
 	return get_viewport().get_mouse_position()
 
@@ -205,6 +247,7 @@ func _process(delta: float) -> void:
 					break
 	var flow = get_node_or_null("/root/UIFlow")
 	var playing: bool = flow != null and flow.gameplay_input_allowed()
+	if not playing or not rumble_enabled: stop_damage_rumble()
 	var mouse_mode := Input.MOUSE_MODE_HIDDEN if controller_active and playing else Input.MOUSE_MODE_VISIBLE
 	if Input.mouse_mode != mouse_mode: Input.mouse_mode = mouse_mode
 	if not controller_active or not playing: return
@@ -216,11 +259,12 @@ func _process(delta: float) -> void:
 
 func _on_joy_connection_changed(device: int, connected: bool) -> void:
 	if connected or device != active_joypad or not controller_active: return
+	stop_damage_rumble()
 	_set_controller_mode(false)
 	active_joypad = -1
 	controller_notice = "CONTROLLER DISCONNECTED / RECONNECT OR USE KEYBOARD + MOUSE"
 	notice_timer = 8.0
-	for action in ["aim_left", "aim_right", "aim_up", "aim_down", "thrust_forward", "thrust_backward", "yaw_left", "yaw_right", "strafe_left", "strafe_right", "climb", "descend", "fire_primary", "paint_salvo", "evasive_dash", "reload", "deploy_flares", "super_ability", "next_weapon", "prev_weapon", "mission_action", "ui_accept", "ui_cancel", "pause"]:
+	for action in ["aim_left", "aim_right", "aim_up", "aim_down", "thrust_forward", "thrust_backward", "yaw_left", "yaw_right", "strafe_left", "strafe_right", "climb", "descend", "fire_primary", "paint_salvo", "evasive_dash", "reload", "deploy_flares", "super_ability", "next_weapon", "prev_weapon", "mission_action", "ui_accept", "ui_cancel", "ui_left", "ui_right", "ui_up", "ui_down", "pause"]:
 		Input.action_release(action)
 	var flow = get_node_or_null("/root/UIFlow")
 	if flow: flow.block_held_input()
@@ -243,10 +287,22 @@ func get_flight_input() -> Dictionary:
 	var thrust: float = Input.get_axis("thrust_backward", "thrust_forward")
 	# Strafe: Left (-1) / Right (+1)
 	var strafe: float = Input.get_axis("strafe_left", "strafe_right")
+	if controller_active:
+		# Camera-relative translation stays intuitive even during a manual turn.
+		var move := Vector2(strafe, -thrust).limit_length(1.0)
+		var camera := get_viewport().get_camera_3d()
+		var player := get_tree().get_first_node_in_group("player") as Node3D
+		if camera and player:
+			var right := Vector3(camera.global_basis.x.x, 0, camera.global_basis.x.z).normalized()
+			var forward := Vector3(-camera.global_basis.z.x, 0, -camera.global_basis.z.z).normalized()
+			var movement := right * move.x - forward * move.y
+			strafe = movement.dot(player.global_basis.x)
+			thrust = movement.dot(-player.global_basis.z)
 	# Vertical: Down (-1) / Up (+1)
 	var lift: float = Input.get_axis("descend", "climb")
 	
 	return {
+		"direct_move": controller_active,
 		"yaw": yaw,
 		"thrust": thrust,
 		"strafe": strafe,
@@ -262,7 +318,7 @@ func get_flight_input() -> Dictionary:
 
 const CONTROL_LABELS := {"thrust_forward": "Forward", "thrust_backward": "Brake / reverse", "yaw_left": "Turn left", "yaw_right": "Turn right", "strafe_left": "Strafe left", "strafe_right": "Strafe right", "climb": "Climb", "descend": "Descend", "evasive_dash": "Dash", "fire_primary": "Fire weapon", "paint_salvo": "Paint salvo (hold/release)", "deploy_flares": "Flares", "super_ability": "Devastation Super", "reload": "Reload", "next_weapon": "Next weapon", "prev_weapon": "Previous weapon", "mission_action": "Mission / extraction + radar", "pause": "Pause"}
 func controls_reference() -> String:
-	var text := "Aim: mouse / right stick | Weapons: 1–4 / wheel / L3 previous / R3 next\nD-pad: strafe + altitude | View/Back: mission actions | A: confirm | B: back\n\n"
+	var text := "Left stick: move in any direction | Right stick: aim + auto-lock\nD-pad: turn + altitude | L3/R3: weapons | View: mission | Start: pause\n\n"
 	for action in CONTROL_LABELS:
 		var names: Array[String] = []
 		for event in InputMap.action_get_events(action):
@@ -271,6 +327,26 @@ func controls_reference() -> String:
 				names.append(label)
 		text += CONTROL_LABELS[action] + ": " + " / ".join(names) + "\n"
 	return text
+
+func play_damage_rumble(damage: float) -> void:
+	var flow := get_node_or_null("/root/UIFlow")
+	if not rumble_enabled or not controller_active or active_joypad < 0 or damage <= 0 or not flow or not flow.gameplay_input_allowed(): return
+	var intensity := clampf(damage / 30.0, 0.0, 1.0)
+	var weak := lerpf(0.28, 0.80, intensity)
+	var strong := lerpf(0.12, 0.65, intensity)
+	var duration := lerpf(0.12, 0.28, intensity)
+	_rumble_device = active_joypad
+	last_damage_rumble = {"device":active_joypad, "weak":weak, "strong":strong, "duration":duration}
+	damage_rumble_requested.emit(active_joypad, weak, strong, duration)
+	if active_joypad in Input.get_connected_joypads():
+		Input.start_joy_vibration(active_joypad, weak, strong, duration)
+
+func stop_damage_rumble() -> void:
+	if _rumble_device >= 0 and _rumble_device in Input.get_connected_joypads(): Input.stop_joy_vibration(_rumble_device)
+	_rumble_device = -1
+
+func _exit_tree() -> void:
+	stop_damage_rumble()
 
 func binding_label(event: InputEvent) -> String:
 	if event is InputEventKey:

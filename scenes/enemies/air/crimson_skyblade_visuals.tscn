@@ -1,0 +1,74 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/Enemy/air/crimson_skyblade/crimson_skyblade.glb" id="1"]
+[ext_resource type="Script" path="res://src/enemies/air/air_visual_rig.gd" id="2"]
+
+[sub_resource type="StandardMaterial3D" id="CueMaterial"]
+shading_mode = 0
+albedo_color = Color(1, 0.4, 0.08, 1)
+emission_enabled = true
+emission = Color(1, 0.25, 0.04, 1)
+
+[sub_resource type="SphereMesh" id="CueMesh"]
+material = SubResource("CueMaterial")
+radius = 0.10
+height = 0.20
+radial_segments = 8
+rings = 4
+
+[sub_resource type="StandardMaterial3D" id="ExhaustMaterial"]
+shading_mode = 0
+albedo_color = Color(0.3, 0.65, 1, 1)
+emission_enabled = true
+emission = Color(0.2, 0.5, 1, 1)
+
+[sub_resource type="SphereMesh" id="ExhaustMesh"]
+material = SubResource("ExhaustMaterial")
+radius = 0.012
+height = 0.024
+radial_segments = 8
+rings = 4
+
+[node name="Visuals" type="Node3D"]
+script = ExtResource("2")
+weapon_sockets = Array[NodePath]([NodePath("CosmeticOffset/Sockets/Cannon_L"), NodePath("CosmeticOffset/Sockets/Cannon_R")])
+
+[node name="CosmeticOffset" type="Node3D" parent="."]
+
+[node name="Model" parent="CosmeticOffset" instance=ExtResource("1")]
+position = Vector3(0, 0.8, 0)
+scale = Vector3(6.2, 6.2, 6.2)
+
+[node name="Sockets" type="Node3D" parent="CosmeticOffset"]
+position = Vector3(0, 0.8, 0)
+scale = Vector3(6.2, 6.2, 6.2)
+
+[node name="Cannon_L" type="Marker3D" parent="CosmeticOffset/Sockets"]
+position = Vector3(-0.074, -0.068, -0.201)
+
+[node name="Cannon_R" type="Marker3D" parent="CosmeticOffset/Sockets"]
+position = Vector3(0.075, -0.068, -0.201)
+
+[node name="Exhaust_L" type="Marker3D" parent="CosmeticOffset/Sockets"]
+position = Vector3(-0.05, -0.055, 0.462)
+
+[node name="Glow" type="MeshInstance3D" parent="CosmeticOffset/Sockets/Exhaust_L"]
+position = Vector3(0, 0, 0.008)
+scale = Vector3(1, 1, 2.2)
+mesh = SubResource("ExhaustMesh")
+cast_shadow = 0
+
+[node name="Exhaust_R" type="Marker3D" parent="CosmeticOffset/Sockets"]
+position = Vector3(0.05, -0.055, 0.462)
+
+[node name="Glow" type="MeshInstance3D" parent="CosmeticOffset/Sockets/Exhaust_R"]
+position = Vector3(0, 0, 0.008)
+scale = Vector3(1, 1, 2.2)
+mesh = SubResource("ExhaustMesh")
+cast_shadow = 0
+
+[node name="StateCue" type="MeshInstance3D" parent="CosmeticOffset"]
+position = Vector3(0, 1.2000000000000002, -0.8)
+mesh = SubResource("CueMesh")
+cast_shadow = 0
+visible = false

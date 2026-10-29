@@ -19,6 +19,9 @@ static func build(enemy: Node3D, role: String, visual_seed: int) -> void:
     turret.name = "Turret"
     enemy.add_child(turret)
     match role:
+        "torpedo_vtol", "escort_fighter":
+            Parts.build(enemy, role)
+            return
         "hunter_drone":
             Parts.box(visual, Vector3(1.6, 0.7, 2.0), Vector3(0, 0.7, 0), red)
             Parts.box(visual, Vector3(3.4, 0.15, 0.5), Vector3(0, 0.9, 0), dark)

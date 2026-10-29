@@ -79,6 +79,7 @@ var card_tags: Array[Label] = []
 
 var deploy_btn: Button
 var biome_selector: OptionButton
+var preview_hint: Label
 var back_btn: Button
 var armory_btn: Button
 var prev_btn: Button
@@ -890,6 +891,8 @@ func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
 	var controls = get_node_or_null("/root/InputManager")
+	if preview_hint:
+		preview_hint.text = "RIGHT STICK ROTATE / LT-RT ZOOM / A SELECT / B BACK" if controls and controls.controller_active else "DRAG TO ROTATE   /   SCROLL TO ZOOM"
 	if controls and controls.controller_active and not is_deploying:
 		var stick: Vector2 = controls.aim_stick()
 		if turntable_root and absf(stick.x) > 0.01:
@@ -983,6 +986,7 @@ func _build_ui_layout() -> void:
 	preview_caption.position = Vector2(44, 136)
 	layout.add_child(preview_caption)
 	var hint := _menu_label("DRAG TO ROTATE   /   SCROLL TO ZOOM", 9, Color("a5bbc2"))
+	preview_hint = hint
 	hint.position = Vector2(44, 551)
 	layout.add_child(hint)
 
