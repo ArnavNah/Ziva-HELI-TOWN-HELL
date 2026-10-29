@@ -7,6 +7,8 @@
 
 # Enemy asset locations
 
+- Regular waves exclude the five placeholder drone types: `hunter_drone`, `scout_drone`, `kamikaze_drone`, `shield_drone`, and `repair_drone`. Keep their source controllers/visuals for explicit fixtures and scripted boss escorts. Both credit-director and legacy wave selection must use `EnemyData.is_regular_wave_variant`; normal public spawning rejects them. Preserve the modular Airborne Titan's explicit launch-bay escorts.
+
 - Active ground roster: exactly seven active ground vehicles:
   1. Scout Buggy (`scout_buggy`): light 4-wheeled reconnaissance buggy with rapid dual bursts.
   2. Assault APC (`assault_apc`): heavy 4-wheeled modular armored carrier with high-speed autocannon bursts.

@@ -202,6 +202,9 @@ func _setup_wave(wave_num: int) -> void:
 	# Swarm Tide theme factor (+25% population) (Page 11)
 	var theme_mult = 1.25 if active_theme == "Swarm Tide" else 1.0
 	target_population = clampi(int(float(base_target) * difficulty_pop_factor * theme_mult), 3, MAX_ACTIVE_POPULATION)
+	# A wave containing only the five-cap Scout Buggy cannot fill a larger target.
+	# Keep real per-variant caps and unlock gates instead of waiting for banned drones.
+	target_population = mini(target_population, EnemyData.regular_wave_capacity(wave_num))
 
 	# Air attack slots (1 early up to 4 at wave 9; 2 during boss)
 	if wave_num == 10:
@@ -479,8 +482,10 @@ func get_population_counts_with_reservations() -> Dictionary:
 		counts[key] = counts.get(key, 0) + reserved_variants[key]
 	return counts
 
-func can_spawn_variant(variant_id: String, count: int = 1) -> bool:
+func can_spawn_variant(variant_id: String, count: int = 1, launch_source: Node3D = null) -> bool:
 	if not EnemyData.is_variant_enabled(variant_id) or count < 1:
+		return false
+	if not EnemyData.is_regular_wave_variant(variant_id) and not _is_living_carrier_launch(launch_source):
 		return false
 	var spec = EnemyData.get_spec(variant_id)
 	if current_wave < int(spec.get("gate_wave", 1)):
@@ -499,7 +504,7 @@ func can_spawn_variant(variant_id: String, count: int = 1) -> bool:
 			ground += int(counts[key])
 		if key in ["shield_drone", "repair_drone"]:
 			support += int(counts[key])
-	if spec.get("family", "") == "ground":
+	if spec.get("family", "") == "ground" and EnemyData.has_regular_wave_air(current_wave):
 		var share := 0.8 if active_theme == "Armored Column" else 0.65
 		if ground + count > maxi(2, ceili(target_population * share)):
 			return false
@@ -507,12 +512,15 @@ func can_spawn_variant(variant_id: String, count: int = 1) -> bool:
 		return false
 	return true
 
-func reserve_spawn_card(card: SpawnCard, stream: String) -> int:
+func _is_living_carrier_launch(source: Node3D) -> bool:
+	return is_instance_valid(source) and not source.is_queued_for_deletion() and source.is_in_group("bosses") and source.has_method("escort_launch_position") and source.has_node("DamageReceiver") and not source.get_node("DamageReceiver").is_dead
+
+func reserve_spawn_card(card: SpawnCard, stream: String, launch_source: Node3D = null) -> int:
 	if not is_active_combat_eligible() or catalog == null or card == null:
 		return 0
 	if catalog.get_card_by_id(card.card_id) != card or not card.is_eligible(current_wave, active_theme, stream):
 		return 0
-	if stream not in ["fast", "slow"] or not can_spawn_variant(card.variant_id, card.group_size):
+	if stream not in ["fast", "slow"] or not can_spawn_variant(card.variant_id, card.group_size, launch_source):
 		record_decision("capacity_or_gate", {"card": card.card_id})
 		return 0
 	var cost := card.cost * card.group_size
@@ -562,7 +570,7 @@ func _refresh_composition_pool() -> void:
 		return
 	var groups: Dictionary = {}
 	for card in catalog.get_all_cards():
-		if card.gate_wave > current_wave:
+		if card.gate_wave > current_wave or not EnemyData.is_regular_wave_variant(card.variant_id):
 			continue
 		var role := "ground" if not card.is_air else ("light_air" if card.category == "light_mobile" else "air")
 		if not groups.has(role): groups[role] = []
@@ -579,7 +587,7 @@ func _refresh_composition_pool() -> void:
 				break
 	# Newly unlocked variants participate immediately rather than waiting for a reroll.
 	for card in catalog.get_all_cards():
-		if card.gate_wave == current_wave and card.variant_id not in composition_pool:
+		if EnemyData.is_regular_wave_variant(card.variant_id) and card.gate_wave == current_wave and card.variant_id not in composition_pool:
 			composition_pool.append(card.variant_id)
 
 func filter_composition(cards: Array[SpawnCard]) -> Array[SpawnCard]:

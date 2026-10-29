@@ -183,7 +183,7 @@ func _choose_wave_variant(wave_num: int, theme: String) -> String:
 	var favor_ground := float(ground_count) < float(ground_count + air_count + 1) * ground_share
 	var candidate_pool: Array[String] = []
 	for k in EnemyDataClass.VARIANTS:
-		if not EnemyDataClass.is_variant_enabled(k):
+		if not EnemyDataClass.is_regular_wave_variant(k):
 			continue
 		var v = EnemyDataClass.VARIANTS[k]
 		if wave_num < v.get("gate_wave", 1):
@@ -242,7 +242,7 @@ func spawn_director_card(card: SpawnCard, stream: String, launch_source: Node3D 
 			return spawned
 		if not launch_source.has_node("DamageReceiver") or launch_source.get_node("DamageReceiver").is_dead:
 			return spawned
-	var token: int = cd.reserve_spawn_card(card, stream)
+	var token: int = cd.reserve_spawn_card(card, stream, launch_source)
 	if token == 0:
 		return spawned
 	# A purchase owns one sector for all of its members.
@@ -376,6 +376,8 @@ func spawn_enemy_type(variant_key: String, custom_pos: Vector3 = Vector3.INF, al
 
 	# Fixture bypass never enables disabled/unknown assets.
 	if not EnemyDataClass.is_variant_enabled(variant_key):
+		return null
+	if not allow_test_bypass and not EnemyDataClass.is_regular_wave_variant(variant_key):
 		return null
 	var cd = get_node_or_null("/root/CombatDirector")
 	if not allow_test_bypass and (cd == null or not cd.is_active_combat_eligible() or not cd.can_spawn_variant(variant_key)):

@@ -2,8 +2,8 @@ class_name SpawnCardCatalog
 extends RefCounted
 
 ## SpawnCardCatalog — Master repository of validated SpawnCards for the autonomous director.
-## Guarantees roster integrity: only the five active ground vehicles, active air/support variants,
-## and strictly rejects all eight disabled ground types.
+## Regular selection uses the seven active ground vehicles and modeled aircraft.
+## Source cards for excluded drones remain available to explicit boss launches.
 
 const EnemyDataClass = preload("res://src/enemies/enemy_data.gd")
 const SpawnCardClass = preload("res://src/resources/spawn_card.gd")
@@ -94,7 +94,8 @@ func _build_catalog() -> void:
 	_add_card(rover_elite)
 
 	# =========================================================================
-	# ACTIVE AIR VARIANTS (12 variants)
+	# Modeled wave aircraft and preserved drone source cards.
+	# get_affordable_eligible_cards excludes the five placeholder drone roles.
 	# =========================================================================
 	# Light / Close Pursuer Drones & Light Aircraft (Fast Stream)
 	_add_card(_create_card("hunter_drone_solo", "hunter_drone", "light_mobile", 10, 3.0, ["fast"], 1))
@@ -151,6 +152,8 @@ func get_affordable_eligible_cards(
 	var eligible: Array[SpawnCard] = []
 
 	for card in _cards:
+		if not EnemyDataClass.is_regular_wave_variant(card.variant_id):
+			continue
 		# 1. Eligibility gate & stream
 		if not card.is_eligible(wave, theme, stream):
 			continue

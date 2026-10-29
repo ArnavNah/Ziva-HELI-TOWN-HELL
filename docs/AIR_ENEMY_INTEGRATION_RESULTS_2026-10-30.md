@@ -2,6 +2,8 @@
 
 Implemented in the existing project and verified with real controllers, public spawning, projectile sweeps, damage, city gameplay, and the production chase camera. Model loading alone was not treated as combat verification.
 
+**Later roster update:** the five unmodeled drone roles are now excluded from regular waves at the user's request. Their sources and explicit Titan escorts remain available. See [regular wave roster results](REGULAR_WAVE_ROSTER_RESULTS_2026-10-30.md); statements below about preserving drone visuals describe the original integration scope.
+
 ## Final mapping
 
 Production wrappers remain authoritative under `scenes/enemies/air/`. Each wrapper contains one model assembly; model scale and placement live inside the wrapper. Physics roots remain at unit scale.

@@ -20,6 +20,12 @@ const ACTIVE_GROUND_VARIANTS: Array[String] = [
 	"raptor_raider", "desert_barrage_rover"
 ]
 
+# Retain controllers/assets for explicit fixtures and scripted boss launches,
+# but never select these unmodeled drones for ordinary wave replenishment.
+const EXCLUDED_WAVE_VARIANTS: Array[String] = [
+	"hunter_drone", "scout_drone", "kamikaze_drone", "shield_drone", "repair_drone"
+]
+
 const VARIANTS: Dictionary = {
 	"rail_crawler": {
 		"name": "Rail Crawler", "family": "ground", "base_hull": 90.0,
@@ -296,6 +302,22 @@ static func is_variant_enabled(v_id: String) -> bool:
 	if spec.is_empty():
 		return false
 	return spec.get("family", "") != "ground" or v_id in ACTIVE_GROUND_VARIANTS
+
+static func is_regular_wave_variant(v_id: String) -> bool:
+	return is_variant_enabled(v_id) and v_id not in EXCLUDED_WAVE_VARIANTS
+
+static func regular_wave_capacity(wave: int) -> int:
+	var capacity := 0
+	for v_id in VARIANTS:
+		if is_regular_wave_variant(v_id) and int(VARIANTS[v_id].gate_wave) <= wave:
+			capacity += int(VARIANTS[v_id].max_cap)
+	return capacity
+
+static func has_regular_wave_air(wave: int) -> bool:
+	for v_id in VARIANTS:
+		if is_regular_wave_variant(v_id) and VARIANTS[v_id].family != "ground" and int(VARIANTS[v_id].gate_wave) <= wave:
+			return true
+	return false
 
 static func get_role(v_id: String) -> String:
 	return VARIANTS.get(v_id, {}).get("role", ROLE_MOBILE_SHOOTER)
