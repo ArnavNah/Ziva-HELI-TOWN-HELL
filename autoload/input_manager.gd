@@ -11,6 +11,9 @@ var controller_active := false
 var active_joypad := -1
 var aim_sensitivity := 1.0
 var aim_deadzone := 0.18
+var move_deadzone := 0.18
+var _device_left_stick: Dictionary = {}
+var _device_right_stick: Dictionary = {}
 var aim_invert_y := false
 var virtual_aim := Vector2.ZERO
 var aim_viewport := Vector2.ZERO
@@ -25,6 +28,10 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_input_actions()
 	Input.joy_connection_changed.connect(_on_joy_connection_changed)
+	for dev in Input.get_connected_joypads():
+		_log_controller_connected(dev)
+		_device_left_stick[dev] = Vector2(Input.get_joy_axis(dev, JOY_AXIS_LEFT_X), Input.get_joy_axis(dev, JOY_AXIS_LEFT_Y))
+		_device_right_stick[dev] = Vector2(Input.get_joy_axis(dev, JOY_AXIS_RIGHT_X), Input.get_joy_axis(dev, JOY_AXIS_RIGHT_Y))
 
 func _setup_input_actions() -> void:
 	# 1. Flight Controls
@@ -102,10 +109,10 @@ func _setup_input_actions() -> void:
 	_add_action_joy_axis("aim_right", JOY_AXIS_RIGHT_X, 1.0)
 	_add_action_joy_axis("aim_up", JOY_AXIS_RIGHT_Y, -1.0)
 	_add_action_joy_axis("aim_down", JOY_AXIS_RIGHT_Y, 1.0)
-	for action in ["aim_left", "aim_right", "aim_up", "aim_down"]:
+	for action in ["aim_left", "aim_right", "aim_up", "aim_down", "thrust_forward", "thrust_backward", "strafe_left", "strafe_right"]:
 		InputMap.action_set_deadzone(action, 0.0) # One radial deadzone below, not two axial ones.
-	for action in ["thrust_forward", "thrust_backward", "strafe_left", "strafe_right", "yaw_left", "yaw_right"]:
-		InputMap.action_set_deadzone(action, 0.20)
+	for action in ["yaw_left", "yaw_right"]:
+		InputMap.action_set_deadzone(action, 0.15)
 	InputMap.action_set_deadzone("fire_primary", 0.15)
 	InputMap.action_set_deadzone("paint_salvo", 0.15)
 	_add_action_key("mission_action", KEY_T)
@@ -171,17 +178,53 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventJoypadButton and event.pressed:
 		_set_controller_mode(true, event.device)
 	elif event is InputEventJoypadMotion:
-		var threshold := aim_deadzone if event.axis in [JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y] else 0.25
-		if absf(event.axis_value) > threshold:
-			_set_controller_mode(true, event.device)
-	elif event is InputEventMouseMotion and event.relative.length() > 2.0:
-		_set_controller_mode(false)
+		var dev: int = event.device
+		if event.axis in [JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y]:
+			var stick: Vector2 = _device_left_stick.get(dev, Vector2.ZERO)
+			if event.axis == JOY_AXIS_LEFT_X:
+				stick.x = event.axis_value
+			else:
+				stick.y = event.axis_value
+			_device_left_stick[dev] = stick
+		elif event.axis in [JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y]:
+			var rstick: Vector2 = _device_right_stick.get(dev, Vector2.ZERO)
+			if event.axis == JOY_AXIS_RIGHT_X:
+				rstick.x = event.axis_value
+			else:
+				rstick.y = event.axis_value
+			_device_right_stick[dev] = rstick
+		
+		# Radial activation check
+		var left_r: float = _device_left_stick.get(dev, Vector2.ZERO).length()
+		var right_r: float = _device_right_stick.get(dev, Vector2.ZERO).length()
+		var is_trigger: bool = event.axis in [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]
+		if left_r > move_deadzone or right_r > aim_deadzone or (is_trigger and event.axis_value > 0.25):
+			_set_controller_mode(true, dev)
+	elif event is InputEventMouseMotion:
+		var stick_held := false
+		if active_joypad >= 0:
+			var left_len: float = _device_left_stick.get(active_joypad, Vector2.ZERO).length()
+			var right_len: float = _device_right_stick.get(active_joypad, Vector2.ZERO).length()
+			if left_len > move_deadzone or right_len > aim_deadzone:
+				stick_held = true
+		if not stick_held and event.relative.length() > 6.0:
+			_set_controller_mode(false)
 	elif (event is InputEventMouseButton or event is InputEventKey) and event.is_pressed():
-		_set_controller_mode(false)
+		var stick_held := false
+		if active_joypad >= 0:
+			var left_len: float = _device_left_stick.get(active_joypad, Vector2.ZERO).length()
+			if left_len > move_deadzone:
+				stick_held = true
+		if not stick_held:
+			_set_controller_mode(false)
 
 func _set_controller_mode(enabled: bool, device: int = -1) -> void:
 	if enabled:
-		active_joypad = device
+		if device >= 0:
+			active_joypad = device
+		elif active_joypad < 0:
+			var pads := Input.get_connected_joypads()
+			active_joypad = pads[0] if not pads.is_empty() else 0
 		notice_timer = 0.0
 		controller_notice = ""
 	if controller_active == enabled: return
@@ -190,6 +233,63 @@ func _set_controller_mode(enabled: bool, device: int = -1) -> void:
 	_auto_aim_target = null
 	if not enabled: stop_damage_rumble()
 	input_mode_changed.emit(enabled)
+
+func get_device_raw_left_stick(device: int) -> Vector2:
+	if _device_left_stick.has(device):
+		return _device_left_stick[device]
+	if device in Input.get_connected_joypads():
+		return Vector2(Input.get_joy_axis(device, JOY_AXIS_LEFT_X), Input.get_joy_axis(device, JOY_AXIS_LEFT_Y))
+	return Vector2.ZERO
+
+func get_device_raw_right_stick(device: int) -> Vector2:
+	if _device_right_stick.has(device):
+		return _device_right_stick[device]
+	if device in Input.get_connected_joypads():
+		return Vector2(Input.get_joy_axis(device, JOY_AXIS_RIGHT_X), Input.get_joy_axis(device, JOY_AXIS_RIGHT_Y))
+	return Vector2.ZERO
+
+func get_raw_left_stick() -> Vector2:
+	if active_joypad >= 0:
+		return get_device_raw_left_stick(active_joypad)
+	return Vector2.ZERO
+
+func get_left_stick_vector(device: int = -1) -> Vector2:
+	var dev: int = device if device >= 0 else active_joypad
+	if dev < 0:
+		var pads := Input.get_connected_joypads()
+		dev = pads[0] if not pads.is_empty() else 0
+	var raw: Vector2 = get_device_raw_left_stick(dev)
+	var r: float = raw.length()
+	if r <= move_deadzone:
+		return Vector2.ZERO
+	var response: float = clampf((r - move_deadzone) / (1.0 - move_deadzone), 0.0, 1.0)
+	return raw.normalized() * response
+
+func left_stick() -> Vector2:
+	return get_left_stick_vector(active_joypad)
+
+func get_camera_horizontal_frame(camera: Camera3D) -> Array[Vector3]:
+	if not camera:
+		return [Vector3.RIGHT, Vector3.FORWARD]
+	
+	var forward := Vector3.ZERO
+	if "current_cam_yaw" in camera:
+		var yaw: float = camera.current_cam_yaw
+		forward = Vector3(sin(yaw), 0.0, cos(yaw)).normalized()
+	else:
+		var cam_fwd_3d: Vector3 = -camera.global_basis.z
+		var fwd_h := Vector3(cam_fwd_3d.x, 0.0, cam_fwd_3d.z)
+		if fwd_h.length_squared() > 0.0001:
+			forward = fwd_h.normalized()
+		else:
+			var cam_up_h := Vector3(camera.global_basis.y.x, 0.0, camera.global_basis.y.z)
+			if cam_up_h.length_squared() > 0.0001:
+				forward = cam_up_h.normalized()
+			else:
+				forward = Vector3.FORWARD
+	
+	var right := forward.cross(Vector3.UP).normalized()
+	return [right, forward]
 
 func aim_stick() -> Vector2:
 	var raw := Vector2(Input.get_action_raw_strength("aim_right") - Input.get_action_raw_strength("aim_left"), Input.get_action_raw_strength("aim_down") - Input.get_action_raw_strength("aim_up"))
@@ -258,7 +358,12 @@ func _process(delta: float) -> void:
 	advance_controller_aim(delta, get_viewport().get_visible_rect().size, initial)
 
 func _on_joy_connection_changed(device: int, connected: bool) -> void:
-	if connected or device != active_joypad or not controller_active: return
+	if connected:
+		_log_controller_connected(device)
+		return
+	_device_left_stick.erase(device)
+	_device_right_stick.erase(device)
+	if device != active_joypad or not controller_active: return
 	stop_damage_rumble()
 	_set_controller_mode(false)
 	active_joypad = -1
@@ -276,6 +381,12 @@ func _on_joy_connection_changed(device: int, connected: bool) -> void:
 		if pause_menu: pause_menu.toggle_pause()
 		else: gm.toggle_pause()
 
+func _log_controller_connected(device: int) -> void:
+	var pad_name := Input.get_joy_name(device)
+	var known := Input.is_joy_known(device)
+	var guid := Input.get_joy_guid(device)
+	print("JOYPAD_CONNECTED device=%d name='%s' known=%s guid='%s'" % [device, pad_name, str(known), guid])
+
 # ------------------------------------------------------------------------------
 # Input Query Helpers
 # ------------------------------------------------------------------------------
@@ -283,29 +394,48 @@ func get_flight_input() -> Dictionary:
 	if has_node("/root/UIFlow") and not get_node("/root/UIFlow").gameplay_input_allowed():
 		return {}
 	var yaw: float = Input.get_axis("yaw_left", "yaw_right")
-	# Heading relative thrust: Forward (+1) / Reverse (-1)
-	var thrust: float = Input.get_axis("thrust_backward", "thrust_forward")
-	# Strafe: Left (-1) / Right (+1)
-	var strafe: float = Input.get_axis("strafe_left", "strafe_right")
-	if controller_active:
-		# Camera-relative translation stays intuitive even during a manual turn.
-		var move := Vector2(strafe, -thrust).limit_length(1.0)
-		var camera := get_viewport().get_camera_3d()
+	var stick := left_stick()
+	var stick_active := stick.length_squared() > 0.000001
+	var is_direct := controller_active or stick_active
+	var thrust: float = 0.0
+	var strafe: float = 0.0
+	var move_world: Vector3 = Vector3.ZERO
+
+	if is_direct and stick_active:
+		var camera := get_viewport().get_camera_3d() if get_viewport() else null
+		var frame := get_camera_horizontal_frame(camera)
+		var right: Vector3 = frame[0]
+		var forward: Vector3 = frame[1]
+		move_world = right * stick.x + forward * (-stick.y)
 		var player := get_tree().get_first_node_in_group("player") as Node3D
-		if camera and player:
-			var right := Vector3(camera.global_basis.x.x, 0, camera.global_basis.x.z).normalized()
-			var forward := Vector3(-camera.global_basis.z.x, 0, -camera.global_basis.z.z).normalized()
-			var movement := right * move.x - forward * move.y
-			strafe = movement.dot(player.global_basis.x)
-			thrust = movement.dot(-player.global_basis.z)
-	# Vertical: Down (-1) / Up (+1)
+		if player:
+			strafe = move_world.dot(player.global_basis.x)
+			thrust = move_world.dot(-player.global_basis.z)
+		else:
+			strafe = stick.x
+			thrust = -stick.y
+	else:
+		var kb_thrust: float = Input.get_action_raw_strength("thrust_forward") - Input.get_action_raw_strength("thrust_backward")
+		var kb_strafe: float = Input.get_action_raw_strength("strafe_right") - Input.get_action_raw_strength("strafe_left")
+		thrust = kb_thrust
+		strafe = kb_strafe
+		var player := get_tree().get_first_node_in_group("player") as Node3D
+		if player:
+			var fwd_dir := -player.global_basis.z.normalized()
+			var rgt_dir := player.global_basis.x.normalized()
+			move_world = (fwd_dir * thrust + rgt_dir * strafe).limit_length(1.0)
+		else:
+			move_world = Vector3(strafe, 0.0, -thrust).limit_length(1.0)
+
 	var lift: float = Input.get_axis("descend", "climb")
-	
+
 	return {
-		"direct_move": controller_active,
+		"direct_move": is_direct,
 		"yaw": yaw,
 		"thrust": thrust,
 		"strafe": strafe,
+		"move_world": move_world,
+		"stick_vector": stick,
 		"lift": lift,
 		"dash": Input.is_action_just_pressed("evasive_dash"),
 		"fire": Input.is_action_pressed("fire_primary"),

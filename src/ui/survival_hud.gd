@@ -43,49 +43,51 @@ func _ready() -> void:
 	xp_bar = bar(Vector2.ZERO, Vector2(0, 7), Color("65bfc9"))
 	xp_bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	xp_bar.offset_bottom = 7
-	var stats := HBoxContainer.new()
-	stats.position = Vector2(18, 23)
-	stats.add_theme_constant_override("separation", 24)
+	var stats := GridContainer.new()
+	stats.position = Vector2(18, 16)
+	stats.columns = 3
+	stats.add_theme_constant_override("h_separation", 14)
+	stats.add_theme_constant_override("v_separation", 2)
 	stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(stats)
-	elapsed_label = stat(stats, "clock", "0:00", 64, Color("f0f0e4"))
+	elapsed_label = stat(stats, "clock", "0:00", 52, Color("f0f0e4"))
 	coins_label = stat(stats, "coin", "0", 48, Color("ffe276"))
-	kills_label = stat(stats, "skull", "0", 48, Color("f0f0e4"))
-	score_label = stat(stats, "star", "0", 72, Color("5ce6c6"))
-	high_score_label = stat(stats, "trophy", "0", 72, Color("ffd24d"))
-	xp_gain_float = label("", Vector2(18, 10), 10, Color("4deeea"))
+	kills_label = stat(stats, "skull", "0", 44, Color("f0f0e4"))
+	score_label = stat(stats, "star", "0", 68, Color("5ce6c6"))
+	high_score_label = stat(stats, "trophy", "0", 68, Color("ffd24d"))
+	xp_gain_float = label("", Vector2(18, 8), 10, Color("4deeea"))
 	xp_gain_float.visible = false
-	hull_bar = bar(Vector2(18, 60), Vector2(244, 18), Color("d92c38"))
-	hp_label = label("140/140", Vector2(18, 60), 10)
+	hull_bar = bar(Vector2(18, 66), Vector2(244, 18), Color("d92c38"))
+	hp_label = label("140/140", Vector2(18, 66), 10)
 	hp_label.size = Vector2(244, 18)
 	hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	fuel_bar = bar(Vector2(18, 84), Vector2(244, 6), Color("3ec6a6"))
-	fuel_caption = label("FUEL 100%", Vector2(18, 97), 8, Color("8fe0c3"))
-	ammo_label = label("Machine Gun: 300/300", Vector2(18, 117), 10)
-	flare_label = label("FLARES: 3/3", Vector2(18, 138), 10)
-	super_bar = bar(Vector2(18, 162), Vector2(244, 5), Color("a188ea"))
-	label("SUPER", Vector2(18, 174), 8, Color("b2a1d8"))
+	fuel_bar = bar(Vector2(18, 88), Vector2(244, 6), Color("3ec6a6"))
+	fuel_caption = label("FUEL 100%", Vector2(18, 98), 8, Color("8fe0c3"))
+	ammo_label = label("Machine Gun: 300/300", Vector2(18, 116), 10)
+	flare_label = label("FLARES: 3/3", Vector2(18, 136), 10)
+	super_bar = bar(Vector2(18, 158), Vector2(244, 5), Color("a188ea"))
+	label("SUPER", Vector2(18, 169), 8, Color("b2a1d8"))
 	stage_timer = label("0:45", Vector2.ZERO, 22)
 	stage_timer.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	stage_timer.offset_left = -160
-	stage_timer.offset_right = 160
-	stage_timer.offset_top = 23
-	stage_timer.offset_bottom = 52
+	stage_timer.offset_left = -140
+	stage_timer.offset_right = 140
+	stage_timer.offset_top = 16
+	stage_timer.offset_bottom = 44
 	stage_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	wave_subtitle = label("WAVE 1", Vector2.ZERO, 8, Color("b6c6bc"))
 	wave_subtitle.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	wave_subtitle.offset_left = -180
 	wave_subtitle.offset_right = 180
-	wave_subtitle.offset_top = 57
-	wave_subtitle.offset_bottom = 73
+	wave_subtitle.offset_top = 46
+	wave_subtitle.offset_bottom = 64
 	wave_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	high_score_toast = label("", Vector2.ZERO, 12, Color("ffd700"))
 	high_score_toast.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	high_score_toast.offset_left = -260
 	high_score_toast.offset_right = 260
-	high_score_toast.offset_top = 78
-	high_score_toast.offset_bottom = 100
+	high_score_toast.offset_top = 66
+	high_score_toast.offset_bottom = 88
 	high_score_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	high_score_toast.visible = false
 	if has_node("/root/EventBus"):
@@ -96,29 +98,29 @@ func _ready() -> void:
 	level_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	level_label.offset_left = -190
 	level_label.offset_right = -20
-	level_label.offset_top = 23
-	level_label.offset_bottom = 54
+	level_label.offset_top = 16
+	level_label.offset_bottom = 44
 	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	fps_label = label("60 FPS", Vector2.ZERO, 9, Color("76e5c9"))
 	fps_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	fps_label.offset_left = -190
 	fps_label.offset_right = -20
-	fps_label.offset_top = 58
-	fps_label.offset_bottom = 74
+	fps_label.offset_top = 48
+	fps_label.offset_bottom = 64
 	fps_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	task_panel = Panel.new()
-	task_panel.position = Vector2(18, 198)
+	task_panel.position = Vector2(18, 192)
 	task_panel.size = Vector2(468, 52)
 	task_panel.add_theme_stylebox_override("panel", style(Color(0.025, 0.05, 0.06, 0.78)))
 	task_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(task_panel)
-	mission_label = label("[ ] AIR DEFENSE PATROL", Vector2(26, 205), 10)
-	cargo_label = label("CARGO", Vector2(26, 227), 9, Color("edce7d"))
+	mission_label = label("[ ] AIR DEFENSE PATROL", Vector2(26, 199), 10)
+	cargo_label = label("CARGO", Vector2(26, 221), 9, Color("edce7d"))
 	for item in [mission_label, cargo_label]:
 		item.size.x = 450
 		item.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 
-func stat(parent: HBoxContainer, icon: String, initial: String, width: float, color: Color) -> Label:
+func stat(parent: Container, icon: String, initial: String, width: float, color: Color) -> Label:
 	var group := HBoxContainer.new()
 	group.add_theme_constant_override("separation", 8)
 	group.mouse_filter = Control.MOUSE_FILTER_IGNORE

@@ -425,7 +425,7 @@ func _on_targeting_overlay_draw() -> void:
 					var screen_pos = camera.unproject_position(world_pos)
 					if vp_rect.has_point(screen_pos):
 						var is_manual: bool = ("hovered_enemy" in turret and is_instance_valid(turret.hovered_enemy))
-						_draw_target_bracket(screen_pos, target, rec, is_manual, default_font)
+						_draw_target_bracket(camera, screen_pos, target, rec, is_manual, default_font)
 
 	# 2. Salvo Painted Locks Brackets
 	var salvo = player_helicopter.get_node_or_null("Salvo")
@@ -445,17 +445,79 @@ func _on_targeting_overlay_draw() -> void:
 						if vp_rect.has_point(screen_pos):
 							_draw_salvo_bracket(screen_pos, lock_counts[l_node], default_font)
 
-func _draw_target_bracket(pos: Vector2, target: Node3D, rec: Node, is_manual: bool, font: Font) -> void:
-	var box_size: float = 46.0
-	var half_s: float = box_size * 0.5
-	var corner_len: float = 10.0
+func _get_target_screen_envelope(camera: Camera3D, target: Node3D, default_pos: Vector2) -> Rect2:
+	if not target or not is_instance_valid(target) or not camera:
+		return Rect2(default_pos - Vector2(23, 23), Vector2(46, 46))
+
+	var local_box: AABB
+	if target.has_meta("_hud_aabb"):
+		local_box = target.get_meta("_hud_aabb")
+	else:
+		var found := false
+		var col = target.get_node_or_null("CollisionShape3D") as CollisionShape3D
+		if col and col.shape:
+			if col.shape is BoxShape3D:
+				var sz = (col.shape as BoxShape3D).size
+				local_box = AABB(-sz * 0.5, sz)
+				found = true
+			elif col.shape is SphereShape3D:
+				var r = (col.shape as SphereShape3D).radius
+				local_box = AABB(Vector3(-r, -r, -r), Vector3(r * 2.0, r * 2.0, r * 2.0))
+				found = true
+		if not found:
+			var visual = target.get_node_or_null("Visuals")
+			if visual:
+				for mesh in visual.find_children("*", "MeshInstance3D", true, false):
+					if mesh is MeshInstance3D and mesh.is_visible_in_tree() and not ("Blur" in mesh.name or "Cue" in mesh.name):
+						var aabb = (mesh as MeshInstance3D).get_aabb()
+						var xform = target.global_transform.affine_inverse() * (mesh as MeshInstance3D).global_transform
+						for c in 8:
+							var pt = xform * aabb.get_endpoint(c)
+							if not found:
+								local_box = AABB(pt, Vector3.ZERO)
+								found = true
+							else:
+								local_box = local_box.expand(pt)
+		if not found:
+			local_box = AABB(Vector3(-2.0, -1.0, -2.5), Vector3(4.0, 2.0, 5.0))
+		target.set_meta("_hud_aabb", local_box)
+
+	var min_p = Vector2(INF, INF)
+	var max_p = Vector2(-INF, -INF)
+	var visible_pts := 0
+	var gt = target.global_transform
+	for i in 8:
+		var world_corner = gt * local_box.get_endpoint(i)
+		if camera.is_position_behind(world_corner):
+			continue
+		var pt = camera.unproject_position(world_corner)
+		min_p.x = minf(min_p.x, pt.x)
+		min_p.y = minf(min_p.y, pt.y)
+		max_p.x = maxf(max_p.x, pt.x)
+		max_p.y = maxf(max_p.y, pt.y)
+		visible_pts += 1
+
+	if visible_pts < 3:
+		return Rect2(default_pos - Vector2(23, 23), Vector2(46, 46))
+
+	var width = clampf(max_p.x - min_p.x + 8.0, 36.0, 220.0)
+	var height = clampf(max_p.y - min_p.y + 8.0, 32.0, 180.0)
+	var center = (min_p + max_p) * 0.5
+	return Rect2(center - Vector2(width * 0.5, height * 0.5), Vector2(width, height))
+
+func _draw_target_bracket(camera: Camera3D, pos: Vector2, target: Node3D, rec: Node, is_manual: bool, font: Font) -> void:
+	var rect = _get_target_screen_envelope(camera, target, pos)
+	var center = rect.get_center()
+	var half_w = rect.size.x * 0.5
+	var half_h = rect.size.y * 0.5
+	var corner_len = clampf(minf(rect.size.x, rect.size.y) * 0.25, 8.0, 18.0)
 	var line_w: float = 2.0
 
 	var bracket_col = Color(0.15, 1.0, 0.45, 0.95) if is_manual else Color(1.0, 0.82, 0.2, 0.9)
-	var top_left = pos + Vector2(-half_s, -half_s)
-	var top_right = pos + Vector2(half_s, -half_s)
-	var bot_left = pos + Vector2(-half_s, half_s)
-	var bot_right = pos + Vector2(half_s, half_s)
+	var top_left = center + Vector2(-half_w, -half_h)
+	var top_right = center + Vector2(half_w, -half_h)
+	var bot_left = center + Vector2(-half_w, half_h)
+	var bot_right = center + Vector2(half_w, half_h)
 
 	# Corner brackets
 	targeting_overlay.draw_line(top_left, top_left + Vector2(corner_len, 0), bracket_col, line_w)
@@ -471,7 +533,7 @@ func _draw_target_bracket(pos: Vector2, target: Node3D, rec: Node, is_manual: bo
 	targeting_overlay.draw_line(bot_right, bot_right + Vector2(0, -corner_len), bracket_col, line_w)
 
 	# Center dot
-	targeting_overlay.draw_circle(pos, 2.0, bracket_col)
+	targeting_overlay.draw_circle(center, 2.0, bracket_col)
 
 	# Mini Health Bar (above bracket)
 	if rec:
@@ -488,9 +550,9 @@ func _draw_target_bracket(pos: Vector2, target: Node3D, rec: Node, is_manual: bo
 			cur_hp = rec.current_hull
 		if max_hp > 0.0:
 			var hp_ratio = clampf(cur_hp / max_hp, 0.0, 1.0)
-			var bar_w = 40.0
+			var bar_w = clampf(rect.size.x * 0.85, 36.0, 100.0)
 			var bar_h = 4.0
-			var bar_pos = pos + Vector2(-bar_w * 0.5, -half_s - 9.0)
+			var bar_pos = center + Vector2(-bar_w * 0.5, -half_h - 9.0)
 			targeting_overlay.draw_rect(Rect2(bar_pos, Vector2(bar_w, bar_h)), Color(0.1, 0.1, 0.1, 0.75), true)
 			var hp_col = Color(0.2, 0.9, 0.3, 0.95) if hp_ratio > 0.4 else Color(0.95, 0.25, 0.2, 0.95)
 			targeting_overlay.draw_rect(Rect2(bar_pos, Vector2(bar_w * hp_ratio, bar_h)), hp_col, true)
@@ -504,7 +566,7 @@ func _draw_target_bracket(pos: Vector2, target: Node3D, rec: Node, is_manual: bo
 		v_name = str(v_name).to_upper().replace("_", " ")
 
 		var label_str = "%s %s (%dm)" % [mode_tag, v_name, dist_m]
-		var text_pos = pos + Vector2(-half_s, half_s + 14.0)
+		var text_pos = center + Vector2(-half_w, half_h + 14.0)
 		targeting_overlay.draw_string(font, text_pos, label_str, HORIZONTAL_ALIGNMENT_LEFT, -1, 8, bracket_col)
 
 func _draw_salvo_bracket(pos: Vector2, lock_count: int, font: Font) -> void:

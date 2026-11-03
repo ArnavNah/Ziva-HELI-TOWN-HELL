@@ -1,14 +1,14 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://cgw3fhfyx8s7d"]
 
-[ext_resource type="Script" path="res://src/ui/menus/main_menu.gd" id="1_main"]
-[ext_resource type="Script" path="res://src/ui/menus/hangar_menu.gd" id="2_hangar"]
-[ext_resource type="Script" path="res://src/ui/menus/settings_menu.gd" id="3_settings"]
+[ext_resource type="Script" uid="uid://crk6pxqlqsxjy" path="res://src/ui/menus/main_menu.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://bsd54gjluiyrf" path="res://src/ui/menus/hangar_menu.gd" id="2_hangar"]
+[ext_resource type="Script" uid="uid://dgfo73112rolq" path="res://src/ui/menus/settings_menu.gd" id="3_settings"]
 [ext_resource type="PackedScene" path="res://scenes/ui/vehicle_selection_menu.tscn" id="4_vehicle_select"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_Bg"]
 bg_color = Color(0.08, 0.1, 0.12, 1)
 
-[node name="MainMenu" type="Control"]
+[node name="MainMenu" type="Control" unique_id=1120158590]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -17,7 +17,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_main")
 
-[node name="Background" type="Panel" parent="."]
+[node name="Background" type="Panel" parent="." unique_id=1215345180]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -26,7 +26,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBox_Bg")
 
-[node name="TopBar" type="HBoxContainer" parent="."]
+[node name="TopBar" type="HBoxContainer" parent="." unique_id=794140438]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
@@ -36,28 +36,28 @@ offset_right = -30.0
 offset_bottom = 65.0
 grow_horizontal = 2
 
-[node name="TitleLabel" type="Label" parent="TopBar"]
+[node name="TitleLabel" type="Label" parent="TopBar" unique_id=521722704]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 28
 text = "HELI-TOWN HELL"
 
-[node name="CreditsLabel" type="Label" parent="TopBar"]
+[node name="CreditsLabel" type="Label" parent="TopBar" unique_id=222186790]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.9, 0.4, 1)
 theme_override_font_sizes/font_size = 18
 text = "CREDITS: 150 CR"
 
-[node name="VSeparator" type="VSeparator" parent="TopBar"]
+[node name="VSeparator" type="VSeparator" parent="TopBar" unique_id=1679869690]
 layout_mode = 2
 
-[node name="SalvageLabel" type="Label" parent="TopBar"]
+[node name="SalvageLabel" type="Label" parent="TopBar" unique_id=2135317573]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.8, 0.2, 1)
 theme_override_font_sizes/font_size = 18
 text = "SALVAGE: 0"
 
-[node name="VBoxContainer" type="VBoxContainer" parent="."]
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=360737465]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -72,46 +72,46 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 14
 
-[node name="AircraftLabel" type="Label" parent="VBoxContainer"]
+[node name="AircraftLabel" type="Label" parent="VBoxContainer" unique_id=1427968045]
 visible = false
 layout_mode = 2
 text = "SELECT DEPLOYMENT AIRCRAFT:"
 
-[node name="AircraftSelect" type="OptionButton" parent="VBoxContainer"]
+[node name="AircraftSelect" type="OptionButton" parent="VBoxContainer" unique_id=1765869510]
 visible = false
-layout_mode = 2
 custom_minimum_size = Vector2(0, 36)
-
-[node name="StartBtn" type="Button" parent="VBoxContainer"]
 layout_mode = 2
+
+[node name="StartBtn" type="Button" parent="VBoxContainer" unique_id=1409480296]
 custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
 text = "SELECT AIRFRAME & DEPLOY"
 
-[node name="HangarBtn" type="Button" parent="VBoxContainer"]
-layout_mode = 2
+[node name="HangarBtn" type="Button" parent="VBoxContainer" unique_id=1749758460]
 custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
 text = "HANGAR & ARMORY"
 
-[node name="ManualBtn" type="Button" parent="VBoxContainer"]
-layout_mode = 2
+[node name="ManualBtn" type="Button" parent="VBoxContainer" unique_id=1843355863]
 custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
 text = "FLIGHT MANUAL & CONTROLS"
 
-[node name="SettingsBtn" type="Button" parent="VBoxContainer"]
-layout_mode = 2
+[node name="SettingsBtn" type="Button" parent="VBoxContainer" unique_id=1574078454]
 custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
 text = "PILOT SETTINGS"
 
-[node name="ExitBtn" type="Button" parent="VBoxContainer"]
-layout_mode = 2
+[node name="ExitBtn" type="Button" parent="VBoxContainer" unique_id=888736566]
 custom_minimum_size = Vector2(0, 38)
+layout_mode = 2
 text = "EXIT"
 
-[node name="VehicleSelectionMenu" parent="." instance=ExtResource("4_vehicle_select")]
+[node name="VehicleSelectionMenu" parent="." unique_id=2112633663 instance=ExtResource("4_vehicle_select")]
 visible = false
 layout_mode = 1
 
-[node name="HangarMenu" type="Control" parent="."]
+[node name="HangarMenu" type="Control" parent="." unique_id=1153859325]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -121,7 +121,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("2_hangar")
 
-[node name="SettingsMenu" type="Control" parent="."]
+[node name="SettingsMenu" type="Control" parent="." unique_id=1835076789]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -131,7 +131,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("3_settings")
 
-[node name="FlightManualDialog" type="AcceptDialog" parent="."]
+[node name="FlightManualDialog" type="AcceptDialog" parent="." unique_id=1700889392]
 title = "FLIGHT MANUAL — TACTICAL CONTROLS"
 size = Vector2i(540, 420)
 dialog_text = "TACTICAL FLIGHT CONTROLS:

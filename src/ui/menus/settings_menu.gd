@@ -23,6 +23,7 @@ var status_label: Label
 var _populating: bool = false
 var pad_sensitivity_slider: HSlider
 var pad_deadzone_slider: HSlider
+var pad_move_deadzone_slider: HSlider
 var pad_invert_check: CheckBox
 var pad_rumble_check: CheckBox
 
@@ -168,6 +169,7 @@ func _build_ui_layout() -> void:
 	controls_box.add_child(aim)
 	pad_sensitivity_slider = _controller_slider("Right-stick free-aim reach", "pad_sensitivity", 0.3, 2.5, 0.05)
 	pad_deadzone_slider = _controller_slider("Right-stick deadzone", "pad_deadzone", 0.08, 0.40, 0.01)
+	pad_move_deadzone_slider = _controller_slider("Left-stick move deadzone", "pad_move_deadzone", 0.08, 0.40, 0.01)
 	pad_invert_check = CheckBox.new()
 	pad_invert_check.text = "Invert right-stick vertical aim"
 	pad_invert_check.toggled.connect(func(value): _set_preference("pad_invert_y", value))
@@ -222,7 +224,7 @@ func _controller_slider(caption: String, key: String, low: float, high: float, i
 	value_label.custom_minimum_size.x = 65
 	row.add_child(value_label)
 	slider.value_changed.connect(func(value):
-		value_label.text = "%d%%" % roundi(value * 100) if key == "pad_deadzone" else "%.2fx" % value
+		value_label.text = "%d%%" % roundi(value * 100) if (key == "pad_deadzone" or key == "pad_move_deadzone") else "%.2fx" % value
 		_set_preference(key, value)
 	)
 	slider.set_meta("value_label", value_label)
@@ -235,8 +237,12 @@ func _load_current_values() -> void:
 	var v: Dictionary = store.values
 	pad_sensitivity_slider.set_value_no_signal(v.pad_sensitivity)
 	pad_deadzone_slider.set_value_no_signal(v.pad_deadzone)
+	if pad_move_deadzone_slider:
+		pad_move_deadzone_slider.set_value_no_signal(v.get("pad_move_deadzone", 0.18))
 	pad_sensitivity_slider.get_meta("value_label").text = "%.2fx" % v.pad_sensitivity
 	pad_deadzone_slider.get_meta("value_label").text = "%d%%" % roundi(v.pad_deadzone * 100)
+	if pad_move_deadzone_slider:
+		pad_move_deadzone_slider.get_meta("value_label").text = "%d%%" % roundi(v.get("pad_move_deadzone", 0.18) * 100)
 	pad_invert_check.set_pressed_no_signal(v.pad_invert_y)
 	pad_rumble_check.set_pressed_no_signal(v.pad_rumble)
 	window_mode_btn.select(v.window)

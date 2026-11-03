@@ -96,6 +96,8 @@ var flight_time: float = 0.0
 
 var current_agl: float = 18.5
 var in_ground_effect_factor: float = 1.0
+var hover_blend: float = 1.0
+var prev_horizontal_velocity: Vector3 = Vector3.ZERO
 
 # Exported state for camera/HUD
 var visual_pitch: float = 0.0
@@ -644,9 +646,15 @@ func _process_flight_physics(delta: float) -> void:
 	var forward_dir = -global_transform.basis.z.normalized()
 	var right_dir = global_transform.basis.x.normalized()
 	
-	# Compute current local velocity components
+	# Compute current local velocity and acceleration components
 	var v_fwd = velocity.dot(forward_dir)
 	var v_lat = velocity.dot(right_dir)
+	var current_horiz_vel := Vector3(velocity.x, 0.0, velocity.z)
+	var horiz_accel := (current_horiz_vel - prev_horizontal_velocity) / maxf(delta, 0.001)
+	prev_horizontal_velocity = current_horiz_vel
+	var a_fwd := horiz_accel.dot(forward_dir)
+	var a_lat := horiz_accel.dot(right_dir)
+
 	var direct_move: bool = input_data.get("direct_move", false)
 	var strafe_speed = max_speed if direct_move else max_speed * 0.72
 	fwd_speed_ratio = clampf(v_fwd / max_speed, -1.0, 1.0)
@@ -656,36 +664,45 @@ func _process_flight_physics(delta: float) -> void:
 	var max_pitch_rad = deg_to_rad(GameConstants.VISUAL_PITCH_LIMIT_DEG) # 18.0°
 	var target_pitch = 0.0
 
-	# Subtle arcade forward cyclic tilt during high-speed flight
+	# Pitch response derived from forward demand, acceleration, and braking flares
 	if thrust_input > 0.0:
-		# Active forward cyclic (W): dips nose forward into flight path (-18°)
-		var forward_demand = clampf(thrust_input + fwd_speed_ratio * 0.25, 0.0, 1.0)
+		# Forward cyclic: nose dips forward into flight path (-18°)
+		var forward_demand = clampf(thrust_input + fwd_speed_ratio * 0.35, 0.0, 1.0)
 		target_pitch = -forward_demand * max_pitch_rad
 	elif thrust_input < 0.0:
-		if v_fwd > 0.5:
-			# Reverse cyclic / Air Braking Flare (S): nose flares UP (+22.5°)
-			target_pitch = 1.25 * max_pitch_rad
+		if v_fwd > 1.2 or a_fwd < -2.0:
+			# Braking flare: nose flares UP (+22.5°)
+			var flare_ratio = clampf((v_fwd / max_speed) * 1.25, 0.6, 1.25)
+			target_pitch = flare_ratio * max_pitch_rad
 		else:
-			# Backing up / reverse flight: nose points up naturally (+13.5°)
+			# Reverse flight: nose points up naturally (+13.5°)
 			target_pitch = -thrust_input * max_pitch_rad * 0.75
 	else:
-		# Coasting: sustains slight forward lean with airspeed
-		if v_fwd > 1.0:
-			target_pitch = -fwd_speed_ratio * (max_pitch_rad * 0.50)
+		if v_fwd > 1.2 and a_fwd < -2.0:
+			# Decelerating coasting flare
+			target_pitch = clampf(-a_fwd / 15.0, 0.0, 0.8) * max_pitch_rad
+		elif v_fwd > 1.0:
+			target_pitch = -fwd_speed_ratio * (max_pitch_rad * 0.45)
 		elif v_fwd < -1.0:
 			target_pitch = -fwd_speed_ratio * (max_pitch_rad * 0.35)
+
+	# Restrained vertical climb/descent pitch cue
+	if absf(velocity.y) > 0.8:
+		target_pitch += deg_to_rad(clampf(velocity.y / GameConstants.CLIMB_SPEED, -1.0, 1.0) * 2.2)
 
 	# Bank / Roll targets (Z-axis airframe lean):
 	var max_bank_rad = deg_to_rad(GameConstants.VISUAL_BANK_LIMIT_DEG) # 28.0°
 	
 	# Turn banking: turning left (angular_velocity > 0) leans airframe left (+Z roll); turning right (angular_velocity < 0) leans right (-Z roll)
-	var turn_bank = (angular_velocity / GameConstants.MAX_YAW_RATE) * max_bank_rad * lerpf(0.12, 0.75, flight_speed_ratio)
+	var turn_bank = (angular_velocity / GameConstants.MAX_YAW_RATE) * max_bank_rad * lerpf(0.15, 0.85, flight_speed_ratio)
 	
-	# Strafe banking: strafing left (strafe_input < 0) leans left (+Z roll); strafing right (strafe_input > 0) leans right (-Z roll)
-	# Lean into acceleration and counter-bank while arresting sideways motion.
-	# A small cruise lean remains once the requested lateral speed is reached.
+	# Strafe banking:
+	# Lean into acceleration, counter-bank while braking sideways motion.
 	var lateral_speed_error = (strafe_input * strafe_speed - v_lat) / maxf(strafe_speed * 0.65, 0.1)
-	var strafe_effort = strafe_input * 0.25 + clampf(lateral_speed_error, -1.0, 1.0) * 0.45
+	var strafe_effort = strafe_input * 0.35 + clampf(lateral_speed_error, -1.0, 1.0) * 0.55
+	if absf(strafe_input) < 0.05 and absf(v_lat) > 1.5:
+		# Lateral braking produces restrained counter-bank
+		strafe_effort = clampf(-v_lat / strafe_speed, -0.65, 0.65)
 	var strafe_bank = -strafe_effort * max_bank_rad
 	
 	# Total target bank angle
@@ -713,56 +730,95 @@ func _process_flight_physics(delta: float) -> void:
 	visual_bank = bank_angle
 
 	# 4. Physical Rotor Thrust Vectoring & Momentum
-	var target_fwd_vel = 0.0
-	if thrust_input > 0.0:
-		target_fwd_vel = thrust_input * max_speed
-	elif thrust_input < 0.0:
-		# One continuous brake-to-reverse command; no zero-speed threshold latch.
-		target_fwd_vel = thrust_input * max_speed * (1.0 if direct_move else 0.65)
-
-	# Decoupled Strafe: cleanly driven by strafe input without injecting unwanted drift during yaw turning
-	var target_str_vel = strafe_input * strafe_speed
-
-	var target_horiz_vel = (forward_dir * target_fwd_vel) + (right_dir * target_str_vel)
-	if target_horiz_vel.length() > max_speed:
-		target_horiz_vel = target_horiz_vel.normalized() * max_speed
-
-	# Independent local-axis control keeps lateral braking identical whether W/S
-	# is held or released. Bounded acceleration also prevents reversal spikes.
-	target_fwd_vel = target_horiz_vel.dot(forward_dir)
-	target_str_vel = target_horiz_vel.dot(right_dir)
 	var control_authority = engine_factor * cargo_mass_multiplier * thrust_multiplier
 	var drag_rate = (6.2 + planar_speed / maxf(max_speed, 0.1) * 4.8) * drag_multiplier
-	var forward_rate = 4.2 * control_authority if absf(thrust_input) > 0.001 else drag_rate
-	if thrust_input < 0.0 and v_fwd > 1.8:
-		forward_rate = 7.8 * control_authority
-	v_fwd = lerpf(v_fwd, target_fwd_vel, 1.0 - exp(-forward_rate * delta))
-	if absf(thrust_input) < 0.001 and absf(v_fwd) < 0.05:
-		v_fwd = 0.0
-	var lateral_error = target_str_vel - v_lat
-	var braking_sideways = absf(strafe_input) < 0.001 or v_lat * strafe_input < 0.0
-	var lateral_limit = (strafe_braking if braking_sideways else strafe_acceleration) * control_authority
+
 	if direct_move:
-		# Match forward response, with a bounded quick stop/reversal for dodging.
-		lateral_limit = maxf(lateral_limit, max_speed * (6.0 if braking_sideways else 4.2) * control_authority)
-	if absf(strafe_input) < 0.001:
-		lateral_limit *= maxf(0.35, drag_multiplier)
-	# Ease into small corrections instead of alternating full-strength thrust
-	# around the requested speed while the helicopter is turning.
-	var desired_accel = clampf(lateral_error * 12.0, -lateral_limit, lateral_limit)
-	lateral_acceleration = lerpf(lateral_acceleration, desired_accel, 1.0 - exp(-strafe_response * delta))
-	if lateral_acceleration * lateral_error <= 0.0:
-		lateral_acceleration = 0.0
-	var lateral_step = lateral_acceleration * delta
-	if absf(lateral_step) >= absf(lateral_error):
-		v_lat = target_str_vel
+		var move_intent: Vector3 = input_data.get("move_world", Vector3.ZERO)
+		move_intent.y = 0.0
+		if move_intent.length_squared() < 0.0001:
+			var cam = camera if is_instance_valid(camera) else get_viewport().get_camera_3d()
+			if cam:
+				var cam_basis = cam.global_basis
+				var cam_r = Vector3(cam_basis.x.x, 0.0, cam_basis.x.z)
+				cam_r = cam_r.normalized() if cam_r.length_squared() > 0.0001 else Vector3.RIGHT
+				var cam_f = Vector3(-cam_basis.z.x, 0.0, -cam_basis.z.z)
+				cam_f = cam_f.normalized() if cam_f.length_squared() > 0.0001 else Vector3.FORWARD
+				move_intent = cam_r * strafe_input + cam_f * thrust_input
+			else:
+				move_intent = forward_dir * thrust_input + right_dir * strafe_input
+
+		if move_intent.length() > 1.0:
+			move_intent = move_intent.normalized()
+		var target_planar_vel: Vector3 = move_intent * max_speed
+		var current_planar_vel := Vector3(velocity.x, 0.0, velocity.z)
+		var input_mag := Vector2(strafe_input, thrust_input).length()
+
+		if input_mag < 0.001:
+			var stop_drag = (10.5 + current_planar_vel.length() / maxf(max_speed, 0.1) * 6.5) * drag_multiplier
+			current_planar_vel = current_planar_vel.lerp(Vector3.ZERO, 1.0 - exp(-stop_drag * delta))
+			if current_planar_vel.length() < 0.15:
+				current_planar_vel = Vector3.ZERO
+		else:
+			var dot = current_planar_vel.dot(target_planar_vel.normalized())
+			var rate = 4.2 * control_authority
+			if dot < -1.8:
+				rate = 7.8 * control_authority
+			current_planar_vel = current_planar_vel.lerp(target_planar_vel, 1.0 - exp(-rate * delta))
+
+		current_planar_vel = current_planar_vel.limit_length(max_speed)
+		velocity.x = current_planar_vel.x
+		velocity.z = current_planar_vel.z
+		v_fwd = current_planar_vel.dot(forward_dir)
+		v_lat = current_planar_vel.dot(right_dir)
 		lateral_acceleration = 0.0
 	else:
-		v_lat += lateral_step
-	var horizontal_velocity = forward_dir * v_fwd + right_dir * v_lat
-	horizontal_velocity = horizontal_velocity.limit_length(max_speed)
-	velocity.x = horizontal_velocity.x
-	velocity.z = horizontal_velocity.z
+		# Keyboard / legacy branch
+		var target_fwd_vel = 0.0
+		if thrust_input > 0.0:
+			target_fwd_vel = thrust_input * max_speed
+		elif thrust_input < 0.0:
+			# One continuous brake-to-reverse command; no zero-speed threshold latch.
+			target_fwd_vel = thrust_input * max_speed * 0.65
+
+		# Decoupled Strafe: cleanly driven by strafe input without injecting unwanted drift during yaw turning
+		var target_str_vel = strafe_input * strafe_speed
+
+		var target_horiz_vel = (forward_dir * target_fwd_vel) + (right_dir * target_str_vel)
+		if target_horiz_vel.length() > max_speed:
+			target_horiz_vel = target_horiz_vel.normalized() * max_speed
+
+		# Independent local-axis control keeps lateral braking identical whether W/S
+		# is held or released. Bounded acceleration also prevents reversal spikes.
+		target_fwd_vel = target_horiz_vel.dot(forward_dir)
+		target_str_vel = target_horiz_vel.dot(right_dir)
+		var forward_rate = 4.2 * control_authority if absf(thrust_input) > 0.001 else drag_rate
+		if thrust_input < 0.0 and v_fwd > 1.8:
+			forward_rate = 7.8 * control_authority
+		v_fwd = lerpf(v_fwd, target_fwd_vel, 1.0 - exp(-forward_rate * delta))
+		if absf(thrust_input) < 0.001 and absf(v_fwd) < 0.05:
+			v_fwd = 0.0
+		var lateral_error = target_str_vel - v_lat
+		var braking_sideways = absf(strafe_input) < 0.001 or v_lat * strafe_input < 0.0
+		var lateral_limit = (strafe_braking if braking_sideways else strafe_acceleration) * control_authority
+		if absf(strafe_input) < 0.001:
+			lateral_limit *= maxf(0.35, drag_multiplier)
+		# Ease into small corrections instead of alternating full-strength thrust
+		# around the requested speed while the helicopter is turning.
+		var desired_accel = clampf(lateral_error * 12.0, -lateral_limit, lateral_limit)
+		lateral_acceleration = lerpf(lateral_acceleration, desired_accel, 1.0 - exp(-strafe_response * delta))
+		if lateral_acceleration * lateral_error <= 0.0:
+			lateral_acceleration = 0.0
+		var lateral_step = lateral_acceleration * delta
+		if absf(lateral_step) >= absf(lateral_error):
+			v_lat = target_str_vel
+			lateral_acceleration = 0.0
+		else:
+			v_lat += lateral_step
+		var horizontal_velocity = forward_dir * v_fwd + right_dir * v_lat
+		horizontal_velocity = horizontal_velocity.limit_length(max_speed)
+		velocity.x = horizontal_velocity.x
+		velocity.z = horizontal_velocity.z
 
 	# 5. Vertical Dynamics (Collective Lift, Buoyancy & In-Ground Effect)
 	var target_vert_speed = 0.0
@@ -996,6 +1052,14 @@ func _update_helicopter_visuals(_thrust: float, _strafe: float, _delta: float) -
 	# High-frequency mechanical turbine hum vibration
 	var turbine_hum = sin(flight_time * 36.0) * 0.005
 
+	# Smooth hover blend with landed suppression
+	hover_blend = lerpf(hover_blend, 0.0 if is_landed else 1.0, 1.0 - exp(-10.0 * _delta))
+	hover_bob *= hover_blend
+	turbine_hum *= hover_blend
+	idle_pitch *= hover_blend
+	idle_roll *= hover_blend
+	idle_yaw *= hover_blend
+
 	# G-load airframe suspension compression during hard turns, swoops and dives
 	var g_load_dip = (abs(bank_angle) * 0.45 + abs(pitch_angle) * 0.30) * -0.38
 
@@ -1008,6 +1072,11 @@ func _update_helicopter_visuals(_thrust: float, _strafe: float, _delta: float) -
 	visual_hull.rotation.x = pitch_angle + idle_pitch
 	visual_hull.rotation.y = idle_yaw
 	visual_hull.rotation.z = bank_angle + idle_roll
+
+	# Synchronize chin turret mount with visual hull attitude and translation
+	if turret and is_instance_valid(turret):
+		turret.position = visual_hull.position + visual_hull.basis * Vector3(0.0, -0.74, -2.82)
+		turret.basis = visual_hull.basis
 
 	# 2. SUBTLE MOVEMENT ANIMATIONS (DURING ACTIVE FLIGHT)
 	# Blade coning lift on main rotor (smooth aerodynamic flex without high-frequency jitter)
@@ -1131,12 +1200,21 @@ func _trigger_dash(input_data: Dictionary) -> void:
 	dash_cooldown_timer = maxf(0.8, GameConstants.DASH_BASE_COOLDOWN - dash_cooldown_reduction)
 	update_invulnerability_state()
 	
-	var thrust = input_data.get("thrust", 0.0)
-	var strafe = input_data.get("strafe", 0.0)
-	var dir = (-global_transform.basis.z.normalized() * thrust + global_transform.basis.x.normalized() * strafe)
-	if dir.length_squared() < 0.1:
-		dir = -global_transform.basis.z.normalized()
-	dash_direction = dir.normalized()
+	var dir := Vector3.ZERO
+	if input_data.get("direct_move", false) and input_data.has("move_world") and input_data["move_world"].length_squared() > 0.01:
+		dir = Vector3(input_data["move_world"].x, 0.0, input_data["move_world"].z)
+	else:
+		var thrust: float = input_data.get("thrust", 0.0)
+		var strafe: float = input_data.get("strafe", 0.0)
+		dir = (-global_transform.basis.z.normalized() * thrust + global_transform.basis.x.normalized() * strafe)
+	
+	if dir.length_squared() < 0.01:
+		var current_vel := Vector3(velocity.x, 0.0, velocity.z)
+		if current_vel.length_squared() > 1.0:
+			dir = current_vel
+		else:
+			dir = -global_transform.basis.z.normalized()
+	dash_direction = Vector3(dir.x, 0.0, dir.z).normalized()
 
 # ------------------------------------------------------------------------------
 # 2. FUEL & STARVATION (Page 8)
@@ -1167,7 +1245,10 @@ func _process_fuel(delta: float) -> void:
 func take_damage(amount_or_data: Variant, source: String = "Enemy", hit_origin: Variant = null) -> void:
 	if has_protection():
 		return
-	if is_dying or current_hull <= 0.0:
+	if is_dying:
+		return
+	if current_hull <= 0.0:
+		_die(source)
 		return
 
 	var amount: float = 0.0
