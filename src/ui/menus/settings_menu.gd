@@ -24,6 +24,7 @@ var _populating: bool = false
 var pad_sensitivity_slider: HSlider
 var pad_deadzone_slider: HSlider
 var pad_move_deadzone_slider: HSlider
+var hud_scale_slider: HSlider
 var pad_invert_check: CheckBox
 var pad_rumble_check: CheckBox
 
@@ -158,6 +159,7 @@ func _build_ui_layout() -> void:
 	telemetry_check.text = "Show FPS and frame time"
 	telemetry_check.toggled.connect(_on_telemetry_toggled)
 	settings_box.add_child(telemetry_check)
+	hud_scale_slider = _controller_slider("HUD and text size", "hud_scale", 1.0, 1.25, 0.05, settings_box)
 	var defaults := Button.new()
 	defaults.text = "Restore settings defaults"
 	defaults.pressed.connect(func(): get_node("/root/UIFlow").confirm_action("Restore settings?", "This resets preferences only. Purchases and records stay saved.", func(): get_node("/root/SettingsStore").restore_defaults(), defaults))
@@ -208,7 +210,7 @@ func _switch_sub_view(show_settings: bool) -> void:
 		if show_settings and is_instance_valid(window_mode_btn): window_mode_btn.grab_focus.call_deferred()
 		elif not show_settings and is_instance_valid(pad_sensitivity_slider): pad_sensitivity_slider.grab_focus.call_deferred()
 
-func _controller_slider(caption: String, key: String, low: float, high: float, increment: float) -> HSlider:
+func _controller_slider(caption: String, key: String, low: float, high: float, increment: float, target: VBoxContainer = null) -> HSlider:
 	var row := HBoxContainer.new()
 	var label := Label.new()
 	label.text = caption
@@ -228,13 +230,16 @@ func _controller_slider(caption: String, key: String, low: float, high: float, i
 		_set_preference(key, value)
 	)
 	slider.set_meta("value_label", value_label)
-	controls_box.add_child(row)
+	(target if target else controls_box).add_child(row)
 	return slider
 
 func _load_current_values() -> void:
 	_populating = true
 	var store = get_node("/root/SettingsStore")
 	var v: Dictionary = store.values
+	if hud_scale_slider:
+		hud_scale_slider.set_value_no_signal(v.get("hud_scale", 1.0))
+		hud_scale_slider.get_meta("value_label").text = "%.2fx" % v.get("hud_scale", 1.0)
 	pad_sensitivity_slider.set_value_no_signal(v.pad_sensitivity)
 	pad_deadzone_slider.set_value_no_signal(v.pad_deadzone)
 	if pad_move_deadzone_slider:

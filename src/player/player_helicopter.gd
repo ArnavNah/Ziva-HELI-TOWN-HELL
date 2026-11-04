@@ -98,6 +98,13 @@ var current_agl: float = 18.5
 var in_ground_effect_factor: float = 1.0
 var hover_blend: float = 1.0
 var prev_horizontal_velocity: Vector3 = Vector3.ZERO
+var _visual_rest := Transform3D.IDENTITY
+var _turret_rest := Transform3D.IDENTITY
+var _presentation: Dictionary = {}
+var _rotor_phase := 0.0
+var _tail_phase := 0.0
+var _rotor_rest_basis := Basis.IDENTITY
+var _tail_rest_basis := Basis.IDENTITY
 
 # Exported state for camera/HUD
 var visual_pitch: float = 0.0
@@ -112,9 +119,6 @@ var last_strafe_input: float = 0.0
 @onready var magnet_sensor: Area3D = get_node_or_null("MagnetSensor")
 @onready var subsystem_manager: Node = get_node_or_null("SubsystemManager")
 var base_magnet_radius: float = 12.0
-@onready var side_wings: Node3D = $Visuals.get_node_or_null("SideWings")
-@onready var skid_left: Node3D = $Visuals.get_node_or_null("SkidLeft")
-@onready var skid_right: Node3D = $Visuals.get_node_or_null("SkidRight")
 @onready var tail_strobe: OmniLight3D = $Visuals.get_node_or_null("TailStrobe")
 @onready var search_light: SpotLight3D = $Visuals.get_node_or_null("SearchLight")
 @onready var turret: Node3D = $Turret
@@ -153,6 +157,8 @@ var death_cause: String = "KIA"
 var death_impact_occurred: bool = false
 
 func _ready() -> void:
+	_visual_rest = visual_hull.transform
+	_turret_rest = turret.transform
 	add_to_group("player")
 	global_position.y = GameConstants.STARTING_ALTITUDE
 	if has_node("/root/GameManager"):
@@ -262,7 +268,7 @@ func _setup_airframe_damage_effects() -> void:
 		airframe_smoke.scale_amount_min = 0.4
 		airframe_smoke.scale_amount_max = 1.8
 		airframe_smoke.color = Color(0.18, 0.18, 0.20, 0.70)
-		
+
 		var s_mesh = SphereMesh.new()
 		s_mesh.radial_segments = 6
 		s_mesh.rings = 3
@@ -295,7 +301,7 @@ func _setup_airframe_damage_effects() -> void:
 		airframe_fire.scale_amount_min = 0.35
 		airframe_fire.scale_amount_max = 1.2
 		airframe_fire.color = Color(1.0, 0.65, 0.15, 1.0)
-		
+
 		var f_mesh = SphereMesh.new()
 		f_mesh.radial_segments = 6
 		f_mesh.rings = 3
@@ -368,6 +374,7 @@ func _setup_rotors() -> void:
 
 	if main_rotor:
 		main_rotor_base_pos = main_rotor.position
+		_rotor_rest_basis = main_rotor.basis
 		# Remove any old conflicting / cloudy CylinderMesh discs
 		var old_disc = main_rotor.get_node_or_null("RotorDisc")
 		if old_disc:
@@ -375,6 +382,7 @@ func _setup_rotors() -> void:
 
 	if tail_rotor:
 		tail_rotor_base_pos = tail_rotor.position
+		_tail_rest_basis = tail_rotor.basis
 		var old_tail_disc = tail_rotor.get_node_or_null("TailRotorDisc")
 		if old_tail_disc:
 			old_tail_disc.queue_free()
@@ -388,11 +396,11 @@ func _setup_rotor_blur_discs() -> void:
 		main_rotor_blur_mesh = MeshInstance3D.new()
 		main_rotor_blur_mesh.name = "MainRotorBlurPlane"
 		main_rotor_blur_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		
+
 		var p_mesh = PlaneMesh.new()
 		p_mesh.size = Vector2(1.58, 1.58) # Sized to local rotor diameter
 		main_rotor_blur_mesh.mesh = p_mesh
-		
+
 		main_rotor_blur_mat = StandardMaterial3D.new()
 		main_rotor_blur_mat.resource_name = "MainRotorBlurMat"
 		main_rotor_blur_mat.albedo_texture = _create_procedural_rotor_blur_texture(false)
@@ -410,11 +418,11 @@ func _setup_rotor_blur_discs() -> void:
 		tail_rotor_blur_mesh = MeshInstance3D.new()
 		tail_rotor_blur_mesh.name = "TailRotorBlurPlane"
 		tail_rotor_blur_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		
+
 		var q_mesh = QuadMesh.new()
 		q_mesh.size = Vector2(0.32, 0.32)
 		tail_rotor_blur_mesh.mesh = q_mesh
-		
+
 		tail_rotor_blur_mat = StandardMaterial3D.new()
 		tail_rotor_blur_mat.resource_name = "TailRotorBlurMat"
 		tail_rotor_blur_mat.albedo_texture = _create_procedural_rotor_blur_texture(true)
@@ -516,6 +524,13 @@ func _polish_airframe_materials() -> void:
 
 func _apply_aircraft_baseline() -> void:
 	var specs: Dictionary = preload("res://data/aircraft_specs.gd").get_specs(aircraft_type)
+	_presentation = preload("res://data/aircraft_specs.gd").flight_presentation(aircraft_type)
+	var col := get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if col and col.shape is BoxShape3D:
+		col.shape = col.shape.duplicate()
+		col.shape.size = Vector3(3.6, 2.5, 11.5) * float(specs.scale_mult)
+		col.position = Vector3(0, 0, 1.45) * float(specs.scale_mult)
+	_turret_rest.origin = Vector3(0, -0.74, -2.82) * float(specs.scale_mult)
 	max_hull = specs.hull
 	max_fuel = specs.fuel
 	cruise_speed = specs.speed
@@ -533,6 +548,9 @@ func _process(delta: float) -> void:
 	if current_hull <= 0.0:
 		return
 	flight_time += delta
+	# Commit the visible mount pose before gimbal solving and impact queries.
+	_animate_rotors(delta)
+	_update_helicopter_visuals(last_thrust_input, last_strafe_input, delta)
 	if camera and camera.has_method("update_camera"):
 		camera.update_camera(delta)
 	if turret and camera:
@@ -540,8 +558,6 @@ func _process(delta: float) -> void:
 		turret.update_aim(camera, mouse_pos, self, delta)
 
 	# Fluid visual animations & rotor spinning executed at full render framerate
-	_animate_rotors(delta)
-	_update_helicopter_visuals(last_thrust_input, last_strafe_input, delta)
 	_update_helicopter_audio(delta)
 	_update_damage_effects(delta)
 
@@ -604,7 +620,7 @@ func _process_flight_physics(delta: float) -> void:
 	# 1. Evasive Dash
 	if dash_cooldown_timer > 0.0:
 		dash_cooldown_timer -= delta
-		
+
 	if input_data.get("dash", false) and dash_cooldown_timer <= 0.0 and not is_dashing:
 		_trigger_dash(input_data)
 
@@ -645,7 +661,7 @@ func _process_flight_physics(delta: float) -> void:
 	# 3. Attitude Physics: Damped Spring-Mass Attitude System
 	var forward_dir = -global_transform.basis.z.normalized()
 	var right_dir = global_transform.basis.x.normalized()
-	
+
 	# Compute current local velocity and acceleration components
 	var v_fwd = velocity.dot(forward_dir)
 	var v_lat = velocity.dot(right_dir)
@@ -659,7 +675,7 @@ func _process_flight_physics(delta: float) -> void:
 	var strafe_speed = max_speed if direct_move else max_speed * 0.72
 	fwd_speed_ratio = clampf(v_fwd / max_speed, -1.0, 1.0)
 	lat_speed_ratio = clampf(v_lat / strafe_speed, -1.0, 1.0)
-	
+
 	# Pitch targets (In Godot 3D, negative rotation.x tilts nose DOWN = LEAN FORWARD)
 	var max_pitch_rad = deg_to_rad(GameConstants.VISUAL_PITCH_LIMIT_DEG) # 18.0°
 	var target_pitch = 0.0
@@ -692,32 +708,34 @@ func _process_flight_physics(delta: float) -> void:
 
 	# Bank / Roll targets (Z-axis airframe lean):
 	var max_bank_rad = deg_to_rad(GameConstants.VISUAL_BANK_LIMIT_DEG) # 28.0°
-	
+
 	# Turn banking: turning left (angular_velocity > 0) leans airframe left (+Z roll); turning right (angular_velocity < 0) leans right (-Z roll)
 	var turn_bank = (angular_velocity / GameConstants.MAX_YAW_RATE) * max_bank_rad * lerpf(0.15, 0.85, flight_speed_ratio)
-	
+
 	# Strafe banking:
 	# Lean into acceleration, counter-bank while braking sideways motion.
 	var lateral_speed_error = (strafe_input * strafe_speed - v_lat) / maxf(strafe_speed * 0.65, 0.1)
 	var strafe_effort = strafe_input * 0.35 + clampf(lateral_speed_error, -1.0, 1.0) * 0.55
+	strafe_effort += clampf(a_lat / maxf(max_speed * 6.0, 1.0), -0.12, 0.12)
 	if absf(strafe_input) < 0.05 and absf(v_lat) > 1.5:
 		# Lateral braking produces restrained counter-bank
 		strafe_effort = clampf(-v_lat / strafe_speed, -0.65, 0.65)
 	var strafe_bank = -strafe_effort * max_bank_rad
-	
+
 	# Total target bank angle
 	var target_bank = clampf(turn_bank + strafe_bank, -max_bank_rad, max_bank_rad)
 
 	# Snappy and weighty Second-order Spring-Mass-Damper Attitude Integration
-	var spring_k = 42.0
-	var damp_c = 11.5
+	var response: float = float(_presentation.get("response", 1.0))
+	var spring_k = 42.0 * response * response
+	var damp_c = 11.5 * response
 	pitch_velocity += ((target_pitch - pitch_angle) * spring_k - pitch_velocity * damp_c) * delta
 	pitch_angle += pitch_velocity * delta
 	pitch_angle = clampf(pitch_angle, -max_pitch_rad * 1.25, max_pitch_rad * 1.25)
 
 	# Silky smooth second-order roll spring on Z-axis (fluid, natural roll inertia)
-	var roll_spring_k = 60.0
-	var roll_damp_c = 15.0
+	var roll_spring_k = 60.0 * response * response
+	var roll_damp_c = 15.0 * response
 	bank_velocity += ((target_bank - bank_angle) * roll_spring_k - bank_velocity * roll_damp_c) * delta
 	bank_angle += bank_velocity * delta
 	bank_angle = clampf(bank_angle, -max_bank_rad, max_bank_rad)
@@ -736,7 +754,7 @@ func _process_flight_physics(delta: float) -> void:
 	if direct_move:
 		var move_intent: Vector3 = input_data.get("move_world", Vector3.ZERO)
 		move_intent.y = 0.0
-		if move_intent.length_squared() < 0.0001:
+		if not input_data.has("move_world"):
 			var cam = camera if is_instance_valid(camera) else get_viewport().get_camera_3d()
 			if cam:
 				var cam_basis = cam.global_basis
@@ -826,7 +844,7 @@ func _process_flight_physics(delta: float) -> void:
 		target_vert_speed = GameConstants.CLIMB_SPEED * engine_factor * handling_multiplier
 	elif lift_input < 0.0:
 		target_vert_speed = -GameConstants.SINK_SPEED
-		
+
 	# In-Ground Effect (IGE) Cushion calculation
 	if ray_ground and ray_ground.is_colliding():
 		current_agl = global_position.y - ray_ground.get_collision_point().y
@@ -954,7 +972,7 @@ func _process_collision_damage(delta: float, pre_velocity: Vector3) -> void:
 			if fx and fx.has_method("spawn_impact_sparks"):
 				fx.spawn_impact_sparks(hardest_pos, hardest_normal)
 			engine_condition = maxf(0.0, engine_condition - randf_range(4.0, 10.0))
-			
+
 			# Deliver damage to destructible building
 			if hardest_collider and is_instance_valid(hardest_collider):
 				if hardest_collider.has_node("DamageReceiver"):
@@ -1038,17 +1056,17 @@ func _update_helicopter_visuals(_thrust: float, _strafe: float, _delta: float) -
 	var horiz_speed = Vector2(velocity.x, velocity.z).length()
 	var idle_factor = clampf(1.0 - (horiz_speed / 10.0), 0.0, 1.0)
 	idle_factor *= 1.0 - clampf(absf(last_strafe_input) + absf(last_thrust_input) + absf(angular_velocity) / GameConstants.MAX_YAW_RATE, 0.0, 1.0)
-	var active_speed_ratio = clampf(horiz_speed / max(1.0, cruise_speed), 0.0, 1.5)
 
-	# 1. PROMINENT IDLE POSITION HOVER BUOYANCY (Air Cushion Floating)
-	# Dual-harmonic vertical air cushion bobbing (~0.50m amplitude at idle)
-	var hover_bob = (sin(flight_time * 2.4) * 0.42 + sin(flight_time * 4.8) * 0.12) * (0.6 + 0.4 * idle_factor)
-	
+
+	# Small hover corrections, blended out in active flight and on contact.
+	var hover_size: float = float(_presentation.get("hover", 0.12))
+	var hover_bob = (sin(flight_time * 1.7) * 0.72 + sin(flight_time * 2.63) * 0.28) * hover_size * idle_factor
+
 	# Micro-attitude idle cyclic adjustments (organic nodding & rolling)
-	var idle_pitch = cos(flight_time * 1.8) * deg_to_rad(3.0) * idle_factor
-	var idle_roll = sin(flight_time * 1.4) * deg_to_rad(3.5) * idle_factor
-	var idle_yaw = sin(flight_time * 0.8) * deg_to_rad(2.0) * idle_factor
-	
+	var idle_pitch = cos(flight_time * 1.8) * deg_to_rad(0.7) * idle_factor
+	var idle_roll = sin(flight_time * 1.4) * deg_to_rad(0.9) * idle_factor
+	var idle_yaw = sin(flight_time * 0.8) * deg_to_rad(0.35) * idle_factor
+
 	# High-frequency mechanical turbine hum vibration
 	var turbine_hum = sin(flight_time * 36.0) * 0.005
 
@@ -1061,22 +1079,15 @@ func _update_helicopter_visuals(_thrust: float, _strafe: float, _delta: float) -
 	idle_yaw *= hover_blend
 
 	# G-load airframe suspension compression during hard turns, swoops and dives
-	var g_load_dip = (abs(bank_angle) * 0.45 + abs(pitch_angle) * 0.30) * -0.38
+	var g_load_dip = -minf(0.08, abs(bank_angle) * 0.10 + abs(pitch_angle) * 0.06) * hover_blend
 
 	# Apply translation offsets to visual hull (model stays centered over collider)
-	visual_hull.position.x = 0.0
-	visual_hull.position.y = hover_bob + g_load_dip + turbine_hum
-	visual_hull.position.z = 0.0
+	visual_hull.transform = _visual_rest * Transform3D(
+		Basis.from_euler(Vector3(pitch_angle + idle_pitch, idle_yaw, bank_angle + idle_roll)),
+		Vector3(0.0, hover_bob + g_load_dip + turbine_hum, 0.0))
 
-	# Apply 3-axis attitude angles to visual hull with organic idle breathing
-	visual_hull.rotation.x = pitch_angle + idle_pitch
-	visual_hull.rotation.y = idle_yaw
-	visual_hull.rotation.z = bank_angle + idle_roll
-
-	# Synchronize chin turret mount with visual hull attitude and translation
 	if turret and is_instance_valid(turret):
-		turret.position = visual_hull.position + visual_hull.basis * Vector3(0.0, -0.74, -2.82)
-		turret.basis = visual_hull.basis
+		turret.transform = visual_hull.transform * _turret_rest
 
 	# 2. SUBTLE MOVEMENT ANIMATIONS (DURING ACTIVE FLIGHT)
 	# Blade coning lift on main rotor (smooth aerodynamic flex without high-frequency jitter)
@@ -1084,25 +1095,10 @@ func _update_helicopter_visuals(_thrust: float, _strafe: float, _delta: float) -
 		var coning_lift = clampf(abs(fwd_speed_ratio) * 0.03 + (0.015 if abs(last_thrust_input) > 0.1 else 0.0), 0.0, 0.04)
 		main_rotor.position = main_rotor_base_pos + Vector3(0.0, coning_lift, 0.0)
 
-	# Dynamic secondary aero-elastic flex and speed flutter on weapon stub wings
-	if side_wings:
-		var wing_flex_z = -bank_velocity * 0.05
-		var speed_flutter = sin(flight_time * 18.0) * 0.012 * active_speed_ratio
-		side_wings.rotation.z = wing_flex_z + speed_flutter
-		side_wings.position.y = -0.05 + (g_load_dip * 0.20)
-
-	# Tail rotor anchor
+	# The supplied Helicopter_Body combines wings and landing gear. Keep those
+	# parts rigid rather than animating nonexistent procedural nodes.
 	if tail_rotor:
 		tail_rotor.position = tail_rotor_base_pos
-
-	# Landing skid suspension compliance (skids sway slightly with inertia)
-	if skid_left and skid_right:
-		var skid_drag_z = clampf(fwd_speed_ratio * 0.08, -0.10, 0.10)
-		var skid_sway_x = clampf(lat_speed_ratio * 0.06, -0.08, 0.08)
-		skid_left.position.z = -skid_drag_z
-		skid_right.position.z = -skid_drag_z
-		skid_left.position.x = -1.15 - skid_sway_x
-		skid_right.position.x = 1.15 - skid_sway_x
 
 	# Aviation anti-collision beacon strobe (crisp realistic double flash)
 	if tail_strobe:
@@ -1112,7 +1108,7 @@ func _update_helicopter_visuals(_thrust: float, _strafe: float, _delta: float) -
 
 func _animate_rotors(delta: float) -> void:
 	var engine_factor = 0.5 + 0.5 * (engine_condition / 100.0)
-	
+
 	# Physical RPM Spool Model:
 	# Nominal target is 1.0; boosts up to 1.30 under heavy forward flight / dash
 	var target_rpm = 1.0
@@ -1126,18 +1122,21 @@ func _animate_rotors(delta: float) -> void:
 		target_rpm = (1.0 + active_load) * engine_factor
 
 	var spool_rate = 3.5 if target_rpm >= rotor_rpm_ratio else 1.8
+	var rpm_integral: float = target_rpm * delta + (rotor_rpm_ratio-target_rpm) * (1.0-exp(-spool_rate*delta)) / spool_rate
 	rotor_rpm_ratio = lerpf(rotor_rpm_ratio, target_rpm, 1.0 - exp(-spool_rate * delta))
 
 	# Calibrated anti-aliasing rotation speed for 4-blade rotor (54.0 rad/s ~ 51.5 deg/frame @ 60 FPS)
 	# Breaks the 90-degree 4-blade wagon wheel harmonic trap, creating high-speed forward whir
-	var main_rpm_speed = delta * 54.0 * rotor_rpm_ratio
-	var tail_rpm_speed = delta * 108.0 * rotor_rpm_ratio
+	var main_rpm_speed = 54.0 * rpm_integral
+	var tail_rpm_speed = 108.0 * rpm_integral
 
 	if main_rotor:
-		main_rotor.rotate_y(main_rpm_speed)
+		_rotor_phase = fposmod(_rotor_phase + main_rpm_speed, TAU)
+		main_rotor.basis = _rotor_rest_basis * Basis(Vector3.UP, _rotor_phase)
 	if tail_rotor:
 		# player.glb tail rotor rotates around its local Z axis
-		tail_rotor.rotate_z(tail_rpm_speed)
+		_tail_phase = fposmod(_tail_phase + tail_rpm_speed, TAU)
+		tail_rotor.basis = _tail_rest_basis * Basis(Vector3.BACK, _tail_phase)
 
 	# Dynamic Motion Blur Disc Opacity Response:
 	# Smoothly blends in as rotor spools up into high-speed operation
@@ -1199,7 +1198,7 @@ func _trigger_dash(input_data: Dictionary) -> void:
 	dash_timer = GameConstants.DASH_DURATION
 	dash_cooldown_timer = maxf(0.8, GameConstants.DASH_BASE_COOLDOWN - dash_cooldown_reduction)
 	update_invulnerability_state()
-	
+
 	var dir := Vector3.ZERO
 	if input_data.get("direct_move", false) and input_data.has("move_world") and input_data["move_world"].length_squared() > 0.01:
 		dir = Vector3(input_data["move_world"].x, 0.0, input_data["move_world"].z)
@@ -1207,7 +1206,7 @@ func _trigger_dash(input_data: Dictionary) -> void:
 		var thrust: float = input_data.get("thrust", 0.0)
 		var strafe: float = input_data.get("strafe", 0.0)
 		dir = (-global_transform.basis.z.normalized() * thrust + global_transform.basis.x.normalized() * strafe)
-	
+
 	if dir.length_squared() < 0.01:
 		var current_vel := Vector3(velocity.x, 0.0, velocity.z)
 		if current_vel.length_squared() > 1.0:
@@ -1311,7 +1310,7 @@ func take_damage(amount_or_data: Variant, source: String = "Enemy", hit_origin: 
 	var accepted_damage: float = prev_hull - current_hull
 	if source != "Fuel Starvation" and has_node("/root/InputManager"):
 		get_node("/root/InputManager").play_damage_rumble(accepted_damage + absorbed_damage * 0.5)
-	
+
 	# Subsystem Damage roll (40% chance to hit engine or rotor) if alive
 	if current_hull > 0.0 and randf() < GameConstants.SUBSYSTEM_DAMAGE_CHANCE:
 		var hit_engine = randf() < 0.5

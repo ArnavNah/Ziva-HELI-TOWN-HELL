@@ -70,6 +70,12 @@ static func get_specs(id: String) -> Dictionary:
 		return AIRCRAFT[key].duplicate(true)
 	return AIRCRAFT["apache"].duplicate(true)
 
+## Presentation only: independent of collision response and flight speed upgrades.
+static func flight_presentation(id: String) -> Dictionary:
+	var response: float = {"nighthawk": 1.20, "warlock": 0.86}.get(id.to_lower(), 1.0)
+	return {"response": response, "hover": 0.09 if id == "warlock" else 0.12,
+		"camera_distance": 40.0, "camera_height": 36.0, "camera_fov": 52.0}
+
 ## Pure, side-effect-free calculation of pre-run effective stats accounting for
 ## permanent hangar ranks and perks. Both menu preview and runtime apply_loadout() use this.
 static func calculate_effective_stats(aircraft_id: String, hangar_ranks: Dictionary = {}, perk_ranks: Dictionary = {}) -> Dictionary:

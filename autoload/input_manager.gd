@@ -8,6 +8,7 @@ var _rumble_device := -1
 var aim_direction := Vector2.UP
 var _auto_aim_target: WeakRef
 var controller_active := false
+var _mouse_aim_override := false
 var active_joypad := -1
 var aim_sensitivity := 1.0
 var aim_deadzone := 0.18
@@ -37,11 +38,11 @@ func _setup_input_actions() -> void:
 	# 1. Flight Controls
 	_add_action_key("thrust_forward", KEY_W)
 	_add_action_key("thrust_forward", KEY_UP)
-	_add_action_joy_axis("thrust_forward", JOY_AXIS_LEFT_Y, -1.0)
+	_remove_joy_axis("thrust_forward", JOY_AXIS_LEFT_Y)
 	
 	_add_action_key("thrust_backward", KEY_S)
 	_add_action_key("thrust_backward", KEY_DOWN)
-	_add_action_joy_axis("thrust_backward", JOY_AXIS_LEFT_Y, 1.0)
+	_remove_joy_axis("thrust_backward", JOY_AXIS_LEFT_Y)
 	
 	_add_action_key("yaw_left", KEY_A)
 	_add_action_key("yaw_left", KEY_LEFT)
@@ -55,11 +56,11 @@ func _setup_input_actions() -> void:
 	
 	_add_action_key("strafe_left", KEY_Q)
 	_remove_joy_button("strafe_left", JOY_BUTTON_DPAD_LEFT)
-	_add_action_joy_axis("strafe_left", JOY_AXIS_LEFT_X, -1.0)
+	_remove_joy_axis("strafe_left", JOY_AXIS_LEFT_X)
 	
 	_add_action_key("strafe_right", KEY_E)
 	_remove_joy_button("strafe_right", JOY_BUTTON_DPAD_RIGHT)
-	_add_action_joy_axis("strafe_right", JOY_AXIS_LEFT_X, 1.0)
+	_remove_joy_axis("strafe_right", JOY_AXIS_LEFT_X)
 	
 	_add_action_key("climb", KEY_SPACE)
 	_add_action_key("climb", KEY_SHIFT)
@@ -199,7 +200,8 @@ func _input(event: InputEvent) -> void:
 		var right_r: float = _device_right_stick.get(dev, Vector2.ZERO).length()
 		var is_trigger: bool = event.axis in [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]
 		if left_r > move_deadzone or right_r > aim_deadzone or (is_trigger and event.axis_value > 0.25):
-			_set_controller_mode(true, dev)
+			var take_aim: bool = (event.axis in [JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y] and right_r > aim_deadzone) or (is_trigger and event.axis_value > 0.25)
+			_set_controller_mode(true, dev, take_aim)
 	elif event is InputEventMouseMotion:
 		var stick_held := false
 		if active_joypad >= 0:
@@ -207,19 +209,28 @@ func _input(event: InputEvent) -> void:
 			var right_len: float = _device_right_stick.get(active_joypad, Vector2.ZERO).length()
 			if left_len > move_deadzone or right_len > aim_deadzone:
 				stick_held = true
-		if not stick_held and event.relative.length() > 6.0:
-			_set_controller_mode(false)
+		# Input motion is stretched into logical canvas units. Arbitration uses
+		# physical pixels so resizing/DPI cannot turn jitter into deliberate aim.
+		var motion: Vector2 = event.screen_relative
+		if motion.is_zero_approx(): motion = get_viewport().get_screen_transform().basis_xform(event.relative)
+		if motion.length() > (12.0 if stick_held else 6.0):
+			_mouse_aim_override = true
+			_auto_aim_target = null
+			if not stick_held: _set_controller_mode(false)
 	elif (event is InputEventMouseButton or event is InputEventKey) and event.is_pressed():
 		var stick_held := false
 		if active_joypad >= 0:
 			var left_len: float = _device_left_stick.get(active_joypad, Vector2.ZERO).length()
 			if left_len > move_deadzone:
 				stick_held = true
-		if not stick_held:
-			_set_controller_mode(false)
+		if event is InputEventMouseButton:
+			_mouse_aim_override = true
+			_auto_aim_target = null
+		if not stick_held: _set_controller_mode(false)
 
-func _set_controller_mode(enabled: bool, device: int = -1) -> void:
+func _set_controller_mode(enabled: bool, device: int = -1, take_aim: bool = true) -> void:
 	if enabled:
+		if take_aim: _mouse_aim_override = false
 		if device >= 0:
 			active_joypad = device
 		elif active_joypad < 0:
@@ -292,11 +303,23 @@ func get_camera_horizontal_frame(camera: Camera3D) -> Array[Vector3]:
 	return [right, forward]
 
 func aim_stick() -> Vector2:
-	var raw := Vector2(Input.get_action_raw_strength("aim_right") - Input.get_action_raw_strength("aim_left"), Input.get_action_raw_strength("aim_down") - Input.get_action_raw_strength("aim_up"))
+	var raw := get_device_raw_right_stick(active_joypad)
 	var magnitude := minf(1.0, raw.length())
 	if magnitude <= aim_deadzone: return Vector2.ZERO
 	var response := (magnitude - aim_deadzone) / (1.0 - aim_deadzone)
 	return raw.normalized() * response * Vector2(1, -1 if aim_invert_y else 1)
+
+func uses_controller_aim() -> bool:
+	return controller_active and not _mouse_aim_override
+
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_APPLICATION_FOCUS_OUT: return
+	for device in _device_left_stick: _device_left_stick[device] = Vector2.ZERO
+	for device in _device_right_stick: _device_right_stick[device] = Vector2.ZERO
+	_auto_aim_target = null
+	stop_damage_rumble()
+	var flow := get_node_or_null("/root/UIFlow")
+	if flow: flow.block_held_input()
 
 func advance_controller_aim(delta: float, viewport_size: Vector2, initial_point: Vector2) -> void:
 	if viewport_size.x <= 48 or viewport_size.y <= 48: return
@@ -321,7 +344,7 @@ func set_auto_aim_target(target: Node3D) -> void:
 	_auto_aim_target = weakref(target) if is_instance_valid(target) else null
 
 func get_aim_screen_position() -> Vector2:
-	if controller_active:
+	if uses_controller_aim():
 		var target: Node3D = _auto_aim_target.get_ref() if _auto_aim_target else null
 		var camera := get_viewport().get_camera_3d()
 		if is_instance_valid(target) and not target.is_queued_for_deletion() and camera and not camera.is_position_behind(target.global_position):
@@ -348,9 +371,9 @@ func _process(delta: float) -> void:
 	var flow = get_node_or_null("/root/UIFlow")
 	var playing: bool = flow != null and flow.gameplay_input_allowed()
 	if not playing or not rumble_enabled: stop_damage_rumble()
-	var mouse_mode := Input.MOUSE_MODE_HIDDEN if controller_active and playing else Input.MOUSE_MODE_VISIBLE
+	var mouse_mode := Input.MOUSE_MODE_HIDDEN if uses_controller_aim() and playing else Input.MOUSE_MODE_VISIBLE
 	if Input.mouse_mode != mouse_mode: Input.mouse_mode = mouse_mode
-	if not controller_active or not playing: return
+	if not uses_controller_aim() or not playing: return
 	var player = get_tree().get_first_node_in_group("player")
 	var camera := get_viewport().get_camera_3d()
 	if not is_instance_valid(player) or not camera: return

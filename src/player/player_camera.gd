@@ -51,6 +51,15 @@ func _ready() -> void:
 
 func init_camera(target: Node3D) -> void:
 	target_node = target
+	if "aircraft_type" in target:
+		var catalog := preload("res://data/aircraft_specs.gd")
+		var profile: Dictionary = catalog.flight_presentation(target.aircraft_type)
+		var fitting := sqrt(float(catalog.get_specs(target.aircraft_type).scale_mult))
+		base_distance = float(profile.camera_distance) * fitting
+		base_height = float(profile.camera_height) * fitting
+		base_fov = float(profile.camera_fov)
+		max_speed_distance = base_distance + 4.0
+		fov = base_fov
 	smoothed_target_pos = target.global_position
 	current_cam_dist = base_distance
 	current_cam_height = base_height

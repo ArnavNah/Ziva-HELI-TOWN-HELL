@@ -387,6 +387,8 @@ func _update_missile_warnings(delta: float) -> void:
 
 func _update_border_warnings() -> void:
 	if border_warning_banner:
+		border_warning_banner.offset_top = 124.0 if lock_warning_banner and lock_warning_banner.visible else 90.0
+		border_warning_banner.offset_bottom = border_warning_banner.offset_top + 45.0
 		if is_border_warning:
 			border_warning_banner.visible = fmod(alert_flash_timer, 1.6) < 1.15
 			var sub = border_warning_banner.get_node_or_null("Subtitle") as Label
@@ -449,61 +451,7 @@ func _get_target_screen_envelope(camera: Camera3D, target: Node3D, default_pos: 
 	if not target or not is_instance_valid(target) or not camera:
 		return Rect2(default_pos - Vector2(23, 23), Vector2(46, 46))
 
-	var local_box: AABB
-	if target.has_meta("_hud_aabb"):
-		local_box = target.get_meta("_hud_aabb")
-	else:
-		var found := false
-		var col = target.get_node_or_null("CollisionShape3D") as CollisionShape3D
-		if col and col.shape:
-			if col.shape is BoxShape3D:
-				var sz = (col.shape as BoxShape3D).size
-				local_box = AABB(-sz * 0.5, sz)
-				found = true
-			elif col.shape is SphereShape3D:
-				var r = (col.shape as SphereShape3D).radius
-				local_box = AABB(Vector3(-r, -r, -r), Vector3(r * 2.0, r * 2.0, r * 2.0))
-				found = true
-		if not found:
-			var visual = target.get_node_or_null("Visuals")
-			if visual:
-				for mesh in visual.find_children("*", "MeshInstance3D", true, false):
-					if mesh is MeshInstance3D and mesh.is_visible_in_tree() and not ("Blur" in mesh.name or "Cue" in mesh.name):
-						var aabb = (mesh as MeshInstance3D).get_aabb()
-						var xform = target.global_transform.affine_inverse() * (mesh as MeshInstance3D).global_transform
-						for c in 8:
-							var pt = xform * aabb.get_endpoint(c)
-							if not found:
-								local_box = AABB(pt, Vector3.ZERO)
-								found = true
-							else:
-								local_box = local_box.expand(pt)
-		if not found:
-			local_box = AABB(Vector3(-2.0, -1.0, -2.5), Vector3(4.0, 2.0, 5.0))
-		target.set_meta("_hud_aabb", local_box)
-
-	var min_p = Vector2(INF, INF)
-	var max_p = Vector2(-INF, -INF)
-	var visible_pts := 0
-	var gt = target.global_transform
-	for i in 8:
-		var world_corner = gt * local_box.get_endpoint(i)
-		if camera.is_position_behind(world_corner):
-			continue
-		var pt = camera.unproject_position(world_corner)
-		min_p.x = minf(min_p.x, pt.x)
-		min_p.y = minf(min_p.y, pt.y)
-		max_p.x = maxf(max_p.x, pt.x)
-		max_p.y = maxf(max_p.y, pt.y)
-		visible_pts += 1
-
-	if visible_pts < 3:
-		return Rect2(default_pos - Vector2(23, 23), Vector2(46, 46))
-
-	var width = clampf(max_p.x - min_p.x + 8.0, 36.0, 220.0)
-	var height = clampf(max_p.y - min_p.y + 8.0, 32.0, 180.0)
-	var center = (min_p + max_p) * 0.5
-	return Rect2(center - Vector2(width * 0.5, height * 0.5), Vector2(width, height))
+	return preload("res://src/ui/vehicle_bounds.gd").screen_envelope(camera, target, default_pos)
 
 func _draw_target_bracket(camera: Camera3D, pos: Vector2, target: Node3D, rec: Node, is_manual: bool, font: Font) -> void:
 	var rect = _get_target_screen_envelope(camera, target, pos)

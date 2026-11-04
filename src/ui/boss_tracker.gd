@@ -52,7 +52,10 @@ func _process(delta: float) -> void:
 		hide()
 		return
 	var width := minf(380, get_viewport_rect().size.x * 0.42)
-	position = Vector2((get_viewport_rect().size.x - width) * 0.5, 112)
+	var factor: float = get_node("/root/SettingsStore").values.get("hud_scale", 1.0)
+	scale = Vector2.ONE * factor
+	# Reserve separate rows above this panel for alerts and score notifications.
+	position = Vector2((get_viewport_rect().size.x - width * factor) * 0.5, 188)
 	size.x = width
 	title.text = boss.boss_title if "boss_title" in boss else "HEAVY GUNSHIP"
 	var receiver = boss.get_node("DamageReceiver")

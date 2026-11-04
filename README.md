@@ -82,6 +82,8 @@ Large asset files are stored with Git LFS. If a model or texture appears as a sm
 
 Gamepad bindings are also configured. See the Flight Manual for the full list.
 
+The left stick provides camera-relative movement through 360 degrees, and the right stick provides directional aim assistance. Movement and aim have separate deadzone settings. Settings also includes HUD/text sizing from 1.00x to 1.25x. Deliberate mouse aiming can be used while moving with the left stick; moving the right stick restores controller aiming. See the [controller and presentation verification](docs/PRESENTATION_AND_CONTROLLER_FIX_RESULTS_2026-11-04.md) for the latest checks.
+
 ## Aircraft
 
 | Airframe | Flight style |

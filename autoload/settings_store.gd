@@ -2,7 +2,7 @@ extends Node
 signal changed(key: String)
 signal save_failed(message: String)
 const Storage = preload("res://src/ui/menus/game_storage.gd")
-const DEFAULTS := {"master": 1.0, "sfx": 1.0, "music": 0.8, "shake": 2, "flashes": false, "telemetry": true, "fps": 60, "vsync": false, "window": 0, "pad_sensitivity": 1.0, "pad_deadzone": 0.18, "pad_move_deadzone": 0.18, "pad_invert_y": false, "pad_rumble": true}
+const DEFAULTS := {"master": 1.0, "sfx": 1.0, "music": 0.8, "shake": 2, "flashes": false, "telemetry": true, "fps": 60, "vsync": false, "window": 0, "pad_sensitivity": 1.0, "pad_deadzone": 0.18, "pad_move_deadzone": 0.18, "pad_invert_y": false, "pad_rumble": true, "hud_scale": 1.0}
 var values: Dictionary = DEFAULTS.duplicate()
 var last_error: String = ""
 var save_path: String
@@ -39,6 +39,7 @@ func load_settings() -> void:
 
 func _validated(key: String, value: Variant) -> Variant:
 	match key:
+		"hud_scale": return clampf(float(value), 1.0, 1.25) if value is float or value is int else 1.0
 		"pad_sensitivity": return clampf(float(value), 0.3, 2.5) if value is float or value is int else DEFAULTS[key]
 		"pad_deadzone", "pad_move_deadzone": return clampf(float(value), 0.08, 0.40) if value is float or value is int else DEFAULTS[key]
 		"master", "sfx", "music": return clampf(float(value), 0.0, 1.0) if value is float or value is int else DEFAULTS[key]

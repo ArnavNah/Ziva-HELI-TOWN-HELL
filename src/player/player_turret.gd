@@ -95,7 +95,7 @@ func update_aim(camera: Camera3D, mouse_pos: Vector2, parent_heli: Node3D, delta
 	var best_candidate: Node3D = null
 	var best_score: float = 0.0
 	var inputs := get_node_or_null("/root/InputManager")
-	var controller_aim: bool = inputs != null and inputs.controller_active
+	var controller_aim: bool = inputs != null and inputs.uses_controller_aim()
 
 	# If direct raycast clicked an enemy collider, it receives maximum direct-hit score
 	if controller_aim:

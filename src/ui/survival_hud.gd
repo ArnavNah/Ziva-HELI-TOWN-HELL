@@ -26,6 +26,7 @@ var fps_label: Label
 
 var last_known_xp: int = 0
 var xp_gain_float: Label = null
+var sidebar: Control
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -58,16 +59,16 @@ func _ready() -> void:
 	xp_gain_float = label("", Vector2(18, 8), 10, Color("4deeea"))
 	xp_gain_float.visible = false
 	hull_bar = bar(Vector2(18, 66), Vector2(244, 18), Color("d92c38"))
-	hp_label = label("140/140", Vector2(18, 66), 10)
+	hp_label = label("140/140", Vector2(18, 66), 12)
 	hp_label.size = Vector2(244, 18)
 	hp_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hp_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	fuel_bar = bar(Vector2(18, 88), Vector2(244, 6), Color("3ec6a6"))
-	fuel_caption = label("FUEL 100%", Vector2(18, 98), 8, Color("8fe0c3"))
-	ammo_label = label("Machine Gun: 300/300", Vector2(18, 116), 10)
-	flare_label = label("FLARES: 3/3", Vector2(18, 136), 10)
+	fuel_caption = label("FUEL 100%", Vector2(18, 98), 10, Color("8fe0c3"))
+	ammo_label = label("Machine Gun: 300/300", Vector2(18, 116), 12)
+	flare_label = label("FLARES: 3/3", Vector2(18, 136), 12)
 	super_bar = bar(Vector2(18, 158), Vector2(244, 5), Color("a188ea"))
-	label("SUPER", Vector2(18, 169), 8, Color("b2a1d8"))
+	label("SUPER", Vector2(18, 169), 10, Color("b2a1d8"))
 	stage_timer = label("0:45", Vector2.ZERO, 22)
 	stage_timer.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	stage_timer.offset_left = -140
@@ -117,8 +118,18 @@ func _ready() -> void:
 	mission_label = label("[ ] AIR DEFENSE PATROL", Vector2(26, 199), 10)
 	cargo_label = label("CARGO", Vector2(26, 221), 9, Color("edce7d"))
 	for item in [mission_label, cargo_label]:
-		item.size.x = 450
+		item.size.x = 300
 		item.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	task_panel.size.x = 320
+	# Scale only the information cluster, never world-projected targeting controls.
+	sidebar = Control.new()
+	sidebar.name = "SurvivalSidebar"
+	sidebar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var items := get_children()
+	add_child(sidebar)
+	for item in items:
+		if item is Control and item.anchor_left == 0 and item.anchor_right == 0:
+			item.reparent(sidebar, false)
 
 func stat(parent: Container, icon: String, initial: String, width: float, color: Color) -> Label:
 	var group := HBoxContainer.new()
@@ -169,6 +180,9 @@ static func clock_text(seconds: float, countdown: bool = false) -> String:
 	return "%d:%02d" % [int(whole / 60.0), whole % 60]
 
 func refresh(manager: Node, player: Node3D) -> void:
+	var store := get_node_or_null("/root/SettingsStore")
+	if sidebar:
+		sidebar.scale = Vector2.ONE * (float(store.values.get("hud_scale", 1.0)) if store else 1.0)
 	if manager:
 		elapsed_label.text = clock_text(manager.run_time)
 		coins_label.text = str(manager.coins_collected)
@@ -238,6 +252,7 @@ func refresh(manager: Node, player: Node3D) -> void:
 	var cargo := scene.get_node_or_null("CargoManager") if scene else null
 	cargo_label.visible = cargo != null and cargo.current_state != 0
 	task_panel.size.y = 52 if cargo_label.visible else 30
+	task_panel.visible = cargo_label.visible or (mission_label.visible and not mission_label.text.is_empty())
 
 	if fps_label:
 		if has_node("/root/GameManager") and not get_node("/root/GameManager").show_fps_telemetry:

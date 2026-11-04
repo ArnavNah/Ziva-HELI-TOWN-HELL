@@ -260,3 +260,5 @@ func _process(delta: float) -> void:
 	action.text = "CONFIRM END SORTIE / EXTRACT" if is_exfil else "ABORT TASK / REQUEST EXFIL" if active else "REQUEST SORTIE EXTRACTION"
 	if get_node("/root/InputManager").controller_active: action.text += "  [VIEW]"
 	panel.offset_top = -26.0 - maxf(140.0, column.get_combined_minimum_size().y + 25.0)
+	panel.pivot_offset = Vector2(0, panel.size.y)
+	panel.scale = Vector2.ONE * float(get_node("/root/SettingsStore").values.get("hud_scale", 1.0))
