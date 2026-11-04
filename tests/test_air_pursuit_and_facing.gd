@@ -29,6 +29,7 @@ func run() -> void:
 	if OS.get_environment("ZIVA_TEST_DATA_DIR").is_empty():
 		quit(2)
 		return
+	seed(20261105)
 	Engine.time_scale = 8
 	Engine.physics_ticks_per_second = 480
 	Engine.max_fps = 0
@@ -59,6 +60,12 @@ func run() -> void:
 		for i in 60: unit.steer_air_unit(Vector3.ZERO,18,52,1.0/60.0,player.position)
 		var to_player: Vector3 = (player.position-unit.position).normalized()
 		check((-unit.global_basis.z).dot(to_player)>.95,role+" tracks the player while hovering from an opposite heading")
+		player.position = Vector3(0,3,0)
+		unit.position = Vector3(0,38,25)
+		for i in 60: unit.steer_air_unit(Vector3.ZERO,18,52,1.0/60.0,player.position)
+		check((-unit.global_basis.z).dot((player.position-unit.position).normalized())>.98,role+" aims down at a low-flying player")
+		player.position = Vector3(0,30,0)
+		unit.position = Vector3(0,30,35)
 		if role in ["attack_gunship","interceptor"]:
 			unit.rotation = Vector3(0,PI,0)
 			unit.set_behavior_state(BaseEnemy.BehaviorState.FIRE)
@@ -77,6 +84,16 @@ func run() -> void:
 		elif role in ["attack_wing","escort_fighter","stealth_vtol"]:
 			unit.rotation = Vector3(0,PI,0)
 			check(not unit._fire_single_shot(player.position) and unit.get_node("Visuals").outlet_index==0,role+" cannot fire fixed guns backwards")
+		unit.queue_free()
+		await tick(2)
+	for role in ROLES:
+		var unit := spawn(role,Vector3(0,36,22))
+		unit.rotation.y = PI
+		await tick(90)
+		var offset: Vector3 = unit.position-player.position
+		check(Vector2(offset.x,offset.z).length()>20,role+" holds safe distance during protected entry")
+		check((-unit.global_basis.z).dot(offset.normalized()*-1)>.95,role+" keeps aiming while holding entry distance")
+		unit._release_all_slots()
 		unit.queue_free()
 		await tick(2)
 	for role in ROLES:

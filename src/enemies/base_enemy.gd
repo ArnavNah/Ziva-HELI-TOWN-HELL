@@ -326,7 +326,9 @@ func _process_player_pursuit(delta: float) -> bool:
 	set_behavior_state(BehaviorState.ENTER if entry_grace_timer > 0.0 else BehaviorState.PURSUE)
 	not_firing_reason = REASON_ENTERING if entry_grace_timer > 0.0 else REASON_OUT_OF_RANGE
 	if is_air_unit:
-		var desired := planar.normalized() * move_speed
+		# Entry protection must not force a close-spawned aircraft to ram.
+		# Facing remains active even while the range controller asks it to hover.
+		var desired := planar.normalized() * move_speed if distance > approach_range else Vector3.ZERO
 		desired.y = (clampf(activity_player.global_position.y + 6.0, 18.0, 46.0) - global_position.y) * 2.0
 		steer_air_unit(desired, 18.0, 52.0, delta, activity_player.global_position)
 	else:
