@@ -71,9 +71,10 @@ func _custom_process(delta: float) -> void:
 			not_firing_reason = REASON_OUT_OF_RANGE if dist > 65.0 else REASON_COOLDOWN
 			var lead_target := get_predicted_target_position(global_position, target_player, move_speed * 1.35, 0.95, 0.0)
 			var to_intercept := (lead_target - global_position).normalized()
-			steer_air_unit(to_intercept * move_speed, 22.0, 52.0, delta)
+			steer_air_unit(to_intercept * move_speed, 22.0, 52.0, delta, lead_aim)
 
 			if dist < 65.0 or strafe_timer > 4.5:
+				if not air_weapon_can_fire(lead_aim, true): return
 				# Request air attack slot
 				var director = get_node_or_null("/root/CombatDirector")
 				var can_fire = true
@@ -91,7 +92,8 @@ func _custom_process(delta: float) -> void:
 					not_firing_reason = REASON_WAITING_PERMISSION
 
 		1: # High-Speed Attack Run
-			steer_air_unit(strafe_vector * (move_speed * 1.35), 20.0, 55.0, delta)
+			var firing_point: Vector3 = committed_aim_point if aim_committed else cached_aim_point
+			steer_air_unit(strafe_vector * (move_speed * 1.35), 20.0, 55.0, delta, firing_point)
 
 			if behavior_state == BehaviorState.WINDUP:
 				var windup_done = update_telegraph(get_air_weapon_origin(), cached_aim_point, delta)
@@ -106,16 +108,21 @@ func _custom_process(delta: float) -> void:
 				gun_timer -= delta
 				if gun_timer <= 0.0 and burst_shots_remaining > 0:
 					gun_timer = 0.07
-					burst_shots_remaining -= 1
 					if check_muzzle_line_of_sight(get_air_weapon_origin(), target_player.global_position):
-						_fire_interceptor_round()
+						if _fire_interceptor_round(): burst_shots_remaining -= 1
 					else:
 						not_firing_reason = REASON_BLOCKED_SHOT
 
 					if burst_shots_remaining <= 0:
 						_release_all_slots()
 
-			if dist > 70.0 and strafe_timer > 1.8:
+			var egress_break := false
+			if behavior_state == BehaviorState.FIRE and burst_shots_remaining <= 0:
+				egress_break = true
+			elif dist < 8.0 or (dist > 70.0 and strafe_timer > 1.8) or strafe_timer > 3.5:
+				egress_break = true
+
+			if egress_break:
 				_release_all_slots()
 				clear_telegraph()
 				strafe_state = 2
@@ -133,11 +140,11 @@ func _custom_process(delta: float) -> void:
 				strafe_timer = 0.0
 				set_behavior_state(BehaviorState.PURSUE)
 
-func _fire_interceptor_round() -> void:
+func _fire_interceptor_round() -> bool:
 	if not is_inside_tree() or not target_player:
-		return
+		return false
 	var fire_aim = committed_aim_point if aim_committed else cached_aim_point
-	if not air_weapon_can_fire(fire_aim, true): return
+	if not air_weapon_can_fire(fire_aim, true): return false
 	var muzzle_socket := get_air_weapon_socket()
 	var p = ProjectileScene.instantiate()
 	var p_data = DamageDataClass.new(9.0, GameConstants.WeaponType.MACHINE_GUN, self)
@@ -159,3 +166,4 @@ func _fire_interceptor_round() -> void:
 		var up_vec = Vector3.UP if absf(aim_dir.dot(Vector3.UP)) < 0.99 else Vector3.FORWARD
 		var muzzle_tf = Transform3D(Basis.looking_at(aim_dir, up_vec), spawn_pos)
 		get_node("/root/FXManager").play_muzzle("enemy_bullet", muzzle_tf, muzzle_socket, aim_dir)
+	return true

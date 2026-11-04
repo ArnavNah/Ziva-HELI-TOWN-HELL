@@ -56,29 +56,47 @@ func _custom_process(delta: float) -> void:
 		if distance > max_engagement_range * 1.25 + 4.0:
 			set_behavior_state(BehaviorState.PURSUE)
 
+	# Resolve muzzle origin and predictive target aim before movement
+	if not _has_resolved_turret:
+		_resolve_turret()
+	var muzzle_origin := get_muzzle_origin()
+	var turret := _turret_node
+	var is_aligned := true
+	active_aim_target = get_predicted_target_position(muzzle_origin, target, combat_proj_speed, combat_lead_accuracy, combat_spread_rad)
+
 	# --- 2. MOVEMENT & STEERING ---
 	match variant_id:
 		"hunter_drone":
 			var tangent := Vector3(-heading.z, 0, heading.x) * orbit_sign
-			var close_in = clampf((distance - min_engagement_range) / 12.0, 0.0, 1.0)
-			var desired := (heading * lerpf(0.5, 0.95, close_in) + tangent * lerpf(0.7, 0.2, close_in)).normalized() * move_speed
+			var preferred := 25.0
+			var approach := clampf((distance - preferred) / 12.0, -0.8, 1.0)
+			if distance < 16.0:
+				approach = -1.25
+			var desired := (heading * approach + tangent * 0.70).normalized() * move_speed
 			desired.y = (clampf(target.global_position.y + sin(phase * 2.0) * 3.0, 12, 38) - global_position.y) * 2.5
-			steer_air_unit(desired, 12.0, 42.0, delta)
+			steer_air_unit(desired, 12.0, 42.0, delta, active_aim_target)
 
 		"escort_fighter":
-			# Reliable close-in phase before tactical weave / pass (Section 1 & 5)
+			# Tactical standoff & weave, never ramming the player
 			var tangent := Vector3(-heading.z, 0, heading.x) * orbit_sign
-			var close_in = clampf((distance - max_engagement_range) / 20.0, 0.0, 1.0)
-			var desired := (heading * lerpf(0.65, 0.95, close_in) + tangent * lerpf(0.75, 0.15, close_in)).normalized() * move_speed
+			var preferred := 38.0
+			var approach := clampf((distance - preferred) / 16.0, -0.85, 1.0)
+			if distance < 22.0:
+				approach = -1.35
+			var desired := (heading * approach + tangent * 0.75).normalized() * move_speed
 			desired.y = (clampf(target.global_position.y + 6.0, 20.0, 48.0) - global_position.y) * 1.8
-			steer_air_unit(desired, 20.0, 48.0, delta, target.global_position)
+			steer_air_unit(desired, 20.0, 48.0, delta, active_aim_target)
 
 		"torpedo_vtol":
-			var tangent := Vector3(-heading.z, 0, heading.x) * sin(phase)
-			var close_in = clampf((distance - max_engagement_range) / 20.0, 0.0, 1.0)
-			var desired := (heading * lerpf(0.60, 0.95, close_in) + tangent * lerpf(0.65, 0.15, close_in)).normalized() * move_speed
+			# Long-range standoff missile platform
+			var tangent := Vector3(-heading.z, 0, heading.x) * (1.0 if int(get_instance_id()) % 2 == 0 else -1.0)
+			var preferred := 48.0
+			var approach := clampf((distance - preferred) / 18.0, -0.90, 1.0)
+			if distance < 26.0:
+				approach = -1.40
+			var desired := (heading * approach + tangent * 0.65).normalized() * move_speed
 			desired.y = (clampf(target.global_position.y + 10.0, 24, 42) - global_position.y) * 1.8
-			steer_air_unit(desired, 24.0, 46.0, delta)
+			steer_air_unit(desired, 24.0, 46.0, delta, active_aim_target)
 
 		"rail_crawler":
 			var preferred := (min_engagement_range + max_engagement_range) * 0.5
@@ -97,15 +115,25 @@ func _custom_process(delta: float) -> void:
 			var spd_mult = 0.50 if behavior_state == BehaviorState.WINDUP else 1.0
 			steer_ground_unit(dir, move_speed * spd_mult, delta)
 
-		"attack_wing", "stealth_vtol", "heavy_bomber":
-			# These aircraft used the ground fallback after losing the old airframe.
-			# Retain tactical standoff/weave while using the shared flight controller.
+		"heavy_bomber":
+			# Fly over the target's path: level pass across the player to drop bombs from overhead
+			var run_heading := heading
+			if distance < 14.0:
+				run_heading = Vector3(velocity.x, 0, velocity.z).normalized()
+				if run_heading.is_zero_approx(): run_heading = -global_basis.z
+			var desired := run_heading * move_speed
+			desired.y = (clampf(target.global_position.y + 12.0, 26.0, 52.0) - global_position.y) * 1.8
+			steer_air_unit(desired, 26.0, 55.0, delta)
+
+		"attack_wing", "stealth_vtol":
 			var tangent := Vector3(-heading.z, 0, heading.x) * orbit_sign
 			var preferred := (min_engagement_range + max_engagement_range) * 0.5
-			var approach := clampf((distance - preferred) / 18.0, -0.6, 1.0)
+			var approach := clampf((distance - preferred) / 18.0, -0.75, 1.0)
+			if distance < 22.0:
+				approach = -1.30
 			var desired := (heading * approach + tangent * 0.65).normalized() * move_speed
 			desired.y = (clampf(target.global_position.y + 8.0, 22.0, 48.0) - global_position.y) * 1.8
-			steer_air_unit(desired, 22.0, 52.0, delta, target.global_position if variant_id != "heavy_bomber" else Vector3.INF)
+			steer_air_unit(desired, 22.0, 52.0, delta, active_aim_target)
 
 		_:
 			var preferred := (min_engagement_range + max_engagement_range) * 0.5
@@ -113,19 +141,15 @@ func _custom_process(delta: float) -> void:
 			steer_ground_unit(dir, move_speed, delta)
 
 	# Turret Aiming with smooth tracking and predictive lead
-	if not _has_resolved_turret:
-		_resolve_turret()
-	var muzzle_origin := get_muzzle_origin()
-	var turret := _turret_node
-	var is_aligned := true
 	if turret:
-		active_aim_target = get_predicted_target_position(muzzle_origin, target, combat_proj_speed, combat_lead_accuracy, combat_spread_rad)
 		if turret.has_method("track_aim"):
 			is_aligned = turret.track_aim(active_aim_target, delta, 150.0, 24.0)
 		else:
 			is_aligned = track_turret(turret, active_aim_target, delta, 150.0, 24.0)
 	else:
-		active_aim_target = get_predicted_target_position(muzzle_origin, target, combat_proj_speed, combat_lead_accuracy, combat_spread_rad)
+		var rig := get_node_or_null("Visuals")
+		if is_air_unit and variant_id in ["attack_wing", "escort_fighter", "stealth_vtol"] and rig and rig.has_method("is_in_firing_arc"):
+			is_aligned = rig.is_in_firing_arc(active_aim_target)
 
 	# --- 3. WINDUP & TELEGRAPH HANDLING ---
 	if behavior_state == BehaviorState.WINDUP:
@@ -135,6 +159,9 @@ func _custom_process(delta: float) -> void:
 
 		var windup_finished = update_telegraph(muzzle_origin, active_aim_target, delta)
 		if windup_finished:
+			if is_air_unit and not is_aligned:
+				not_firing_reason = REASON_TURNING
+				return
 			# Verify line of sight to committed aim point before firing
 			var shot_clear = check_muzzle_line_of_sight(muzzle_origin, committed_aim_point)
 			if not shot_clear:
@@ -149,7 +176,7 @@ func _custom_process(delta: float) -> void:
 			set_behavior_state(BehaviorState.FIRE)
 			burst_count = combat_burst_count
 			burst_timer = 0.0
-			_fire_single_shot(committed_aim_point)
+			if not _fire_single_shot(committed_aim_point): burst_count += 1
 		return
 
 	# --- 4. BURST FIRE HANDLING ---
@@ -158,11 +185,10 @@ func _custom_process(delta: float) -> void:
 			burst_timer -= delta
 			if burst_timer <= 0.0:
 				burst_timer = combat_burst_delay
-				burst_count -= 1
 				# Re-evaluate line of sight for each burst round (Section 6)
 				var shot_clear = check_muzzle_line_of_sight(muzzle_origin, active_aim_target)
 				if shot_clear:
-					_fire_single_shot(active_aim_target)
+					if _fire_single_shot(active_aim_target): burst_count -= 1
 				else:
 					# Shot blocked mid-burst: abort remainder
 					burst_count = 0
@@ -231,9 +257,9 @@ func get_muzzle_origin() -> Vector3:
 		return get_air_weapon_origin()
 	return global_position + Vector3.UP * 1.8
 
-func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
+func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> bool:
 	if not is_inside_tree() or not is_instance_valid(target):
-		return
+		return false
 
 	var muzzle_pos := get_muzzle_origin()
 	var turret := get_node_or_null("Turret") as Node3D
@@ -243,7 +269,7 @@ func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
 	var shot_aim = aim_point if aim_point != Vector3.ZERO else active_aim_target
 	var air_rig := get_node_or_null("Visuals")
 	var uses_air_sockets := is_air_unit and air_rig and air_rig.has_method("get_weapon_origin")
-	if uses_air_sockets and not air_weapon_can_fire(shot_aim, variant_id in ["attack_wing", "escort_fighter", "stealth_vtol"]): return
+	if uses_air_sockets and not air_weapon_can_fire(shot_aim, variant_id in ["attack_wing", "escort_fighter", "stealth_vtol"]): return false
 	var air_socket := get_air_weapon_socket() if uses_air_sockets else null
 
 	var shot := Shot.instantiate()
@@ -334,3 +360,4 @@ func _fire_single_shot(aim_point: Vector3 = Vector3.ZERO) -> void:
 			shot.blast_radius = 0.0
 			shot.setup(Hit.new(5.0, GameConstants.WeaponType.MACHINE_GUN, self, false, 0.0), null, profile_id)
 	if uses_air_sockets: commit_air_shot()
+	return true

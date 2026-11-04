@@ -58,7 +58,7 @@ func _custom_process(delta: float) -> void:
 			target_pos.y = target_altitude
 
 			var dir = (target_pos - global_position).normalized()
-			steer_air_unit(dir * move_speed, 20.0, 52.0, delta)
+			steer_air_unit(dir * move_speed, 20.0, 52.0, delta, target_player.global_position)
 
 			if dist < 65.0:
 				current_state = EnemyState.SETUP
@@ -72,8 +72,11 @@ func _custom_process(delta: float) -> void:
 			# Active combat hover with strafe weave while requesting attack slot
 			var perp := Vector3(-to_player.z, 0.0, to_player.x) * (1.0 if int(get_instance_id()) % 2 == 0 else -1.0)
 			var hover_vel := (perp * sin(state_timer * 2.8) * 8.0)
+			var planar := Vector3(to_player.x, 0, to_player.z).normalized()
+			hover_vel += planar * clampf((dist - 44.0) * 1.8, -14.0, move_speed)
 			hover_vel.y = (clampf(target_player.global_position.y + 4.0, 20.0, 48.0) - global_position.y) * 2.0
-			steer_air_unit(hover_vel, 18.0, 52.0, delta, target_player.global_position)
+			var aim_lead = get_predicted_target_position(muzzle_pos, target_player, 180.0, combat_lead_accuracy, combat_spread_rad)
+			steer_air_unit(hover_vel, 18.0, 52.0, delta, aim_lead)
 
 			# Strict permission check: NO timeout bypass! Waiting enemies continue useful positioning (Section 1)
 			var slot_granted = false
@@ -88,7 +91,6 @@ func _custom_process(delta: float) -> void:
 				return
 
 			# Check 3D line of sight
-			var aim_lead = get_predicted_target_position(muzzle_pos, target_player, 180.0, combat_lead_accuracy, combat_spread_rad)
 			if not check_muzzle_line_of_sight(muzzle_pos, aim_lead):
 				not_firing_reason = REASON_BLOCKED_SHOT
 				return
@@ -126,17 +128,16 @@ func _custom_process(delta: float) -> void:
 				jink_offset = dodge_perp * jink_sign * 12.0
 
 			var run_vel = (run_dir * (move_speed * 1.35) + jink_offset)
-			steer_air_unit(run_vel, 18.0, 55.0, delta)
+			var aim_point := get_predicted_target_position(muzzle_pos, target_player, 180.0, combat_lead_accuracy, combat_spread_rad)
+			steer_air_unit(run_vel, 18.0, 55.0, delta, aim_point)
 
 			attack_fire_timer -= delta
 			if attack_fire_timer <= 0.0 and attack_shots_fired < MAX_ATTACK_SHOTS:
 				attack_fire_timer = combat_burst_delay
-				attack_shots_fired += 1
-				var aim_point := get_predicted_target_position(muzzle_pos, target_player, 180.0, combat_lead_accuracy, combat_spread_rad)
 				if check_muzzle_line_of_sight(muzzle_pos, aim_point):
-					_fire_gun(aim_point)
+					if _fire_gun(aim_point): attack_shots_fired += 1
 
-			if attack_shots_fired >= MAX_ATTACK_SHOTS or dist < 18.0 or state_timer > 3.0:
+			if attack_shots_fired >= MAX_ATTACK_SHOTS or dist < 26.0 or state_timer > 3.0:
 				_release_all_slots()
 				clear_telegraph()
 				current_state = EnemyState.BREAK_AWAY
@@ -170,12 +171,12 @@ func _custom_process(delta: float) -> void:
 				set_behavior_state(BehaviorState.PURSUE)
 				state_timer = 0.0
 
-func _fire_gun(aim_point: Vector3) -> void:
+func _fire_gun(aim_point: Vector3) -> bool:
 	if not is_inside_tree() or get_tree() == null:
-		return
+		return false
 	if not target_player or not is_instance_valid(target_player):
-		return
-	if not air_weapon_can_fire(aim_point, true): return
+		return false
+	if not air_weapon_can_fire(aim_point, true): return false
 	var muzzle_socket := get_air_weapon_socket()
 	var muzzle_pos := get_air_weapon_origin()
 
@@ -198,3 +199,4 @@ func _fire_gun(aim_point: Vector3) -> void:
 		var up_vec = Vector3.UP if absf(aim_dir.dot(Vector3.UP)) < 0.99 else Vector3.FORWARD
 		var muzzle_tf = Transform3D(Basis.looking_at(aim_dir, up_vec), muzzle_pos)
 		get_node("/root/FXManager").play_muzzle("enemy_bullet", muzzle_tf, muzzle_socket, aim_dir)
+	return true

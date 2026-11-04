@@ -2,7 +2,7 @@ class_name AirVisualRig
 extends Node3D
 ## Selection is a pure query. Commit only after creating a shot.
 @export var weapon_sockets: Array[NodePath] = []
-@export var fixed_gun_half_arc_degrees := 70.0
+@export var fixed_gun_half_arc_degrees := 50.0
 var outlet_index := 0
 var _recoil := 0.0
 var _cue := 0.0

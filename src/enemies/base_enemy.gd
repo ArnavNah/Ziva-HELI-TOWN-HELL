@@ -326,9 +326,9 @@ func _process_player_pursuit(delta: float) -> bool:
 	set_behavior_state(BehaviorState.ENTER if entry_grace_timer > 0.0 else BehaviorState.PURSUE)
 	not_firing_reason = REASON_ENTERING if entry_grace_timer > 0.0 else REASON_OUT_OF_RANGE
 	if is_air_unit:
-		var desired := planar.normalized() * move_speed if distance > approach_range else Vector3.ZERO
+		var desired := planar.normalized() * move_speed
 		desired.y = (clampf(activity_player.global_position.y + 6.0, 18.0, 46.0) - global_position.y) * 2.0
-		steer_air_unit(desired, 18.0, 52.0, delta)
+		steer_air_unit(desired, 18.0, 52.0, delta, activity_player.global_position)
 	else:
 		var heading := Vector3.ZERO
 		if distance > approach_range:
@@ -492,7 +492,7 @@ func _is_offscreen_threat() -> bool:
 	if not cam:
 		return false
 	var is_offscreen = not cam.is_position_in_frustum(global_position)
-	var is_threatening = is_heavy_attacker or requires_heavy_slot or max_engagement_range >= 55.0 or variant_id in ["rail_crawler", "siege_tank", "gatling_heavy", "rocket_gunship", "heavy_bomber", "torpedo_vtol"]
+	var is_threatening = is_heavy_attacker or requires_heavy_slot or (max_engagement_range >= 55.0 and not is_air_unit) or variant_id in ["rail_crawler", "siege_tank", "gatling_heavy", "rocket_gunship", "heavy_bomber", "torpedo_vtol"]
 	return is_offscreen and is_threatening
 
 
@@ -1100,7 +1100,7 @@ func steer_air_unit(desired_vel: Vector3, min_alt: float, max_alt: float, delta:
 	elif global_position.y > max_alt:
 		desired_vel.y = minf(desired_vel.y, -10.0)
 
-	velocity = velocity.lerp(desired_vel, delta * 5.0)
+	velocity = velocity.lerp(desired_vel, 1.0 - exp(-delta * 5.0))
 	move_and_slide()
 
 	if is_on_wall():
@@ -1110,18 +1110,24 @@ func steer_air_unit(desired_vel: Vector3, min_alt: float, max_alt: float, delta:
 		desired_vel.y = maxf(desired_vel.y, 28.0)
 
 	var current_h_vel = Vector3(velocity.x, 0.0, velocity.z)
-	if current_h_vel.length_squared() > 1.0:
+	var facing: Vector3 = current_h_vel if facing_target == Vector3.INF else facing_target - global_position
+	if Vector2(facing.x, facing.z).length_squared() > 0.001:
 		# Fixed airframe guns track with the aircraft's existing yaw/bank controller.
 		# Translational tactics stay independent; do not rotate a combined gun mesh.
-		var facing: Vector3 = current_h_vel if facing_target == Vector3.INF else facing_target - global_position
 		var target_yaw = atan2(-facing.x, -facing.z)
 		rotation.y = rotate_toward(rotation.y, target_yaw, delta * 6.5)
 
-		var target_pitch = clampf(-velocity.y / (h_speed + 0.1) * 0.45, -0.35, 0.35)
-		rotation.x = rotate_toward(rotation.x, target_pitch, delta * 5.0)
+		var target_pitch := 0.0
+		if facing_target != Vector3.INF:
+			target_pitch = clampf(atan2(facing.y, Vector2(facing.x, facing.z).length()), deg_to_rad(-60.0), deg_to_rad(60.0))
+		else:
+			target_pitch = clampf(velocity.y / (h_speed + 0.1) * 0.45, -0.45, 0.45)
+		rotation.x = rotate_toward(rotation.x, target_pitch, delta * 6.0)
 
 		var yaw_diff = wrapf(target_yaw - rotation.y, -PI, PI)
 		var target_roll = clampf(-yaw_diff * 1.5, -0.42, 0.42)
+		if facing_target != Vector3.INF and absf(yaw_diff) < 0.20:
+			target_roll = 0.0
 		rotation.z = rotate_toward(rotation.z, target_roll, delta * 6.0)
 
 func _process_death_spiral(delta: float) -> void:

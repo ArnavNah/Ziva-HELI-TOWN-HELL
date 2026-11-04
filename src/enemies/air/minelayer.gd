@@ -38,9 +38,12 @@ func _custom_process(delta: float) -> void:
 
 	var dist = global_position.distance_to(target_player.global_position)
 	var to_player = (target_player.global_position - global_position).normalized()
-	# Perpendicular crossing flight
+	# Close onto the player's flight corridor, then cross it to place hazards.
 	var perp = Vector3(-to_player.z, 0.0, to_player.x).normalized()
-	steer_air_unit(perp * move_speed, 20.0, 48.0, delta)
+	var planar := Vector3(to_player.x, 0, to_player.z).normalized()
+	var desired := (planar + perp * (0.35 if dist > 24.0 else 1.5)).normalized() * move_speed
+	desired.y = (clampf(target_player.global_position.y + 6.0, 20.0, 48.0) - global_position.y) * 1.8
+	steer_air_unit(desired, 20.0, 50.0, delta)
 
 	match behavior_state:
 		BehaviorState.PURSUE:

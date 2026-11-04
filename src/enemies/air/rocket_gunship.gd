@@ -56,17 +56,17 @@ func _custom_process(delta: float) -> void:
 	var dist = global_position.distance_to(target_player.global_position)
 	var to_player = (target_player.global_position - global_position).normalized()
 
+	# Aim point calculation with near-zero quadratic guard
+	var lead_aim = get_predicted_target_position(global_position, target_player, 135.0, 0.92, 0.0)
+	cached_lead_aim = lead_aim
+
 	# Standoff positioning with tactical lateral strafing
 	var flank_perp = Vector3(-to_player.z, 0.0, to_player.x) * (1.0 if int(get_instance_id()) % 2 == 0 else -1.0)
 	var strafe_offset = flank_perp * (sin(state_timer * 1.4) * 16.0)
 	var target_pos = target_player.global_position - to_player * standoff_distance + strafe_offset
 	target_pos.y = clampf(target_player.global_position.y + 6.0, 22.0, 52.0)
-	var move_dir = (target_pos - global_position).normalized()
-	steer_air_unit(move_dir * move_speed, 22.0, 52.0, delta, target_player.global_position)
-
-	# Aim point calculation with near-zero quadratic guard
-	var lead_aim = get_predicted_target_position(global_position, target_player, 135.0, 0.92, 0.0)
-	cached_lead_aim = lead_aim
+	var move_vel: Vector3 = ((target_pos - global_position) * 1.8).limit_length(move_speed)
+	steer_air_unit(move_vel, 22.0, 52.0, delta, committed_aim_point if aim_committed else cached_lead_aim)
 
 	match behavior_state:
 		BehaviorState.PURSUE:
@@ -119,7 +119,7 @@ func _custom_process(delta: float) -> void:
 					salvo_index += 1
 				else:
 					# Abort blocked salvos without consuming an outlet or slot indefinitely.
-					salvo_count = 0
+					if not_firing_reason != REASON_TURNING or state_timer > 3.0: salvo_count = 0
 				if salvo_count <= 0:
 					_release_all_slots()
 					set_behavior_state(BehaviorState.RECOVER)
@@ -146,7 +146,7 @@ func _fire_rocket(shot_idx: int) -> bool:
 
 	var fire_lead = committed_aim_point if aim_committed else cached_lead_aim
 	var target_spot = fire_lead + bracket_offset
-	if not air_weapon_can_fire(target_spot): return false
+	if not air_weapon_can_fire(target_spot, true): return false
 	var muzzle_socket := get_air_weapon_socket()
 	var p = ProjectileScene.instantiate()
 	var p_data = DamageDataClass.new(24.0, GameConstants.WeaponType.ROCKET, self, false, 14.0)
